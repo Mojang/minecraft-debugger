@@ -1,23 +1,102 @@
 {
 	"name": "minecraft-debugger",
-	"displayName": "minecraft-debugger",
-	"description": "",
-	"version": "0.0.1",
+	"displayName": "Minecraft Bedrock Edition Debugger",
+	"description": "Debug your JavaScript code running as part of the GameTest Framework experimental feature in Microsoft Bedrock Edition.",
+	"version": "0.1.0",
+	"publisher": "mojang-studios",
 	"engines": {
 		"vscode": "^1.55.0"
 	},
 	"categories": [
-		"Other"
+		"Debuggers"
 	],
+	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Mojang/minecraft-debugger.git"
+	},
 	"activationEvents": [
-		"onCommand:minecraft-debugger.helloWorld"
+		"onDebug",
+		"onCommand:extension.minecraft-js.getPort"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [
+		"breakpoints": [
 			{
-				"command": "minecraft-debugger.helloWorld",
-				"title": "Hello World"
+				"language": "javascript"
+			}
+		],
+		"debuggers": [
+			{
+				"type": "minecraft-js",
+				"label": "Minecraft Debugger",
+				"program": "./out/debugAdapter.js",
+				"runtime": "node",
+				"languages": [
+					"javascript"
+				],
+				"configurationAttributes": {
+					"attach": {
+						"properties": {
+							"mode": {
+								"type": "string",
+								"description": "The debugger connection mode. Use 'listen' to have VSCode wait for Minecraft to connect. Use 'connect' to have VSCode attach to a Minecraft instance that is listening for a debugger.",
+								"enum": [
+									"connect",
+									"listen"
+								],
+								"default": "connect"
+							},
+							"localRoot": {
+								"type": "string",
+								"description": "The local root of the Minecraft Add-On.",
+								"default": "${workspaceFolder}/"
+							},
+							"host": {
+								"type": "string",
+								"description": "The host address the extension will connect to.",
+								"default": "localhost"
+							},
+							"port": {
+								"type": "number",
+								"description": "The port Minecraft is listening on."
+							},
+							"inputPort": {
+								"type": "string",
+								"description": "Prompts for a port at launch."
+							}
+						}
+					}
+				},
+				"initialConfigurations": [
+					{
+						"type": "minecraft-js",
+						"request": "attach",
+						"name": "Attach to Minecraft",
+						"mode": "connect",
+						"localRoot": "${workspaceFolder}/",
+						"host": "localhost",
+						"port": 19144
+					}
+				],
+				"configurationSnippets": [
+					{
+						"label": "Minecraft Debugger: Attach",
+						"description": "A new configuration for attaching JavaScript debugger to Minecraft.",
+						"body": {
+							"type": "minecraft-js",
+							"request": "attach",
+							"name": "Attach to Minecraft",
+							"mode": "connect",
+							"localRoot": "^\"\\${workspaceFolder}/\"",
+							"host": "localhost",
+							"port": 19144
+						}
+					}
+				],
+				"variables": {
+					"PromptForPort": "extension.minecraft-js.getPort"
+				}
 			}
 		]
 	},
@@ -27,19 +106,26 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js"
+		"test": "node ./out/test/runTest.js",
+		"package": "vsce package"
+	},
+	"dependencies": {
+		"stream-parser": "^0.3.1",
+		"vscode-debugadapter": "1.47.0"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.55.0",
 		"@types/glob": "^7.1.3",
 		"@types/mocha": "^8.0.4",
 		"@types/node": "^12.11.7",
-		"eslint": "^7.19.0",
+		"@types/vscode": "^1.55.0",
 		"@typescript-eslint/eslint-plugin": "^4.14.1",
 		"@typescript-eslint/parser": "^4.14.1",
+		"esbuild": "^0.12.5",
+		"eslint": "^7.19.0",
 		"glob": "^7.1.6",
 		"mocha": "^8.2.1",
 		"typescript": "^4.1.3",
+		"vsce": "^1.93.0",
 		"vscode-test": "^1.5.0"
 	}
 }

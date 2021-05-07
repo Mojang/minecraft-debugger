@@ -1,9 +1,5 @@
-# Change Log
+# Changelog
 
-All notable changes to the "minecraft-debugger" extension will be documented in this file.
+## Version 0.1.0 (September 2021)
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+- Initial release, connect to Minecraft Bedrock Edition to debug GameTest scripts.

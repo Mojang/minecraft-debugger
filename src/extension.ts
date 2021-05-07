@@ -1,27 +1,36 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
+import * as vscode from 'vscode';
+import { MCConfigProvider } from './MCConfigProvider'
+import { MCServerDebugAdapterFactory } from './MCServerDebugAdapterFactory'
+
+// called when extension is activated
+//
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "minecraft-debugger" is now active!');
+	// register commands
+	context.subscriptions.push(vscode.commands.registerCommand('extension.minecraft-js.getPort', config => {
+		return vscode.window.showInputBox({
+			placeHolder: "Please enter the port Minecraft is listening on.",
+			value: ""
+		});
+	}));
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('minecraft-debugger.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
+	// register a configuration provider for the 'minecraft-js' debug type
+	const configProvider = new MCConfigProvider();
+	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider("minecraft-js", configProvider));
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from minecraft-debugger!');
-	});
+	// register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
+	let descriptorFactory = new MCServerDebugAdapterFactory();
+	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
 
-	context.subscriptions.push(disposable);
+	if ('dispose' in descriptorFactory) {
+		context.subscriptions.push(descriptorFactory);
+	}
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {}
+// called when extension is deactivated
+//
+export function deactivate() {
+}

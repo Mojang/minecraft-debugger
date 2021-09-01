@@ -108,7 +108,7 @@ You should see your breakpoints get triggered as the code executes. You can add 
 }
 ```
 
-3. Within Bedrock Dedicated Server's command line, run the following command:
+3. Within Bedrock Dedicated Server, run the following command:
 
 ```powershell
 /script debugger listen 19144 

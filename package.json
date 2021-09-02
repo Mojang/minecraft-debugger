@@ -4,17 +4,22 @@
 	"description": "Debug your JavaScript code running as part of the GameTest Framework experimental feature in Microsoft Bedrock Edition.",
 	"version": "0.1.0",
 	"publisher": "mojang-studios",
+	"author": {
+		"name": "Mojang Studios"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Mojang/minecraft-debugger.git"
+	},
+	"icon": "bedrock-icon.png",	
 	"engines": {
 		"vscode": "^1.55.0"
 	},
 	"categories": [
 		"Debuggers"
-	],
-	"private": true,
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Mojang/minecraft-debugger.git"
-	},
+	],	
+	"private": true,	
 	"activationEvents": [
 		"onDebug",
 		"onCommand:extension.minecraft-js.getPort"

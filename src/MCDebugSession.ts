@@ -6,6 +6,7 @@ import { DebugSession, InitializedEvent, Scope, Source, StackFrame, StoppedEvent
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { LogOutputEvent, LogLevel } from 'vscode-debugadapter/lib/logger';
 import { MCMessageStreamParser } from './MCMessageStreamParser';
+import { window } from 'vscode';
 import * as path from 'path';
 
 interface PendingResponse {
@@ -27,6 +28,8 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 //
 export class MCDebugSession extends DebugSession {
 	private static DEBUGGER_PROTOCOL_VERSION = 1;
+	private static CONNECTION_RETRY_ATTEMPTS = 5;
+	private static CONNECTION_RETRY_WAIT_MS = 2000;	
 
 	private _debugeeServer?: Server;		// when listening for incoming connections
 	private _connectionSocket?: Socket;
@@ -232,6 +235,7 @@ export class MCDebugSession extends DebugSession {
 	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
+		// closeSession triggers the 'close' event on the socket which will call terminateSession
 		this.closeServer();
 		this.closeSession();
 		this.sendResponse(response);
@@ -248,14 +252,16 @@ export class MCDebugSession extends DebugSession {
 			this.onDebugeeConnected(socket);
 		});
 		this._debugeeServer.listen(port);
+		this.showNotification(`Listening for debugger connections on port [${port}].`, LogLevel.Log);
 	}
 
-	//connect to Minecraft (Minecraft (debugee) is server, VSCode is client)
+	// connect to Minecraft (Minecraft (debugee) is server, VSCode is client)
 	private async connect(host: string, port: number) {
 		let socket: Socket | undefined = undefined;
 
 		// try connecting for 5 seconds
-		for (let attempt = 0; attempt < 5; attempt++) {
+		for (let attempt = 0; attempt < MCDebugSession.CONNECTION_RETRY_ATTEMPTS; attempt++) {
+			this.log(`Connecting to host [${host}] on port [${port}], attempt [${attempt+1}].`, LogLevel.Log);
 			try {
 				socket = await new Promise<Socket>((resolve, reject) => {
 					let client = createConnection({ host: host, port: port });
@@ -270,11 +276,12 @@ export class MCDebugSession extends DebugSession {
 				break;
 			}
 			catch (e) {
-				await new Promise(resolve => setTimeout(resolve, 1000));
+				await new Promise(resolve => setTimeout(resolve, MCDebugSession.CONNECTION_RETRY_WAIT_MS));
 			}
 		}
 
 		if (!socket) {
+			this.terminateSession("failed to connect debugger");
 			throw new Error(`Cannot connect to port [${port}].`);
 		}
 
@@ -295,11 +302,13 @@ export class MCDebugSession extends DebugSession {
 			this.terminateSession(e.toString());
 		});
 		socket.on('close', () => {
-			this.terminateSession('close');
+			this.terminateSession('socket closed');
 		});
 
 		// connect socket to stream parser
 		socket.pipe(socketStreamParser as any);
+
+		this.showNotification("Success! Debugger is now connected.", LogLevel.Log);
 
 		// Now that a connection is established, send this event to
 		// tell VSCode to ask Minecraft/debugee for config data (breakpoints etc).
@@ -333,6 +342,8 @@ export class MCDebugSession extends DebugSession {
 		if (!this._terminated) {
 			this._terminated = true;
 			this.sendEvent(new TerminatedEvent());
+
+			this.showNotification(`Session terminated, ${reason}.`, LogLevel.Log);
 		}
 	}
 
@@ -439,16 +450,34 @@ export class MCDebugSession extends DebugSession {
 		if (mcVer < extVer) {
 			// Minecraft protocol is behind the extension
 			let errorMessage = `Minecraft's debugger protocol [${mcVer}] is not compatible with this extension's protocol [${extVer}], please update Minecraft.`;
-			this.sendEvent(new LogOutputEvent(errorMessage, LogLevel.Error));
+			this.showNotification(errorMessage, LogLevel.Error);
 		}
 		else if (mcVer > extVer) {
 			// Extension protocol is behind Minecraft
 			let errorMessage = `This extension's protocol [${extVer}] is not compatible with Minecraft's debugger protocol [${mcVer}], please update the extension.`;
-			this.sendEvent(new LogOutputEvent(errorMessage, LogLevel.Error));
+			this.showNotification(errorMessage, LogLevel.Error);
 		}
 	}
 
 	private trackThreadChanges(threadId: number) {
 		this._threads.add(threadId);
+	}
+
+	// ------------------------------------------------------------------------
+
+	private log(message: string, logLevel: LogLevel) {
+		this.sendEvent(new LogOutputEvent(message + '\n', logLevel));
+	}
+
+	private showNotification(message: string, logLevel: LogLevel) {
+		if (logLevel === LogLevel.Log) {
+			window.showInformationMessage(message);
+		}
+		else if (logLevel === LogLevel.Warn) {
+			window.showWarningMessage(message);
+		}
+		else if (logLevel === LogLevel.Error) {
+			window.showErrorMessage(message);
+		}
 	}
 }

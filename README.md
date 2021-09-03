@@ -38,13 +38,13 @@ CheckNetIsolation.exe LoopbackExempt –a –p=S-1-15-2-1958404141-86561845-1752
 
 You will only need to run this once on your PC.
 
-2. Open the folder containing the project you want to work on - likely you should open Visual Studio Code at C:\Users\\(you)\AppData\Roaming\MinecraftPE\games\com.mojang\development_behavior_packs\\(behaviorpackname).
+2. Open the folder containing the project you want to work on - likely you should open Visual Studio Code at `%localappdata%\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\development_behavior_packs\(behaviorpackname)`.
 3. Create `launch.json` within a `.vscode` subfolder of that project folder:
 
 ```json
-{	
+{
   "version": "0.2.0",
-	"configurations": [
+  "configurations": [
     {
       "type": "minecraft-js",
       "request": "attach",
@@ -72,51 +72,59 @@ You should see your breakpoints get triggered as the code executes. You can add 
 
 ### For debugging Microsoft Bedrock Dedicated Server Edition inside Visual Studio Code
 
-1.Open the folder containing the project you want to work on - likely you should open Visual Studio Code at 
-(my Bedrock Dedicated Server path)\development_behavior_packs\\(behaviorpackname).
+By default, Bedrock Dedicated Servers are not configured to allow debug connections. To enable this debugging, you'll need to change some settings within the `server.properties` file of your Bedrock Dedicated Server.
 
+These settings configure debugging on Bedrock Dedicated Server:
+
+ * `allow-outbound-script-debugging` (true/false) - enables the /script debugger connect command. Defaults to false.
+ * `allow-inbound-script-debugging` (true false) - enables the /script debugger listen command (and the opening of ports on a server).  Defaults to false.
+ * `force-inbound-debug-port` (number) - Locks the inbound debug port to a particular port. This will set the default script debugging port and prevent a user of the `/script debugger listen` command from specifying an alternate port.
+
+1. To get started, edit `server.properties` and set `allow-inbound-script-debugging` to true.
+
+2. Open the folder containing the project you want to work on - likely you should open Visual Studio Code at `(my Bedrock Dedicated Server path)\development_behavior_packs\(behaviorpackname)`.
 
 ```json
-{	
+{  
   "version": "0.2.0",
-	"configurations": [
-		{
-			"type": "minecraft-js",
-			"request": "attach",
-			"name": "Attach to Minecraft Bedrock Dedicated Server",
-			"localRoot": "${workspaceFolder}/",
-			"port": 19144
-		}
-	]
+  "configurations": [
+    {
+      "type": "minecraft-js",
+      "request": "attach",
+      "name": "Attach to Minecraft Bedrock Dedicated Server",
+      "localRoot": "${workspaceFolder}/",
+      "port": 19144
+    }
+  ]
 }
 ```
 
-2. Create `launch.json` within a `.vscode` subfolder of that project folder:
+3. Create `launch.json` within a `.vscode` subfolder of that project folder:
 
 ```json
-{	
+{  
   "version": "0.2.0",
-	"configurations": [
-		{
-			"type": "minecraft-js",
-			"request": "attach",
-			"name": "Attach to Minecraft Bedrock Dedicated Server",
-			"localRoot": "${workspaceFolder}/",
-			"port": 19144
-		}
-	]
+  "configurations": [
+    {
+      "type": "minecraft-js",
+      "request": "attach",
+      "name": "Attach to Minecraft Bedrock Dedicated Server",
+      "localRoot": "${workspaceFolder}/",
+      "port": 19144
+    }
+  ]
 }
 ```
 
-3. Within Bedrock Dedicated Server, run the following command:
+4. Within Bedrock Dedicated Server, run the following command:
 
-```powershell
-/script debugger listen 19144 
+```
+script debugger listen 19144 
 ```
 
-4. Within Visual Studio Code, set a break point inside of your GameTest function.
-5. Hit Run | Start Debugging to put Visual Studio Code to connect to Bedrock Dedicated Server.
-6. Trigger the code (likely by running a gametest, like `/gametest run <my test name>`)
+5. Within Visual Studio Code, set a break point inside of your GameTest function.
+6. Hit Run | Start Debugging to put Visual Studio Code to connect to Bedrock Dedicated Server.
+7. Trigger the code (likely by running a gametest, like `/gametest run <my test name>`)
  
 You should see your breakpoints get triggered as the code executes. You can add watches or view locals to see more information about the state of JavaScript in your project.
 

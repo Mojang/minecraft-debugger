@@ -18,8 +18,15 @@
 	},
 	"categories": [
 		"Debuggers"
-	],	
-	"private": true,	
+	],
+	"keywords": [
+		"minecraft",
+		"javascript",
+		"bedrock",
+		"gametest",
+		"add-on"
+	],
+	"private": true,
 	"activationEvents": [
 		"onDebug",
 		"onCommand:extension.minecraft-js.getPort"

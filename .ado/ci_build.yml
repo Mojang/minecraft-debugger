@@ -1,0 +1,15 @@
+trigger:
+  branches:
+    include:
+    - main
+  tags:
+    include:
+    - v*
+
+pool:
+  vmImage: windows-latest
+
+steps:
+- template: templates/package_extension.yml
+
+- publish: $(System.DefaultWorkingDirectory)/minecraft-debugger.vsix

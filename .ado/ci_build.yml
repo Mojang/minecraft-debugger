@@ -12,4 +12,4 @@ pool:
 steps:
 - template: templates/package_extension.yml
 
-- publish: $(System.DefaultWorkingDirectory)/minecraft-debugger-js.vsix
+- publish: $(System.DefaultWorkingDirectory)/minecraft-debugger-js.vcix

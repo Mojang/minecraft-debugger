@@ -4,7 +4,7 @@ out/test/**
 src/**
 .gitignore
 .yarnrc
-azure-pipelines.yml
+.ado/**
 **/tsconfig.json
 **/.eslintrc.json
 **/*.map

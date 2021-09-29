@@ -33,7 +33,7 @@ See more information on Minecraft Bedrock Edition, GameTest, and debugging at ht
 1. If you wish to connect Minecraft Bedrock Edition client to Visual Studio Code running on the same PC (this is the most common scenario), you will need to exempt the Minecraft Bedrock Edition client from UWP loopback restrictions.  To do this, run the following from a command prompt or from the Start | Run app.
 
 ```powershell
-CheckNetIsolation.exe LoopbackExempt –a –p=S-1-15-2-1958404141-86561845-1752920682-3514627264-368642714-62675701-733520436
+CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-1958404141-86561845-1752920682-3514627264-368642714-62675701-733520436
 ```
 
 You will only need to run this once on your PC.

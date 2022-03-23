@@ -410,11 +410,11 @@ export class MCDebugSession extends DebugSession {
 	// Debugee (MC) has sent an event.
 	private handleDebugeeEvent(eventMessage: any) {
 		if (eventMessage.type === 'StoppedEvent') {
-			this.trackThreadChanges(eventMessage.thread);
+			this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
 			this.sendEvent(new StoppedEvent(eventMessage.reason, eventMessage.thread))
 		}
 		else if (eventMessage.type === 'ThreadEvent') {
-			this.trackThreadChanges(eventMessage.thread);
+			this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
 			this.sendEvent(new ThreadEvent(eventMessage.reason, eventMessage.thread));
 		}
 		else if (eventMessage.type === 'PrintEvent') {
@@ -459,8 +459,13 @@ export class MCDebugSession extends DebugSession {
 		}
 	}
 
-	private trackThreadChanges(threadId: number) {
-		this._threads.add(threadId);
+	private trackThreadChanges(reason: string, threadId: number) {
+		if (reason == 'exited') {
+			this._threads.delete(threadId);
+		}
+		else {
+			this._threads.add(threadId);
+		}		
 	}
 
 	// ------------------------------------------------------------------------

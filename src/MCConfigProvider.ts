@@ -24,6 +24,11 @@ export class MCConfigProvider implements vscode.DebugConfigurationProvider {
 			config.localRoot = "${workspaceFolder}/";
 		}
 
+		// default to local root 
+		if (!config.remoteRoot) {
+			config.remoteRoot = config.localRoot;
+		}
+
 		// if no port, then set a command string that will trigger a user input dialog
 		if (!config.port) {
 			config.inputPort = "${command:PromptForPort}";

@@ -6,6 +6,7 @@ import { DebugSession, InitializedEvent, Scope, Source, StackFrame, StoppedEvent
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { LogOutputEvent, LogLevel } from 'vscode-debugadapter/lib/logger';
 import { MCMessageStreamParser } from './MCMessageStreamParser';
+import { MCSourceMaps } from './MCSourceMaps';
 import { window } from 'vscode';
 import * as path from 'path';
 
@@ -19,6 +20,8 @@ interface PendingResponse {
 interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	mode: string;
 	localRoot: string;
+	remoteRoot: string;
+	sourceMapRoot: string;
 	host: string;
 	port: number;
 	inputPort: string;
@@ -29,13 +32,14 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 export class MCDebugSession extends DebugSession {
 	private static DEBUGGER_PROTOCOL_VERSION = 1;
 	private static CONNECTION_RETRY_ATTEMPTS = 5;
-	private static CONNECTION_RETRY_WAIT_MS = 2000;	
+	private static CONNECTION_RETRY_WAIT_MS = 2000;
 
 	private _debugeeServer?: Server;		// when listening for incoming connections
 	private _connectionSocket?: Socket;
 	private _terminated: boolean = false;
 	private _threads = new Set<number>();
 	private _requests = new Map<number, PendingResponse>();
+	private _sourceMaps: MCSourceMaps = new MCSourceMaps("", "");
 	private _localRoot: string = "";
 	private _activeThreadId: number = 0;	// the one being debugged
 
@@ -70,6 +74,8 @@ export class MCDebugSession extends DebugSession {
 	protected async attachRequest(response: DebugProtocol.AttachResponse, args: IAttachRequestArguments, request?: DebugProtocol.Request) {
 		// capture arguments from launch.json
 		this._localRoot = path.normalize(args.localRoot);
+		// init source maps
+		this._sourceMaps = new MCSourceMaps(args.localRoot, args.remoteRoot, args.sourceMapRoot);
 
 		this.closeSession();
 
@@ -80,20 +86,26 @@ export class MCDebugSession extends DebugSession {
 			return;
 		}
 
-		// listen or connect (default), depending on mode.
-		// attach makes more sense to use connect,
-		// but some MC platforms require using listen.
-		if (args.mode === 'listen') {
-			await this.listen(port);
-		} else {
-			await this.connect(host, port);
+		// Listen or connect (default), depending on mode.
+		// Attach makes more sense to use connect, but some MC platforms require using listen.
+		try {
+			if (args.mode === 'listen') {
+				await this.listen(port);
+			} else {
+				await this.connect(host, port);
+			}
+		}
+		catch (e) {
+			this.log((e as Error).message, LogLevel.Error);
+			this.sendErrorResponse(response, 1004, `Failed to attach debugger to Minecraft.`);
+			return;
 		}
 
 		// tell VSCode that attach is complete
 		this.sendResponse(response);
 	}
 
-	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments, request?: DebugProtocol.Request): void {
+	protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments, request?: DebugProtocol.Request) {
 		response.body = {
 			breakpoints: []
 		};
@@ -103,19 +115,46 @@ export class MCDebugSession extends DebugSession {
 			return;
 		}
 
-		let sourcePath = path.normalize(args.source.path);
-		let localRelativePath = path.normalize(path.relative(this._localRoot, sourcePath));
+		let originalLocalAbsolutePath = path.normalize(args.source.path);
+
+		const originalBreakpoints = args.breakpoints || [];
+		const generatedBreakpoints : DebugProtocol.SourceBreakpoint[] = [];
+		let generatedRemoteLocalPath = undefined;
+
+		try {
+			// first get generated remote file path, will throw if fails
+			generatedRemoteLocalPath = await this._sourceMaps.getGeneratedRemoteRelativePath(originalLocalAbsolutePath);
+
+			// for all breakpoint positions set on the source file, get generated/mapped positions
+			if (originalBreakpoints.length) {
+				for (let originalBreakpoint of originalBreakpoints) {
+					const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
+						source: originalLocalAbsolutePath,
+						column: originalBreakpoint.column || 0,
+						line: originalBreakpoint.line
+					});
+					generatedBreakpoints.push({
+						line: generatedPosition.line || 0,
+						column: 0
+					});
+				}
+			}
+		}
+		catch (e) {
+			this.log((e as Error).message, LogLevel.Error);
+			this.sendErrorResponse(response, 1002, `Failed to resolve breakpoint for ${originalLocalAbsolutePath}.`);
+			return;
+		}
 
 		const envelope = {
 			type: 'breakpoints',
 			breakpoints: {
-				path: localRelativePath,
-				breakpoints: args.breakpoints
+				path: generatedRemoteLocalPath,
+				breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined
 			}
 		};
 
 		this.sendDebuggeeMessage(envelope);
-
 		this.sendResponse(response);
 	}
 
@@ -149,11 +188,21 @@ export class MCDebugSession extends DebugSession {
 
 		const stackFrames: StackFrame[] = [];
 		for (const { id, name, filename, line, column } of stacksBody) {
-
-			const localPath = path.join(this._localRoot, filename);
-			const source = new Source(path.basename(filename), this.convertClientPathToDebugger(localPath));
-
-			stackFrames.push(new StackFrame(id, name, source, line || 0, column || 0));
+			try {
+				const originalLocation = await this._sourceMaps.getOriginalPositionFor({
+					source: filename,
+					line: line || 0,
+					column: column || 0
+				});
+				let localOriginalAbsolutePath = path.join(this._localRoot, originalLocation.source);
+				const source = new Source(path.basename(originalLocation.source), localOriginalAbsolutePath);
+				stackFrames.push(new StackFrame(id, name, source, originalLocation.line, originalLocation.column));
+			}
+			catch (e) {
+				this.log((e as Error).message, LogLevel.Error);
+				this.sendErrorResponse(response, 1003, `Failed to get stack trace for ${filename} at line ${line}.`);
+				return;
+			}
 		}
 
 		const totalFrames = stacksBody.length;
@@ -282,7 +331,7 @@ export class MCDebugSession extends DebugSession {
 
 		if (!socket) {
 			this.terminateSession("failed to connect debugger");
-			throw new Error(`Cannot connect to port [${port}].`);
+			throw new Error(`Failed to connect to host [${host}] on port [${port}].`);
 		}
 
 		this.onDebugeeConnected(socket);
@@ -465,7 +514,7 @@ export class MCDebugSession extends DebugSession {
 		}
 		else {
 			this._threads.add(threadId);
-		}		
+		}
 	}
 
 	// ------------------------------------------------------------------------

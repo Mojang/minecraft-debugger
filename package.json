@@ -2,7 +2,7 @@
 	"name": "minecraft-debugger",
 	"displayName": "Minecraft Bedrock Edition Debugger",
 	"description": "Debug your JavaScript code running as part of the GameTest Framework experimental feature in Minecraft Bedrock Edition.",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"publisher": "mojang-studios",
 	"author": {
 		"name": "Mojang Studios"
@@ -64,6 +64,15 @@
 								"description": "The local root of the Minecraft Add-On.",
 								"default": "${workspaceFolder}/"
 							},
+							"remoteRoot": {
+								"type": "string",
+								"description": "The remote root of the Minecraft Add-On."								
+							},
+							"sourceMapRoot": {
+								"type": "string",
+								"description": "The local output folder for source maps.",
+								"default": "{workspaceFolder}/"
+							},
 							"host": {
 								"type": "string",
 								"description": "The host address the extension will connect to.",
@@ -122,6 +131,7 @@
 		"package": "vsce package -o minecraft-debugger-js.vsix"
 	},
 	"dependencies": {
+		"source-map": "^0.7.3",
 		"stream-parser": "^0.3.1",
 		"vscode-debugadapter": "1.47.0"
 	},

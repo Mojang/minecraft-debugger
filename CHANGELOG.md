@@ -8,3 +8,6 @@
 
 - Fixed bug where stale JavaScript threads were not being removed from the UI.
 
+## Version 0.2.0 (April 2022)
+
+- Support for TypeScript debugging.

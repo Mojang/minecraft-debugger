@@ -12,7 +12,7 @@
 		"type": "git",
 		"url": "https://github.com/Mojang/minecraft-debugger.git"
 	},
-	"icon": "bedrock-icon.png",	
+	"icon": "bedrock-icon.png",
 	"engines": {
 		"vscode": "^1.55.0"
 	},
@@ -64,13 +64,9 @@
 								"description": "The local root of the Minecraft Add-On.",
 								"default": "${workspaceFolder}/"
 							},
-							"remoteRoot": {
-								"type": "string",
-								"description": "The remote root of the Minecraft Add-On."								
-							},
 							"sourceMapRoot": {
 								"type": "string",
-								"description": "The local output folder for source maps.",
+								"description": "The location of the source maps.",
 								"default": "{workspaceFolder}/"
 							},
 							"host": {

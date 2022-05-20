@@ -75,7 +75,7 @@ export class MCDebugSession extends DebugSession {
 		// capture arguments from launch.json
 		this._localRoot = path.normalize(args.localRoot);
 		// init source maps
-		this._sourceMaps = new MCSourceMaps(args.localRoot, args.remoteRoot, args.sourceMapRoot);
+		this._sourceMaps = new MCSourceMaps(args.localRoot, args.sourceMapRoot);
 
 		this.closeSession();
 
@@ -194,8 +194,7 @@ export class MCDebugSession extends DebugSession {
 					line: line || 0,
 					column: column || 0
 				});
-				let localOriginalAbsolutePath = path.join(this._localRoot, originalLocation.source);
-				const source = new Source(path.basename(originalLocation.source), localOriginalAbsolutePath);
+				const source = new Source(path.basename(originalLocation.source), originalLocation.source);
 				stackFrames.push(new StackFrame(id, name, source, originalLocation.line, originalLocation.column));
 			}
 			catch (e) {

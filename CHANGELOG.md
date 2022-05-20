@@ -11,3 +11,7 @@
 ## Version 0.2.0 (April 2022)
 
 - Support for TypeScript debugging.
+
+## Version 0.3.0 (April 2022)
+
+- Better TypeScript support.

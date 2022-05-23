@@ -45,11 +45,11 @@ class SourceMapCache {
 				let mapBuffer = fs.readFileSync(mapFullPath);
 				let mapJson = JSON.parse(mapBuffer.toString());
 				let sourceMapConsumer = await new SourceMapConsumer(mapJson);
+				// map has relative path to generated source, resolve for absolute path
+				let generatedSourceAbsolutePath = path.resolve(path.dirname(mapFullPath), sourceMapConsumer.file);
 				for (let originalSource of sourceMapConsumer.sources) {
 					// map has relative path back to original source, resolve for absolute path
 					let originalSourceAbsolutePath = path.resolve(this._sourceMapRoot, originalSource);
-					// map has relative path to generated source, resolve for absolute path
-					let generatedSourceAbsolutePath = path.resolve(path.dirname(mapFullPath), sourceMapConsumer.file);
 					let mapInfo: MapInfo = {
 						originalSourceRelativePath: originalSource, // retain original relative path, required for future lookups into sourcemap
 						generatedSourceAbsolutePath: generatedSourceAbsolutePath,
@@ -57,7 +57,9 @@ class SourceMapCache {
 					};
 					// create lookups using absolute paths of original and generated sources to map
 					this._originalSourcePathToMapLookup.set(originalSourceAbsolutePath.toLowerCase(), mapInfo);
-					this._generatedSourcePathToMapLookup.set(generatedSourceAbsolutePath.toLowerCase(), mapInfo);
+					if (!this._generatedSourcePathToMapLookup.has(generatedSourceAbsolutePath.toLowerCase())) {
+						this._generatedSourcePathToMapLookup.set(generatedSourceAbsolutePath.toLowerCase(), mapInfo);
+					}
 				}
 			}
 		}

@@ -66,8 +66,11 @@
 							},
 							"sourceMapRoot": {
 								"type": "string",
-								"description": "The location of the source maps.",
-								"default": "{workspaceFolder}/"
+								"description": "The location of the source maps."
+							},
+							"generatedSourceRoot": {
+								"type": "string",
+								"description": "The location of the generated source files (js). Not required if same as source maps."
 							},
 							"host": {
 								"type": "string",

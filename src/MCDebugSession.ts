@@ -7,7 +7,7 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { LogOutputEvent, LogLevel } from 'vscode-debugadapter/lib/logger';
 import { MCMessageStreamParser } from './MCMessageStreamParser';
 import { MCSourceMaps } from './MCSourceMaps';
-import { window } from 'vscode';
+import { FileSystemWatcher, window, workspace } from 'vscode';
 import * as path from 'path';
 
 interface PendingResponse {
@@ -20,7 +20,7 @@ interface PendingResponse {
 interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	mode: string;
 	localRoot: string;
-	remoteRoot: string;
+	generatedSourceRoot: string;
 	sourceMapRoot: string;
 	host: string;
 	port: number;
@@ -39,8 +39,8 @@ export class MCDebugSession extends DebugSession {
 	private _terminated: boolean = false;
 	private _threads = new Set<number>();
 	private _requests = new Map<number, PendingResponse>();
-	private _sourceMaps: MCSourceMaps = new MCSourceMaps("", "");
-	private _localRoot: string = "";
+	private _sourceMaps: MCSourceMaps = new MCSourceMaps("");
+	private _fileWatcher?: FileSystemWatcher;
 	private _activeThreadId: number = 0;	// the one being debugged
 
 	public constructor() {
@@ -72,11 +72,6 @@ export class MCDebugSession extends DebugSession {
 
 	// VSCode wants to attach to a debugee (MC), create socket connection on specified port
 	protected async attachRequest(response: DebugProtocol.AttachResponse, args: IAttachRequestArguments, request?: DebugProtocol.Request) {
-		// capture arguments from launch.json
-		this._localRoot = path.normalize(args.localRoot);
-		// init source maps
-		this._sourceMaps = new MCSourceMaps(args.localRoot, args.remoteRoot, args.sourceMapRoot);
-
 		this.closeSession();
 
 		const host = args.host || 'localhost';
@@ -100,6 +95,12 @@ export class MCDebugSession extends DebugSession {
 			this.sendErrorResponse(response, 1004, `Failed to attach debugger to Minecraft.`);
 			return;
 		}
+
+		// init source maps
+		this._sourceMaps = new MCSourceMaps(args.localRoot, args.sourceMapRoot, args.generatedSourceRoot);
+
+		// watch for source map changes
+		this.createSourceMapFileWatcher(args.sourceMapRoot);
 
 		// tell VSCode that attach is complete
 		this.sendResponse(response);
@@ -194,8 +195,7 @@ export class MCDebugSession extends DebugSession {
 					line: line || 0,
 					column: column || 0
 				});
-				let localOriginalAbsolutePath = path.join(this._localRoot, originalLocation.source);
-				const source = new Source(path.basename(originalLocation.source), localOriginalAbsolutePath);
+				const source = new Source(path.basename(originalLocation.source), originalLocation.source);
 				stackFrames.push(new StackFrame(id, name, source, originalLocation.line, originalLocation.column));
 			}
 			catch (e) {
@@ -380,6 +380,11 @@ export class MCDebugSession extends DebugSession {
 			this._connectionSocket.destroy();
 		}
 		this._connectionSocket = undefined;
+
+		if (this._fileWatcher) {
+			this._fileWatcher.dispose();
+			this._fileWatcher = undefined;
+		}
 	}
 
 	// close and terminate session (could be from debugee request)
@@ -439,7 +444,7 @@ export class MCDebugSession extends DebugSession {
 		// json = 1 line json + new line
 		let messageLength = jsonBuffer.byteLength + 1;
 		let length = '00000000' + messageLength.toString(16) + '\n';
-		length = length.substr(length.length - 9);
+		length = length.substring(length.length - 9);
 		let lengthBuffer = Buffer.from(length);
 		let newline = Buffer.from('\n');
 		let buffer = Buffer.concat([lengthBuffer, jsonBuffer, newline]);
@@ -514,6 +519,19 @@ export class MCDebugSession extends DebugSession {
 		}
 		else {
 			this._threads.add(threadId);
+		}
+	}
+
+	private createSourceMapFileWatcher(sourceMapRoot?: string) {
+		if (this._fileWatcher) {
+			this._fileWatcher.dispose();
+			this._fileWatcher = undefined
+		}
+		if (sourceMapRoot) {
+			this._fileWatcher = workspace.createFileSystemWatcher('**/*.{map}', false, false, false);
+			this._fileWatcher.onDidChange(uri => { this._sourceMaps.reset() });
+			this._fileWatcher.onDidCreate(uri => { this._sourceMaps.reset() });
+			this._fileWatcher.onDidDelete(uri => { this._sourceMaps.reset() });
 		}
 	}
 

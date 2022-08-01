@@ -4,6 +4,7 @@
 import { BasicSourceMapConsumer, MappedPosition, NullablePosition, SourceMapConsumer } from 'source-map';
 import * as fs from 'fs';
 import * as path from 'path';
+import { normalizePath, normalizePathForRemote, removeRemotePathPrefix, addRemotePathPrefix } from './Utils';
 
 interface MapInfo {
 	mapAbsoluteDirectory: string			// full path to parent folder of map file, needed when combining with relative paths within map
@@ -12,9 +13,20 @@ interface MapInfo {
 	sourceMap: BasicSourceMapConsumer;		// the source map
 }
 
-function sanitizeDelimitersForRemote(filePath: string) {
-	// remote debugger expects forward slashes on all platforms
-	return filePath.replace(/\\/g,"/");
+class MapLookup {
+	private _sourceToMapInfo = new Map<string, MapInfo>();
+	public get(sourcePath: string) {
+		return this._sourceToMapInfo.get(normalizePath(sourcePath));
+	}
+	public set(sourcePath: string, mapInfo: MapInfo) {
+		this._sourceToMapInfo.set(normalizePath(sourcePath), mapInfo);
+	}
+	public has(sourcePath: string) {
+		return this._sourceToMapInfo.has(normalizePath(sourcePath));
+	}
+	public clear() {
+		this._sourceToMapInfo.clear();
+	}
 }
 
 // Load and cache source map files
@@ -23,8 +35,8 @@ class SourceMapCache {
 	private _sourceMapRoot?: string;
 	public _generatedSourceRoot?: string;
 	private _mapsLoaded: boolean = false;
-	public _originalSourcePathToMapLookup = new Map<string, MapInfo>();
-	public _generatedSourcePathToMapLookup = new Map<string, MapInfo>();
+	public _originalSourcePathToMapLookup = new MapLookup();
+	public _generatedSourcePathToMapLookup = new MapLookup();
 
 	public constructor(sourceMapRoot?: string, generatedSourceRoot?: string) {
 		this._sourceMapRoot = (sourceMapRoot) ? path.normalize(sourceMapRoot) : undefined;
@@ -39,12 +51,12 @@ class SourceMapCache {
 
 	public async getMapFromOriginalSource(originalSource: string) {
 		await this._loadSourceMaps();
-		return this._originalSourcePathToMapLookup.get(path.normalize(originalSource));
+		return this._originalSourcePathToMapLookup.get(originalSource);
 	}
 
 	public async getMapFromGeneratedSource(generatedSource: string) {
 		await this._loadSourceMaps();
-		return this._generatedSourcePathToMapLookup.get(path.normalize(generatedSource));
+		return this._generatedSourcePathToMapLookup.get(generatedSource);
 	}
 
 	private async _loadSourceMaps() {
@@ -74,7 +86,7 @@ class SourceMapCache {
 				for (let originalSource of sourceMapConsumer.sources) {
 
 					// generate relative path from map to ts file
-					let originalSourceRelative = sanitizeDelimitersForRemote(originalSource);
+					let originalSourceRelative = normalizePathForRemote(originalSource);
 					// map has relative path back to original source, resolve for absolute path
 					let originalSourceAbsolutePath = path.resolve(this._sourceMapRoot, originalSourceRelative);
 
@@ -87,11 +99,11 @@ class SourceMapCache {
 					};
 
 					// create lookups using absolute paths of original and generated sources to map
-					this._originalSourcePathToMapLookup.set(originalSourceAbsolutePath.toLowerCase(), mapInfo);
+					this._originalSourcePathToMapLookup.set(originalSourceAbsolutePath, mapInfo);
 
 					// multiple original sources can end up in a single generated file, but only 1 generated file will exist for a given map
-					if (!this._generatedSourcePathToMapLookup.has(generatedSourceRelativePath.toLowerCase())) {
-						this._generatedSourcePathToMapLookup.set(generatedSourceRelativePath.toLowerCase(), mapInfo);
+					if (!this._generatedSourcePathToMapLookup.has(generatedSourceRelativePath)) {
+						this._generatedSourcePathToMapLookup.set(generatedSourceRelativePath, mapInfo);
 					}
 				}
 			}
@@ -122,7 +134,6 @@ class SourceMapCache {
 // Source map manager, responsible for loading source maps and translating
 // from original to generated positions and back again.
 export class MCSourceMaps {
-	private REMOTE_SOURCE_PATH_PREFIX = "scripts"; // TODO: remove me
 	private _localRoot: string;
 	private _sourceMapRoot?: string;
 	private _sourceMapCache: SourceMapCache;
@@ -141,12 +152,12 @@ export class MCSourceMaps {
 		let mapInfo = await this._sourceMapCache.getMapFromOriginalSource(originalSource);
 		if (!mapInfo || !this._sourceMapRoot) {
 			// no source map, convert to remote relative path suitable for debugger.
-			return sanitizeDelimitersForRemote(path.relative(this._localRoot, originalSource));
+			return normalizePathForRemote(path.relative(this._localRoot, originalSource));
 		}
 
 		// given absolute path to generated source, convert to a remote relative path the debugger understands
-		let generatedRemoteRelativePath = this._addRemotePathPrefix_HACK(mapInfo.generatedSourceRelativePath);
-		return sanitizeDelimitersForRemote(generatedRemoteRelativePath);
+		let generatedRemoteRelativePath = addRemotePathPrefix(mapInfo.generatedSourceRelativePath);
+		return normalizePathForRemote(generatedRemoteRelativePath);
 	}
 
 	public async getGeneratedPositionFor(originalPosition: MappedPosition): Promise<NullablePosition> {
@@ -179,7 +190,7 @@ export class MCSourceMaps {
 			return originalLocalRelativePosition;
 		}
 
-		let mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(this._removeRemotePathPrefix_HACK(generatedPosition.source));
+		let mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(removeRemotePathPrefix(generatedPosition.source));
 		if (mapInfo) {
 			let originalPos = mapInfo.sourceMap.originalPositionFor({
 				column: generatedPosition.column,
@@ -199,17 +210,5 @@ export class MCSourceMaps {
 		}
 
 		throw new Error(`Could not map original position for ${generatedPosition.source} at line ${generatedPosition.line}.`);
-	}
-
-	// TODO: remove this after fixing internal root path of MC scripts
-	private _removeRemotePathPrefix_HACK(filePath: string) {
-		// remove the required "/scripts/" prefix from the generated sources when coming back from debugger
-		return filePath.split('/').slice(1).join('/');
-	}
-
-	// TODO: remove this
-	private _addRemotePathPrefix_HACK(filePath: string) {
-		// required to prepend "/scripts/" to generated sources for remote debugger
-		return path.join(this.REMOTE_SOURCE_PATH_PREFIX, filePath);
 	}
 }

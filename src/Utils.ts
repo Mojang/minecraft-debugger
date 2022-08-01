@@ -1,0 +1,49 @@
+
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
+import * as os from 'os';
+import * as path from 'path';
+
+const enum CharCode {
+	Colon = 58,
+	A = 65,
+	Z = 90,
+	a = 97,
+	z = 122
+}
+
+function isWindowsDriveLetter(char0: number): boolean {
+	return char0 >= CharCode.A && char0 <= CharCode.Z || char0 >= CharCode.a && char0 <= CharCode.z;
+}
+
+function hasDriveLetter(path: string, isWindowsOS: boolean): boolean {
+	if (isWindowsOS) {
+		return isWindowsDriveLetter(path.charCodeAt(0)) && path.charCodeAt(1) === CharCode.Colon;
+	}
+	return false;
+}
+
+export function normalizePath(filePath: string): string {	
+	if (hasDriveLetter(filePath, os.type() == 'Windows_NT')) {
+		return path.normalize(filePath.charAt(0).toUpperCase() + filePath.slice(1));
+	}
+    return path.normalize(filePath);
+}
+
+export function normalizePathForRemote(filePath: string) {
+	// remote debugger expects forward slashes on all platforms
+	return filePath.replace(/\\/g,"/");
+}
+
+// TODO: remove this after fixing internal root path of MC scripts
+export function removeRemotePathPrefix(filePath: string) {
+    // remove the required "/scripts/" prefix from the generated sources when coming back from debugger
+    return filePath.split('/').slice(1).join('/');
+}
+
+// TODO: remove this
+export function addRemotePathPrefix(filePath: string) {
+     const REMOTE_SOURCE_PATH_PREFIX = "scripts";
+    // required to prepend "/scripts/" to generated sources for remote debugger
+    return path.join(REMOTE_SOURCE_PATH_PREFIX, filePath);
+}

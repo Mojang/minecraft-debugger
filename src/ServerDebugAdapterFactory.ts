@@ -3,11 +3,11 @@
 
 import * as Net from 'net';
 import * as vscode from 'vscode';
-import { MCDebugSession } from './MCDebugSession';
+import { Session } from './Session';
 
 // Factory for creating a Debug Adapter that runs as a server inside the extension and communicates via a socket.
 //
-export class MCServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
+export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
 	private server?: Net.Server;
 
@@ -15,7 +15,7 @@ export class MCServerDebugAdapterFactory implements vscode.DebugAdapterDescripto
 		if (!this.server) {
 			// start listening on a random port
 			this.server = Net.createServer(socket => {
-				const session = new MCDebugSession();
+				const session = new Session();
 				session.setRunAsServer(true);
 				session.start(socket as NodeJS.ReadableStream, socket);
 			}).listen(0);

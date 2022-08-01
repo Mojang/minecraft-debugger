@@ -5,8 +5,8 @@ import { createConnection, Server, Socket } from 'net';
 import { DebugSession, InitializedEvent, Scope, Source, StackFrame, StoppedEvent, TerminatedEvent, Thread, ThreadEvent, Variable } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { LogOutputEvent, LogLevel } from 'vscode-debugadapter/lib/logger';
-import { MCMessageStreamParser } from './MCMessageStreamParser';
-import { MCSourceMaps } from './MCSourceMaps';
+import { MessageStreamParser } from './MessageStreamParser';
+import { SourceMaps } from './SourceMaps';
 import { FileSystemWatcher, window, workspace } from 'vscode';
 import * as path from 'path';
 
@@ -29,7 +29,7 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 
 // The Debug Adapter for 'minecraft-js'
 //
-export class MCDebugSession extends DebugSession {
+export class Session extends DebugSession {
 	private static DEBUGGER_PROTOCOL_VERSION = 1;
 	private static CONNECTION_RETRY_ATTEMPTS = 5;
 	private static CONNECTION_RETRY_WAIT_MS = 2000;
@@ -39,7 +39,7 @@ export class MCDebugSession extends DebugSession {
 	private _terminated: boolean = false;
 	private _threads = new Set<number>();
 	private _requests = new Map<number, PendingResponse>();
-	private _sourceMaps: MCSourceMaps = new MCSourceMaps("");
+	private _sourceMaps: SourceMaps = new SourceMaps("");
 	private _fileWatcher?: FileSystemWatcher;
 	private _activeThreadId: number = 0;	// the one being debugged
 
@@ -97,7 +97,7 @@ export class MCDebugSession extends DebugSession {
 		}
 
 		// init source maps
-		this._sourceMaps = new MCSourceMaps(args.localRoot, args.sourceMapRoot, args.generatedSourceRoot);
+		this._sourceMaps = new SourceMaps(args.localRoot, args.sourceMapRoot, args.generatedSourceRoot);
 
 		// watch for source map changes
 		this.createSourceMapFileWatcher(args.sourceMapRoot);
@@ -309,7 +309,7 @@ export class MCDebugSession extends DebugSession {
 		let socket: Socket | undefined = undefined;
 
 		// try connecting for 5 seconds
-		for (let attempt = 0; attempt < MCDebugSession.CONNECTION_RETRY_ATTEMPTS; attempt++) {
+		for (let attempt = 0; attempt < Session.CONNECTION_RETRY_ATTEMPTS; attempt++) {
 			this.log(`Connecting to host [${host}] on port [${port}], attempt [${attempt+1}].`, LogLevel.Log);
 			try {
 				socket = await new Promise<Socket>((resolve, reject) => {
@@ -325,7 +325,7 @@ export class MCDebugSession extends DebugSession {
 				break;
 			}
 			catch (e) {
-				await new Promise(resolve => setTimeout(resolve, MCDebugSession.CONNECTION_RETRY_WAIT_MS));
+				await new Promise(resolve => setTimeout(resolve, Session.CONNECTION_RETRY_WAIT_MS));
 			}
 		}
 
@@ -341,7 +341,7 @@ export class MCDebugSession extends DebugSession {
 		this._connectionSocket = socket;
 
 		// create socket stream parser and setup event handlers
-		let socketStreamParser = new MCMessageStreamParser();
+		let socketStreamParser = new MessageStreamParser();
 		socketStreamParser.on('message', (envelope: any) => {
 			this.receiveDebugeeMessage(envelope);
 		});
@@ -435,7 +435,7 @@ export class MCDebugSession extends DebugSession {
 			return;
 		}
 
-		envelope.version = MCDebugSession.DEBUGGER_PROTOCOL_VERSION;
+		envelope.version = Session.DEBUGGER_PROTOCOL_VERSION;
 
 		let json = JSON.stringify(envelope);
 		let jsonBuffer = Buffer.from(json);
@@ -500,7 +500,7 @@ export class MCDebugSession extends DebugSession {
 
 	private handleProtocolEvent(eventMessage: any) {
 		let mcVer = eventMessage.version;
-		let extVer = MCDebugSession.DEBUGGER_PROTOCOL_VERSION;
+		let extVer = Session.DEBUGGER_PROTOCOL_VERSION;
 		if (mcVer < extVer) {
 			// Minecraft protocol is behind the extension
 			let errorMessage = `Minecraft's debugger protocol [${mcVer}] is not compatible with this extension's protocol [${extVer}], please update Minecraft.`;

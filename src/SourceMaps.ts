@@ -133,7 +133,7 @@ class SourceMapCache {
 
 // Source map manager, responsible for loading source maps and translating
 // from original to generated positions and back again.
-export class MCSourceMaps {
+export class SourceMaps {
 	private _localRoot: string;
 	private _sourceMapRoot?: string;
 	private _sourceMapCache: SourceMapCache;

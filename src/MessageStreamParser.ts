@@ -8,7 +8,7 @@ const Transform = require('stream').Transform;
 // Parses messages to json as they arrive from debugee,
 // then raises them as events for consumption by the DA.
 //
-export class MCMessageStreamParser extends Transform {
+export class MessageStreamParser extends Transform {
 	constructor() {
 		super();
 		this._bytes(9, this.onLength);
@@ -27,4 +27,4 @@ export class MCMessageStreamParser extends Transform {
 	}
 }
 
-Parser(MCMessageStreamParser.prototype);
+Parser(MessageStreamParser.prototype);

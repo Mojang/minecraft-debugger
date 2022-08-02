@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 // Intercepts the launch.json configuration used to launch the debug session type 'minecraft-js'
 // Custom fields specified in package.json.
 //
-export class MCConfigProvider implements vscode.DebugConfigurationProvider {
+export class ConfigProvider implements vscode.DebugConfigurationProvider {
 
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
 

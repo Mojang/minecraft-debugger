@@ -2,8 +2,8 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
-import { MCConfigProvider } from './MCConfigProvider'
-import { MCServerDebugAdapterFactory } from './MCServerDebugAdapterFactory'
+import { ConfigProvider } from './ConfigProvider'
+import { ServerDebugAdapterFactory } from './ServerDebugAdapterFactory'
 
 // called when extension is activated
 //
@@ -18,11 +18,11 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	// register a configuration provider for the 'minecraft-js' debug type
-	const configProvider = new MCConfigProvider();
+	const configProvider = new ConfigProvider();
 	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider("minecraft-js", configProvider));
 
 	// register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
-	let descriptorFactory = new MCServerDebugAdapterFactory();
+	let descriptorFactory = new ServerDebugAdapterFactory();
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
 
 	if ('dispose' in descriptorFactory) {

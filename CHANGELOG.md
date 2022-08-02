@@ -15,3 +15,7 @@
 ## Version 0.3.0 (April 2022)
 
 - Better TypeScript support.
+
+## Version 0.3.1 (August 2022)
+
+- Fix bug in source path comparison on Windows due to drive letter capitalization.

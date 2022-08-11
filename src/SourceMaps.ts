@@ -118,9 +118,6 @@ class SourceMapCache {
 					if (!this._generatedSourcePathToMapLookup.has(generatedSourceRelativePath)) {
 						this._generatedSourcePathToMapLookup.set(generatedSourceRelativePath, mapInfo);
 					}
-					else {
-						console.log('Index are getting off here');
-					}
 				}
 			}
 		}
@@ -195,6 +192,15 @@ export class SourceMaps {
 			bias: SourceMapConsumer.LEAST_UPPER_BOUND
 		});
 
+		if (generatedPosition.line === null) {
+			generatedPosition = mapInfo.sourceMap.generatedPositionFor({
+				source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
+				line: originalPosition.line,
+				column: originalPosition.column,
+				bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+			});
+		}
+
 		return generatedPosition;
 	}
 
@@ -213,6 +219,14 @@ export class SourceMaps {
 				line: generatedPosition.line,
 				bias: SourceMapConsumer.LEAST_UPPER_BOUND
 			});
+
+			if (originalPos.line === null) {
+				originalPos = mapInfo.sourceMap.originalPositionFor({
+					line: generatedPosition.line,
+					column: generatedPosition.column,
+					bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+				});
+			}
 
 			if (originalPos.line !== null && originalPos.column !== null && originalPos.source !== null) {
 				// combine directory of map and relative path from map to .ts to arrive at absolute path of .ts

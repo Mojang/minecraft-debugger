@@ -11,6 +11,8 @@ interface MapInfo {
 	originalSourceRelativePath: string;		// original source ts that generated the js, must match path found in map
 	generatedSourceRelativePath: string;	// relative path to the local generated js file
 	sourceMap: BasicSourceMapConsumer;		// the source map
+	sourceAbsolutePath: string;				// the absolute path to the source file
+	preferAbsolute: boolean;				// if true, use absolute paths as that is what the source map contained
 }
 
 class MapLookup {
@@ -84,18 +86,29 @@ class SourceMapCache {
 
 				// generate lookup tables for source maps, original to remote and remote to original
 				for (let originalSource of sourceMapConsumer.sources) {
-
-					// generate relative path from map to ts file
-					let originalSourceRelative = normalizePathForRemote(originalSource);
-					// map has relative path back to original source, resolve for absolute path
-					let originalSourceAbsolutePath = path.resolve(this._sourceMapRoot, originalSourceRelative);
+					let originalSourceAbsolutePath: string;
+					let originalSourceRelative: string;
+					let preferAbsolute = false;
+					if (path.isAbsolute(originalSource)) {
+						// we have an absolute path already, so generate a relative path to the current dir
+						originalSourceAbsolutePath = originalSource;
+						originalSourceRelative = path.relative(this._sourceMapRoot, originalSourceAbsolutePath);
+						preferAbsolute = true;
+					} else {
+						// generate relative path from map to ts file
+						originalSourceRelative = normalizePathForRemote(originalSource);
+						// map has relative path back to original source, resolve for absolute path
+						originalSourceAbsolutePath = path.resolve(this._sourceMapRoot, originalSourceRelative);
+					}
 
 					// collect all relevant path info, used for resolving original->generated and generated->original
 					let mapInfo: MapInfo = {
 						mapAbsoluteDirectory: path.dirname(mapFullPath),
 						originalSourceRelativePath: originalSourceRelative,
 						generatedSourceRelativePath: generatedSourceRelativePath,
-						sourceMap: sourceMapConsumer
+						sourceMap: sourceMapConsumer,
+						sourceAbsolutePath: originalSourceAbsolutePath,
+						preferAbsolute
 					};
 
 					// create lookups using absolute paths of original and generated sources to map
@@ -173,11 +186,20 @@ export class SourceMaps {
 
 		// use the map to get the generated source (js) position using original source path (a relative path to the map)
 		let generatedPosition = mapInfo.sourceMap.generatedPositionFor({
-			source: mapInfo.originalSourceRelativePath,
+			source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
 			line: originalPosition.line,
 			column: originalPosition.column,
 			bias: SourceMapConsumer.LEAST_UPPER_BOUND
 		});
+
+		if (generatedPosition.line === null) {
+			generatedPosition = mapInfo.sourceMap.generatedPositionFor({
+				source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
+				line: originalPosition.line,
+				column: originalPosition.column,
+				bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+			});
+		}
 
 		return generatedPosition;
 	}
@@ -197,6 +219,14 @@ export class SourceMaps {
 				line: generatedPosition.line,
 				bias: SourceMapConsumer.LEAST_UPPER_BOUND
 			});
+
+			if (originalPos.line === null) {
+				originalPos = mapInfo.sourceMap.originalPositionFor({
+					line: generatedPosition.line,
+					column: generatedPosition.column,
+					bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+				});
+			}
 
 			if (originalPos.line !== null && originalPos.column !== null && originalPos.source !== null) {
 				// combine directory of map and relative path from map to .ts to arrive at absolute path of .ts

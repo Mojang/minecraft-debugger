@@ -19,3 +19,7 @@
 ## Version 0.3.1 (August 2022)
 
 - Fix bug in source path comparison on Windows due to drive letter capitalization.
+
+## Version 0.4.0 (August 2022)
+
+- Add support for source maps that contain absolute paths.

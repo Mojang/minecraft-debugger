@@ -62,7 +62,7 @@
 							"localRoot": {
 								"type": "string",
 								"description": "The local root of the Minecraft Add-On scripts folder.",
-								"default": "${workspaceFolder}/scripts"
+								"default": "${workspaceFolder}/scripts/"
 							},
 							"sourceMapRoot": {
 								"type": "string",

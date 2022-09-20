@@ -2,9 +2,9 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { BasicSourceMapConsumer, MappedPosition, NullablePosition, SourceMapConsumer } from 'source-map';
+import { normalizePath, normalizePathForRemote } from './Utils';
 import * as fs from 'fs';
 import * as path from 'path';
-import { normalizePath, normalizePathForRemote, removeRemotePathPrefix, addRemotePathPrefix } from './Utils';
 
 interface MapInfo {
 	mapAbsoluteDirectory: string			// full path to parent folder of map file, needed when combining with relative paths within map
@@ -169,8 +169,7 @@ export class SourceMaps {
 		}
 
 		// given absolute path to generated source, convert to a remote relative path the debugger understands
-		let generatedRemoteRelativePath = addRemotePathPrefix(mapInfo.generatedSourceRelativePath);
-		return normalizePathForRemote(generatedRemoteRelativePath);
+		return normalizePathForRemote(mapInfo.generatedSourceRelativePath);
 	}
 
 	public async getGeneratedPositionFor(originalPosition: MappedPosition): Promise<NullablePosition> {
@@ -212,7 +211,7 @@ export class SourceMaps {
 			return originalLocalRelativePosition;
 		}
 
-		let mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(removeRemotePathPrefix(generatedPosition.source));
+		let mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(generatedPosition.source);
 		if (mapInfo) {
 			let originalPos = mapInfo.sourceMap.originalPositionFor({
 				column: generatedPosition.column,

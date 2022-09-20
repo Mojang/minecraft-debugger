@@ -23,3 +23,7 @@
 ## Version 0.4.0 (August 2022)
 
 - Add support for source maps that contain absolute paths.
+
+## Version 0.4.2 (September 2022)
+
+- Changes to the source path location in Minecraft require that localRoot points to a directory with sources, not the pack root. Update your launch.json 'localRoot'.

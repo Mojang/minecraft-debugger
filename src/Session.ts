@@ -548,7 +548,7 @@ export class Session extends DebugSession {
 		}
 		
 		if (!foundSourceFiles) {
-			this.showNotification("Failed to find source files. Check that launch.json 'localRoot' contains scripts.", LogLevel.Warn);
+			this.showNotification("Failed to find source files. Check that launch.json 'localRoot' contains scripts or if using source maps that 'sourceMapRoot' is correct.", LogLevel.Warn);
 		}
 	}
 

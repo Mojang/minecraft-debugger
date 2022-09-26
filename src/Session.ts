@@ -9,6 +9,7 @@ import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
 import { FileSystemWatcher, window, workspace } from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 interface PendingResponse {
 	resolve: Function;
@@ -42,6 +43,9 @@ export class Session extends DebugSession {
 	private _sourceMaps: SourceMaps = new SourceMaps("");
 	private _fileWatcher?: FileSystemWatcher;
 	private _activeThreadId: number = 0;	// the one being debugged
+	private _localRoot: string = "";
+	private _sourceMapRoot?: string;	
+	private _generatedSourceRoot?: string;
 
 	public constructor() {
 		super();
@@ -81,6 +85,10 @@ export class Session extends DebugSession {
 			return;
 		}
 
+		this._localRoot = args.localRoot ? path.normalize(args.localRoot) : "";
+		this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
+		this._generatedSourceRoot = args.generatedSourceRoot ? path.normalize(args.generatedSourceRoot) : undefined;
+
 		// Listen or connect (default), depending on mode.
 		// Attach makes more sense to use connect, but some MC platforms require using listen.
 		try {
@@ -96,13 +104,7 @@ export class Session extends DebugSession {
 			return;
 		}
 
-		// init source maps
-		this._sourceMaps = new SourceMaps(args.localRoot, args.sourceMapRoot, args.generatedSourceRoot);
-
-		// watch for source map changes
-		this.createSourceMapFileWatcher(args.sourceMapRoot);
-
-		// tell VSCode that attach is complete
+		// tell VSCode that attach has been received
 		this.sendResponse(response);
 	}
 
@@ -357,9 +359,22 @@ export class Session extends DebugSession {
 		// connect socket to stream parser
 		socket.pipe(socketStreamParser as any);
 
+		//
+		// Now wait for the debugee protocol event which will call onConnectionComplete if accepted.
+		//
+	}
+
+	private onConnectionComplete() {
+		// success
 		this.showNotification("Success! Debugger is now connected.", LogLevel.Log);
 
-		// Now that a connection is established, send this event to
+		// init source maps
+		this._sourceMaps = new SourceMaps(this._localRoot, this._sourceMapRoot, this._generatedSourceRoot);
+
+		// watch for source map changes
+		this.createSourceMapFileWatcher(this._sourceMapRoot);
+		
+		// Now that a connection is established, and capabilities have been delivered, send this event to
 		// tell VSCode to ask Minecraft/debugee for config data (breakpoints etc).
 		// When config is complete VSCode calls 'configurationDoneRequest' and the DA
 		// sends a 'resume' message to the debugee, which had paused following the attach.
@@ -498,18 +513,42 @@ export class Session extends DebugSession {
 
 	// ------------------------------------------------------------------------
 
-	private handleProtocolEvent(eventMessage: any) {
-		let mcVer = eventMessage.version;
-		let extVer = Session.DEBUGGER_PROTOCOL_VERSION;
-		if (mcVer < extVer) {
-			// Minecraft protocol is behind the extension
-			let errorMessage = `Minecraft's debugger protocol [${mcVer}] is not compatible with this extension's protocol [${extVer}], please update Minecraft.`;
-			this.showNotification(errorMessage, LogLevel.Error);
+	private handleProtocolEvent(protocolCapabilities: any) {
+		//
+		// handle protocol capabilities here...
+		// can fail connection on errors
+		//
+
+		// MC isn't using pack root, check that localRoot is pointing to js files
+		if (protocolCapabilities.disablePackRoot) {
+			this.handleCapabilityDisablePackRoot(); // warn but don't fail connection
 		}
-		else if (mcVer > extVer) {
-			// Extension protocol is behind Minecraft
-			let errorMessage = `This extension's protocol [${extVer}] is not compatible with Minecraft's debugger protocol [${mcVer}], please update the extension.`;
-			this.showNotification(errorMessage, LogLevel.Error);
+
+		// success
+		this.onConnectionComplete();
+	}
+
+	// MC source files are rooted to scripts/ folder, not the pack root.
+	// check that the localRoot property of launch.json contains source files.
+	// message to user if no source files are found.
+	private handleCapabilityDisablePackRoot() {
+		let sourcePath = this._sourceMapRoot ? this._sourceMapRoot : this._localRoot;
+		let foundSourceFiles = false;
+		try {
+			let fileNames = fs.readdirSync(sourcePath);
+			for (let fn of fileNames) {
+				let ext = path.extname(fn);
+				if (ext == ".js" || ext == ".ts") {
+					foundSourceFiles = true;
+					break;
+				}
+			}
+		}
+		catch (e) {
+		}
+		
+		if (!foundSourceFiles) {
+			this.showNotification("Failed to find source files. Check that launch.json 'localRoot' contains scripts or if using source maps that 'sourceMapRoot' is correct.", LogLevel.Warn);
 		}
 	}
 

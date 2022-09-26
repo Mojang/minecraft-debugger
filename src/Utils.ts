@@ -34,16 +34,3 @@ export function normalizePathForRemote(filePath: string) {
 	// remote debugger expects forward slashes on all platforms
 	return filePath.replace(/\\/g,"/");
 }
-
-// TODO: remove this after fixing internal root path of MC scripts
-export function removeRemotePathPrefix(filePath: string) {
-    // remove the required "/scripts/" prefix from the generated sources when coming back from debugger
-    return filePath.split('/').slice(1).join('/');
-}
-
-// TODO: remove this
-export function addRemotePathPrefix(filePath: string) {
-     const REMOTE_SOURCE_PATH_PREFIX = "scripts";
-    // required to prepend "/scripts/" to generated sources for remote debugger
-    return path.join(REMOTE_SOURCE_PATH_PREFIX, filePath);
-}

@@ -21,7 +21,7 @@ export class ConfigProvider implements vscode.DebugConfigurationProvider {
 			config.name = 'Attach to Minecraft';
 		}
 		if (!config.localRoot) {
-			config.localRoot = "${workspaceFolder}/";
+			config.localRoot = "${workspaceFolder}/scripts/";
 		}
 		if (!config.port) {
 			config.inputPort = "${command:PromptForPort}"; // prompt user for port

@@ -84,6 +84,10 @@
 							"inputPort": {
 								"type": "string",
 								"description": "Prompts for a port at launch."
+							},
+							"moduleMapping": {
+								"type": "object",
+								"description": "Module mapping for imports. Used if modules are external (i.e. included as part of minecraft). Defaults to an empty object."
 							}
 						}
 					}

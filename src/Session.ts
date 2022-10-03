@@ -16,6 +16,11 @@ interface PendingResponse {
 	reject: Function;
 }
 
+// Module mapping for getting line numbers for a given module
+interface ModuleMapping {
+	[moduleName: string]: string;
+}
+
 // Interface for specific launch arguments.
 // See package.json for schema.
 interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
@@ -26,6 +31,7 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	host: string;
 	port: number;
 	inputPort: string;
+	moduleMapping: ModuleMapping;
 }
 
 // The Debug Adapter for 'minecraft-js'
@@ -46,6 +52,7 @@ export class Session extends DebugSession {
 	private _localRoot: string = "";
 	private _sourceMapRoot?: string;	
 	private _generatedSourceRoot?: string;
+	private _moduleMapping?: ModuleMapping;
 
 	public constructor() {
 		super();
@@ -88,6 +95,7 @@ export class Session extends DebugSession {
 		this._localRoot = args.localRoot ? path.normalize(args.localRoot) : "";
 		this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
 		this._generatedSourceRoot = args.generatedSourceRoot ? path.normalize(args.generatedSourceRoot) : undefined;
+		this._moduleMapping = args.moduleMapping;
 
 		// Listen or connect (default), depending on mode.
 		// Attach makes more sense to use connect, but some MC platforms require using listen.
@@ -191,9 +199,10 @@ export class Session extends DebugSession {
 
 		const stackFrames: StackFrame[] = [];
 		for (const { id, name, filename, line, column } of stacksBody) {
+			const mappedFilename = this._moduleMapping?.[filename] ?? filename;
 			try {
 				const originalLocation = await this._sourceMaps.getOriginalPositionFor({
-					source: filename,
+					source: mappedFilename,
 					line: line || 0,
 					column: column || 0
 				});
@@ -201,9 +210,7 @@ export class Session extends DebugSession {
 				stackFrames.push(new StackFrame(id, name, source, originalLocation.line, originalLocation.column));
 			}
 			catch (e) {
-				this.log((e as Error).message, LogLevel.Error);
-				this.sendErrorResponse(response, 1003, `Failed to get stack trace for ${filename} at line ${line}.`);
-				return;
+				stackFrames.push(new StackFrame(id, name));
 			}
 		}
 

@@ -2,7 +2,7 @@
 	"name": "minecraft-debugger",
 	"displayName": "Minecraft Bedrock Edition Debugger",
 	"description": "Debug your JavaScript code running as part of the GameTest Framework experimental feature in Minecraft Bedrock Edition.",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"publisher": "mojang-studios",
 	"author": {
 		"name": "Mojang Studios"
@@ -87,7 +87,7 @@
 							},
 							"moduleMapping": {
 								"type": "object",
-								"description": "Module mapping for imports. Used if modules are external (i.e. included as part of minecraft). Defaults to an empty object."
+								"description": "Module mapping for imports. Each key is an import name that will be mapped to the provided value. Used if modules are external (i.e. included as part of minecraft). Defaults to an empty object."
 							}
 						}
 					}

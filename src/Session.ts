@@ -536,20 +536,20 @@ export class Session extends DebugSession {
 	// check that source and map properties in launch.json are set correctly
 	private checkSourceFilePaths() {
 		if (this._sourceMapRoot) {
-			let foundMaps = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".map" ]);
+			const foundMaps = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".map" ]);
 			if (!foundMaps) {
 				this.showNotification("Failed to find source maps, check that launch.json 'sourceMapRoot' contains .map files.", LogLevel.Warn);
 			}
-			let foundJS = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".js" ]);
+			const foundJS = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".js" ]);
 			if (!foundJS) {
-				let foundGeneratedJS = this.doFilesWithExtExistAt(this._generatedSourceRoot, [ ".js" ]);
+				const foundGeneratedJS = this.doFilesWithExtExistAt(this._generatedSourceRoot, [ ".js" ]);
 				if (!foundGeneratedJS) {
 					this.showNotification("Failed to find generated .js files. Check that launch.json 'sourceMapRoot' or alternately 'generatedSourceRoot' cointain .js files.", LogLevel.Warn);
 				}
 			}
 		}
 		else if (this._localRoot) {
-			let foundJS = this.doFilesWithExtExistAt(this._localRoot, [ ".js" ]);
+			const foundJS = this.doFilesWithExtExistAt(this._localRoot, [ ".js" ]);
 			if (!foundJS) {
 				this.showNotification("Failed to find .js files. Check that launch.json 'localRoot' cointains .js files.", LogLevel.Warn);
 			}

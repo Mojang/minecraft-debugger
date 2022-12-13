@@ -548,7 +548,7 @@ export class Session extends DebugSession {
 				}
 			}
 		}
-		else if (this._localRoot) {
+		else {
 			const foundJS = this.doFilesWithExtExistAt(this._localRoot, [ ".js" ]);
 			if (!foundJS) {
 				this.showNotification("Failed to find .js files. Check that launch.json 'localRoot' cointains .js files.", LogLevel.Warn);

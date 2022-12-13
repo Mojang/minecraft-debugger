@@ -520,43 +520,56 @@ export class Session extends DebugSession {
 
 	// ------------------------------------------------------------------------
 
+	// the final client event before connection is complete
 	private handleProtocolEvent(protocolCapabilities: any) {
 		//
 		// handle protocol capabilities here...
 		// can fail connection on errors
 		//
 
-		// MC isn't using pack root, check that localRoot is pointing to js files
-		if (protocolCapabilities.disablePackRoot) {
-			this.handleCapabilityDisablePackRoot(); // warn but don't fail connection
-		}
+		this.checkSourceFilePaths();
 
 		// success
 		this.onConnectionComplete();
 	}
 
-	// MC source files are rooted to scripts/ folder, not the pack root.
-	// check that the localRoot property of launch.json contains source files.
-	// message to user if no source files are found.
-	private handleCapabilityDisablePackRoot() {
-		let sourcePath = this._sourceMapRoot ? this._sourceMapRoot : this._localRoot;
-		let foundSourceFiles = false;
-		try {
-			let fileNames = fs.readdirSync(sourcePath);
-			for (let fn of fileNames) {
-				let ext = path.extname(fn);
-				if (ext == ".js" || ext == ".ts") {
-					foundSourceFiles = true;
-					break;
+	// check that source and map properties in launch.json are set correctly
+	private checkSourceFilePaths() {
+		if (this._sourceMapRoot) {
+			const foundMaps = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".map" ]);
+			if (!foundMaps) {
+				this.showNotification("Failed to find source maps, check that launch.json 'sourceMapRoot' contains .map files.", LogLevel.Warn);
+			}
+			const foundJS = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".js" ]);
+			if (!foundJS) {
+				const foundGeneratedJS = this.doFilesWithExtExistAt(this._generatedSourceRoot, [ ".js" ]);
+				if (!foundGeneratedJS) {
+					this.showNotification("Failed to find generated .js files. Check that launch.json 'sourceMapRoot' or alternately 'generatedSourceRoot' cointain .js files.", LogLevel.Warn);
 				}
+			}
+		}
+		else if (this._localRoot) {
+			const foundJS = this.doFilesWithExtExistAt(this._localRoot, [ ".js" ]);
+			if (!foundJS) {
+				this.showNotification("Failed to find .js files. Check that launch.json 'localRoot' cointains .js files.", LogLevel.Warn);
+			}
+		}
+	}
+
+	private doFilesWithExtExistAt(filePath?: string, extensions?: string[]) {
+		if (!filePath || !extensions) {
+			return false;
+		}
+		let foundFiles = false;
+		try {
+			let fileNames = fs.readdirSync(filePath);
+			for (let fn of fileNames) {
+				return extensions.includes(path.extname(fn));
 			}
 		}
 		catch (e) {
 		}
-		
-		if (!foundSourceFiles) {
-			this.showNotification("Failed to find source files. Check that launch.json 'localRoot' contains scripts or if using source maps that 'sourceMapRoot' is correct.", LogLevel.Warn);
-		}
+		return foundFiles;
 	}
 
 	private trackThreadChanges(reason: string, threadId: number) {

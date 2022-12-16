@@ -31,3 +31,7 @@
 ## Version 0.6.0 (September 2022)
 
 - Add support for external modules while debugging. For JS modules built into Minecraft, stack will be visible but listed as "unknown". Add configuration support for module name mapping.
+
+## Version 0.6.1 (December 2022)
+
+- Better error messaging when source files cannot be discovered.

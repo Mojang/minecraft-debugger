@@ -98,7 +98,7 @@
 						"request": "attach",
 						"name": "Attach to Minecraft",
 						"mode": "connect",
-						"localRoot": "${workspaceFolder}/",
+						"localRoot": "${workspaceFolder}/scripts",
 						"host": "localhost",
 						"port": 19144
 					}
@@ -112,7 +112,7 @@
 							"request": "attach",
 							"name": "Attach to Minecraft",
 							"mode": "connect",
-							"localRoot": "^\"\\${workspaceFolder}/\"",
+							"localRoot": "^\"\\${workspaceFolder}/scripts\"",
 							"host": "localhost",
 							"port": 19144
 						}

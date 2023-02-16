@@ -72,6 +72,11 @@
 								"type": "string",
 								"description": "The location of the generated source files (js). Not required if same as source maps."
 							},
+							"inlineSourceMap": {
+								"type": "boolean",
+								"description": "If true, generated source maps will be searched for in the generated source files.",
+								"default": false
+							},
 							"host": {
 								"type": "string",
 								"description": "The host address the extension will connect to.",

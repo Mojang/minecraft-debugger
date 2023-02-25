@@ -91,7 +91,7 @@ export class Session extends DebugSession {
 		const localAppDataDir = process.env.APPDATA?.replace('Roaming', 'Local') || '';
 		for (const key of Object.keys(args)) {
 			let value = args[key as keyof IAttachRequestArguments];
-			if (typeof value === 'string' && value.startsWith('%localappdata%')) {
+			if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
 				(args as any)[key] = value.replace('%localappdata%', localAppDataDir);
 			}
 		}

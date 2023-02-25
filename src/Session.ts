@@ -87,12 +87,12 @@ export class Session extends DebugSession {
 	protected async attachRequest(response: DebugProtocol.AttachResponse, args: IAttachRequestArguments, request?: DebugProtocol.Request) {
 		this.closeSession();
 
-		// for each arg, if the value is a string and starts with %appdata%, replace it with the actual path to appdata/local
-		const appDataLocalDir = process.env.APPDATA?.replace('Roaming', 'Local') || '';
+		// for each arg, if the value is a string and starts with %localappdata%, replace it with the actual path to appdata/local
+		const localAppDataDir = process.env.APPDATA?.replace('Roaming', 'Local') || '';
 		for (const key of Object.keys(args)) {
 			let value = args[key as keyof IAttachRequestArguments];
-			if (typeof value === 'string' && value.startsWith('%appdata%')) {
-				(args as any)[key] = value.replace('%appdata%', appDataLocalDir);
+			if (typeof value === 'string' && value.startsWith('%localappdata%')) {
+				(args as any)[key] = value.replace('%localappdata%', localAppDataDir);
 			}
 		}
 			

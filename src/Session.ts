@@ -88,11 +88,11 @@ export class Session extends DebugSession {
 		this.closeSession();
 
 		// for each arg, if the value is a string and starts with %localappdata%, replace it with the actual path to appdata/local
-		const localAppDataDir = process.env.APPDATA?.replace('Roaming', 'Local') || '';
+		const localAppDataDir = process.env.LOCALAPPDATA || '';
 		for (const key of Object.keys(args)) {
 			let value = args[key as keyof IAttachRequestArguments];
 			if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
-				(args as any)[key] = value.replace('%localappdata%', localAppDataDir);
+				(args as any)[key] = path.join(localAppDataDir, value.substring('%localappdata%'.length));
 			}
 		}
 			

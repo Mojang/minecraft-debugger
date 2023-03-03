@@ -74,7 +74,7 @@
 							},
 							"inlineSourceMap": {
 								"type": "boolean",
-								"description": "If true, generated source maps will be searched for in the generated source files.",
+								"description": "Whether or not source maps are embedded in the generated source files. Overrides sourceMapRoot and generatedSourceRoot when true.",
 								"default": false
 							},
 							"host": {

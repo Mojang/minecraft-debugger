@@ -87,15 +87,7 @@ export class Session extends DebugSession {
 	protected async attachRequest(response: DebugProtocol.AttachResponse, args: IAttachRequestArguments, request?: DebugProtocol.Request) {
 		this.closeSession();
 
-		// for each arg, if the value is a string and starts with %localappdata%, replace it with the actual path to appdata/local
-		const localAppDataDir = process.env.LOCALAPPDATA || '';
-		for (const key of Object.keys(args)) {
-			let value = args[key as keyof IAttachRequestArguments];
-			if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
-				(args as any)[key] = path.join(localAppDataDir, value.substring('%localappdata%'.length));
-			}
-		}
-			
+		this.resolveEnvironmentVariables(args);
 
 		const host = args.host || 'localhost';
 		let port = args.port || parseInt(args.inputPort);
@@ -128,6 +120,19 @@ export class Session extends DebugSession {
 		// tell VSCode that attach has been received
 		this.sendResponse(response);
 	}
+
+	protected resolveEnvironmentVariables(args: IAttachRequestArguments) {
+		const localAppDataDir = process.env.LOCALAPPDATA || '';
+
+		for (const key of Object.keys(args)) {
+			//if the value is a string and starts with %localappdata%, replace it with the actual path to AppData\Local
+			let value = args[key as keyof IAttachRequestArguments];
+			if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
+				(args as any)[key] = path.join(localAppDataDir, value.substring('%localappdata%'.length));
+			}
+		}
+	}
+
 
 	protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments, request?: DebugProtocol.Request) {
 		response.body = {

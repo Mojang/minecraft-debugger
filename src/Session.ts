@@ -28,6 +28,7 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	localRoot: string;
 	generatedSourceRoot: string;
 	sourceMapRoot: string;
+	inlineSourceMap: boolean;
 	host: string;
 	port: number;
 	inputPort: string;
@@ -52,6 +53,7 @@ export class Session extends DebugSession {
 	private _localRoot: string = "";
 	private _sourceMapRoot?: string;	
 	private _generatedSourceRoot?: string;
+	private _inlineSourceMap: boolean = false;
 	private _moduleMapping?: ModuleMapping;
 
 	public constructor() {
@@ -85,6 +87,8 @@ export class Session extends DebugSession {
 	protected async attachRequest(response: DebugProtocol.AttachResponse, args: IAttachRequestArguments, request?: DebugProtocol.Request) {
 		this.closeSession();
 
+		this.resolveEnvironmentVariables(args);
+
 		const host = args.host || 'localhost';
 		let port = args.port || parseInt(args.inputPort);
 		if (isNaN(port)) {
@@ -95,6 +99,7 @@ export class Session extends DebugSession {
 		this._localRoot = args.localRoot ? path.normalize(args.localRoot) : "";
 		this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
 		this._generatedSourceRoot = args.generatedSourceRoot ? path.normalize(args.generatedSourceRoot) : undefined;
+		this._inlineSourceMap = args.inlineSourceMap ? args.inlineSourceMap : false;
 		this._moduleMapping = args.moduleMapping;
 
 		// Listen or connect (default), depending on mode.
@@ -115,6 +120,19 @@ export class Session extends DebugSession {
 		// tell VSCode that attach has been received
 		this.sendResponse(response);
 	}
+
+	protected resolveEnvironmentVariables(args: IAttachRequestArguments) {
+		const localAppDataDir = process.env.LOCALAPPDATA || '';
+
+		for (const key of Object.keys(args)) {
+			//if the value is a string and starts with %localappdata%, replace it with the actual path to AppData\Local
+			let value = args[key as keyof IAttachRequestArguments];
+			if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
+				(args as any)[key] = path.join(localAppDataDir, value.substring('%localappdata%'.length));
+			}
+		}
+	}
+
 
 	protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments, request?: DebugProtocol.Request) {
 		response.body = {
@@ -186,7 +204,7 @@ export class Session extends DebugSession {
 	protected threadsRequest(response: DebugProtocol.ThreadsResponse, request?: DebugProtocol.Request): void {
 		response.body = {
 			threads: Array.from(this._threads.keys()).map(thread => new Thread(thread, `thread 0x${thread.toString(16)}`))
-		}
+		};
 		this.sendResponse(response);
 	}
 
@@ -376,7 +394,7 @@ export class Session extends DebugSession {
 		this.showNotification("Success! Debugger is now connected.", LogLevel.Log);
 
 		// init source maps
-		this._sourceMaps = new SourceMaps(this._localRoot, this._sourceMapRoot, this._generatedSourceRoot);
+		this._sourceMaps = new SourceMaps(this._localRoot, this._sourceMapRoot, this._generatedSourceRoot, this._inlineSourceMap);
 
 		// watch for source map changes
 		this.createSourceMapFileWatcher(this._sourceMapRoot);
@@ -432,8 +450,8 @@ export class Session extends DebugSession {
 	// and wait within DA request handler for response.
 	private sendDebugeeRequestAsync(thread: number, response: DebugProtocol.Response, args: any): Promise<any> {
 		let promise = new Promise((resolve, reject) => {
-			let request_seq = response.request_seq;
-			this._requests.set(request_seq, {
+			let requestSeq = response.request_seq;
+			this._requests.set(requestSeq, {
 				resolve,
 				reject
 			});
@@ -441,7 +459,8 @@ export class Session extends DebugSession {
 			let envelope = {
 				type: 'request',
 				request: {
-					request_seq,
+					// eslint-disable-next-line @typescript-eslint/naming-convention
+					request_seq: requestSeq,
 					command: response.command,
 					args
 				}
@@ -487,7 +506,7 @@ export class Session extends DebugSession {
 	private handleDebugeeEvent(eventMessage: any) {
 		if (eventMessage.type === 'StoppedEvent') {
 			this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
-			this.sendEvent(new StoppedEvent(eventMessage.reason, eventMessage.thread))
+			this.sendEvent(new StoppedEvent(eventMessage.reason, eventMessage.thread));
 		}
 		else if (eventMessage.type === 'ThreadEvent') {
 			this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
@@ -504,12 +523,12 @@ export class Session extends DebugSession {
 	// Debugee (MC) responses to pending VSCode requests. Promises contained in a map keyed by
 	// the sequence number of the request. Fascilitates the 'await sendDebugeeRequestAsync(...)' pattern.
 	private handleDebugeeResponse(envelope: any) {
-		let request_seq: number = envelope.request_seq;
-		let pending = this._requests.get(request_seq);
+		let requestSeq: number = envelope.request_seq;
+		let pending = this._requests.get(requestSeq);
 		if (!pending) {
 			return;
 		}
-		this._requests.delete(request_seq);
+		this._requests.delete(requestSeq);
 		if (envelope.error) {
 			pending.reject(new Error(envelope.error));
 		}
@@ -536,7 +555,7 @@ export class Session extends DebugSession {
 	// check that source and map properties in launch.json are set correctly
 	private checkSourceFilePaths() {
 		if (this._sourceMapRoot) {
-			const foundMaps = this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".map" ]);
+			const foundMaps = this._inlineSourceMap ? true : this.doFilesWithExtExistAt(this._sourceMapRoot, [ ".map" ]);
 			if (!foundMaps) {
 				this.showNotification("Failed to find source maps, check that launch.json 'sourceMapRoot' contains .map files.", LogLevel.Warn);
 			}
@@ -560,20 +579,17 @@ export class Session extends DebugSession {
 		if (!filePath || !extensions) {
 			return false;
 		}
-		let foundFiles = false;
-		try {
-			let fileNames = fs.readdirSync(filePath);
-			for (let fn of fileNames) {
-				return extensions.includes(path.extname(fn));
+		let fileNames = fs.readdirSync(filePath);
+		for (let fn of fileNames) {
+			if (extensions.some(ext => fn.endsWith(ext))) {
+				return true;
 			}
 		}
-		catch (e) {
-		}
-		return foundFiles;
+		return false;
 	}
 
 	private trackThreadChanges(reason: string, threadId: number) {
-		if (reason == 'exited') {
+		if (reason === 'exited') {
 			this._threads.delete(threadId);
 		}
 		else {
@@ -584,13 +600,13 @@ export class Session extends DebugSession {
 	private createSourceMapFileWatcher(sourceMapRoot?: string) {
 		if (this._fileWatcher) {
 			this._fileWatcher.dispose();
-			this._fileWatcher = undefined
+			this._fileWatcher = undefined;
 		}
 		if (sourceMapRoot) {
 			this._fileWatcher = workspace.createFileSystemWatcher('**/*.{map}', false, false, false);
-			this._fileWatcher.onDidChange(uri => { this._sourceMaps.reset() });
-			this._fileWatcher.onDidCreate(uri => { this._sourceMaps.reset() });
-			this._fileWatcher.onDidDelete(uri => { this._sourceMaps.reset() });
+			this._fileWatcher.onDidChange(uri => { this._sourceMaps.reset(); });
+			this._fileWatcher.onDidCreate(uri => { this._sourceMaps.reset(); });
+			this._fileWatcher.onDidDelete(uri => { this._sourceMaps.reset(); });
 		}
 	}
 

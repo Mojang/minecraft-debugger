@@ -2,8 +2,8 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
-import { ConfigProvider } from './ConfigProvider'
-import { ServerDebugAdapterFactory } from './ServerDebugAdapterFactory'
+import { ConfigProvider } from './ConfigProvider';
+import { ServerDebugAdapterFactory } from './ServerDebugAdapterFactory';
 
 // called when extension is activated
 //

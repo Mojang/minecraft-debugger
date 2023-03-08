@@ -34,15 +34,20 @@ class MapLookup {
 // Load and cache source map files
 class SourceMapCache {
 	private static readonly _mapFileExt: string = ".map";
+	private static readonly _jsFileExt: string = ".js";
 	private _sourceMapRoot?: string;
 	public _generatedSourceRoot?: string;
+	private _localRoot?: string;
 	private _mapsLoaded: boolean = false;
 	public _originalSourcePathToMapLookup = new MapLookup();
 	public _generatedSourcePathToMapLookup = new MapLookup();
+	private _inlineSourceMap: boolean = false;
 
-	public constructor(sourceMapRoot?: string, generatedSourceRoot?: string) {
+	public constructor(sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap: boolean = false, localRoot?: string) {
 		this._sourceMapRoot = (sourceMapRoot) ? path.normalize(sourceMapRoot) : undefined;
 		this._generatedSourceRoot = (generatedSourceRoot) ? path.normalize(generatedSourceRoot) : undefined;
+		this._inlineSourceMap = inlineSourceMap;
+		this._localRoot = (localRoot) ? path.normalize(localRoot) : undefined;
 	}
 
 	public reset() {
@@ -67,17 +72,35 @@ class SourceMapCache {
 		}
 
 		// assume generated js files live with map files unless explicitly set otherwise
-		if (this._generatedSourceRoot == undefined) {
+		if (this._generatedSourceRoot === undefined) {
 			this._generatedSourceRoot = this._sourceMapRoot;
 		}
 
 		try {
-			const mapFileNames = this._findAllMapFilesInFolder(this._sourceMapRoot, undefined);
+			const mapFileNames = this._findAllMapFilesInFolder(this._sourceMapRoot, undefined, this._inlineSourceMap ? SourceMapCache._jsFileExt : SourceMapCache._mapFileExt);
 			for (let mapFileName of mapFileNames) {
 
-				const mapFullPath = path.resolve(this._sourceMapRoot, mapFileName);
-				let mapBuffer = fs.readFileSync(mapFullPath);
-				let mapJson = JSON.parse(mapBuffer.toString());
+				const mapFullPath = path.resolve(this._sourceMapRoot, mapFileName);				
+				let mapFile = fs.readFileSync(mapFullPath);
+
+				let mapJson;
+				if (this._inlineSourceMap) {
+					const inlineSourceMapRegex = /\/\/# sourceMappingURL=data:application\/json;base64,(.*)$/gm;
+					const match = inlineSourceMapRegex.exec(mapFile.toString());
+					const sourceRoot = path.join(this._localRoot ?? '', path.dirname(mapFileName.split('\\scripts\\')[1]));
+					if (match && match.length > 1) {
+						const base64EncodedMap = match[1];
+						const decodedMap = Buffer.from(base64EncodedMap, 'base64').toString('utf8');
+						mapJson = JSON.parse(decodedMap);
+						mapJson.file = path.basename(mapFileName);
+						mapJson.sourceRoot = sourceRoot;
+					} else {
+						throw new Error('Could not find inline source map');
+					}
+				} else {
+					mapJson = JSON.parse(mapFile.toString());
+				}
+				
 				let sourceMapConsumer = await new SourceMapConsumer(mapJson);
 
 				// map has relative path to generated source, resolve for absolute path
@@ -128,15 +151,15 @@ class SourceMapCache {
 		this._mapsLoaded = true;
 	}
 
-	private _findAllMapFilesInFolder(dirPath: string, existingFiles?: Array<string>): Array<string> {
+	private _findAllMapFilesInFolder(dirPath: string, existingFiles?: Array<string>, fileExtentsion: string = SourceMapCache._mapFileExt): Array<string> {
 		let fileNames = fs.readdirSync(dirPath);
 		let allFiles = existingFiles || [];
 		fileNames.forEach((file) => {
 			const fullPath = path.join(dirPath, file);
 			if (fs.statSync(fullPath).isDirectory()) {
-				allFiles = this._findAllMapFilesInFolder(fullPath, allFiles);
+				allFiles = this._findAllMapFilesInFolder(fullPath, allFiles, fileExtentsion);
 		  	}
-		  	else if (path.extname(file) === SourceMapCache._mapFileExt) {
+		  	else if (path.extname(file) === fileExtentsion) {
 				allFiles.push(fullPath);
 		  	}
 		});
@@ -150,11 +173,13 @@ export class SourceMaps {
 	private _localRoot: string;
 	private _sourceMapRoot?: string;
 	private _sourceMapCache: SourceMapCache;
+	private _inlineSourceMap: boolean;
 
-	public constructor(localRoot: string, sourceMapRoot?: string, generatedSourceRoot?: string) {
+	public constructor(localRoot: string, sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap: boolean = false) {
 		this._localRoot = path.normalize(localRoot);
 		this._sourceMapRoot = (sourceMapRoot) ? path.normalize(sourceMapRoot) : undefined;
-		this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot);
+		this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot, inlineSourceMap, localRoot);
+		this._inlineSourceMap = inlineSourceMap;
 	}
 
 	public reset() {
@@ -180,7 +205,7 @@ export class SourceMaps {
 				line: originalPosition.line,
 				column: originalPosition.column,
 				lastColumn: null
-			}
+			};
 		}
 
 		// use the map to get the generated source (js) position using original source path (a relative path to the map)

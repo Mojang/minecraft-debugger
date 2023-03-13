@@ -35,3 +35,7 @@
 ## Version 0.6.1 (December 2022)
 
 - Better error messaging when source files cannot be discovered.
+
+## Version 0.7.0 (March 2023)
+
+- Support for inline source maps. Paths with %appdata% will be replaced with user app data folder.

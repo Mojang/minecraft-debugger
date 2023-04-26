@@ -39,3 +39,7 @@
 ## Version 0.7.0 (March 2023)
 
 - Support for inline source maps. Paths with %appdata% will be replaced with user app data folder.
+
+## Version 0.8.0 (April 2023)
+
+- Add "All Exceptions" option to breakpoints panel, enabling will instruct Minecraft to break at exceptions.

@@ -69,10 +69,18 @@ export class Session extends DebugSession {
 
 	// VSCode extension has been activated due to the 'onDebug' activation request defined in packages.json
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
-		response.body = response.body || {};
+		const capabilities: DebugProtocol.Capabilities = {
+			// indicates VSCode should send the configurationDoneRequest
+			supportsConfigurationDoneRequest: true,
+			// additional breakpoint filter options shown in UI
+			exceptionBreakpointFilters: [{
+				filter: "exceptions",
+				label: "All Exceptions",
+				default: false
+			}]
+		}
 
-		// set capabilities
-		response.body.supportsConfigurationDoneRequest = true; // so VSCode calls 'configurationDoneRequest'
+		response.body = capabilities;
 
 		// send config response back to VSCode
 		this.sendResponse(response);
@@ -133,7 +141,6 @@ export class Session extends DebugSession {
 		}
 	}
 
-
 	protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments, request?: DebugProtocol.Request) {
 		response.body = {
 			breakpoints: []
@@ -188,7 +195,11 @@ export class Session extends DebugSession {
 	}
 
 	protected setExceptionBreakPointsRequest(response: DebugProtocol.SetExceptionBreakpointsResponse, args: DebugProtocol.SetExceptionBreakpointsArguments, request?: DebugProtocol.Request): void {
-		// todo: to make this work set the exceptionBreakpointFilters capability at init, then send result to debugee here
+		this.sendDebuggeeMessage({
+			type: 'stopOnException',
+			stopOnException: args.filters.length > 0 // there's only 1 type for now so no need to look at which one it is
+		});
+
 		this.sendResponse(response);
 	}
 

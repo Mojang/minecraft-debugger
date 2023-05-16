@@ -2,7 +2,7 @@
 	"name": "minecraft-debugger",
 	"displayName": "Minecraft Bedrock Edition Debugger",
 	"description": "Debug your JavaScript code running as part of the GameTest Framework experimental feature in Minecraft Bedrock Edition.",
-	"version": "0.8.0",
+	"version": "1.0.0",
 	"publisher": "mojang-studios",
 	"author": {
 		"name": "Mojang Studios"
@@ -14,6 +14,7 @@
 	},
 	"icon": "bedrock-icon.png",
 	"engines": {
+		"node": "^18.0.0",
 		"vscode": "^1.55.0"
 	},
 	"categories": [

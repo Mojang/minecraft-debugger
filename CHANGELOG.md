@@ -43,3 +43,7 @@
 ## Version 0.8.0 (April 2023)
 
 - Add "All Exceptions" option to breakpoints panel, enabling will instruct Minecraft to break at exceptions.
+
+## Version 1.0.0 (May 2023)
+
+- Update node dependencies.

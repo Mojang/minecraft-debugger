@@ -2,7 +2,7 @@
 parameters:
 - name: nodeVersion
   type: string
-  default: '10.x'
+  default: '18.x'
 
 steps:
 - task: NodeTool@0

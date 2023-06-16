@@ -136,7 +136,6 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js",
 		"package": "vsce package -o minecraft-debugger-js.vsix"
 	},
 	"dependencies": {

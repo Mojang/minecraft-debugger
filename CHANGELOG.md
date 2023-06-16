@@ -47,3 +47,7 @@
 ## Version 1.0.0 (May 2023)
 
 - Update node dependencies.
+
+## Version 1.1.0 (June 2023)
+
+- Fix ignored 'stop' event, which caused missing variables and stack frame.

@@ -12,8 +12,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 interface PendingResponse {
-	resolve: Function;
-	reject: Function;
+	onSuccess?: Function;
+	onFail?: Function;
 }
 
 // Module mapping for getting line numbers for a given module
@@ -51,7 +51,7 @@ export class Session extends DebugSession {
 	private _fileWatcher?: FileSystemWatcher;
 	private _activeThreadId: number = 0;	// the one being debugged
 	private _localRoot: string = "";
-	private _sourceMapRoot?: string;	
+	private _sourceMapRoot?: string;
 	private _generatedSourceRoot?: string;
 	private _inlineSourceMap: boolean = false;
 	private _moduleMapping?: ModuleMapping;
@@ -220,7 +220,7 @@ export class Session extends DebugSession {
 	}
 
 	// VSCode requesting stack trace for threads, follows threadsRequest
-	protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments) {
+	protected async stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): Promise<void> {
 		const threadId = args.threadId;
 		const stacksBody = await this.sendDebugeeRequestAsync(threadId, response, args);
 
@@ -253,72 +253,77 @@ export class Session extends DebugSession {
 		this.sendResponse(response);
 	}
 
-	protected async scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments) {
+	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments) {
 		// get scopes from debugee for this frame, args contains the desired stack frame id
-		const scopesResponseBody = await this.sendDebugeeRequestAsync(this._activeThreadId, response, args);
-
-		const scopes: Scope[] = [];
-		for (const { name, reference, expensive } of scopesResponseBody) {
-			scopes.push(new Scope(name, reference, expensive));
-		}
-
-		response.body = {
-			scopes
-		};
-
-		this.sendResponse(response);
+		this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
+			const scopes: Scope[] = [];
+			for (const { name, reference, expensive } of body) {
+				scopes.push(new Scope(name, reference, expensive));
+			}
+			response.body = {
+				scopes
+			};
+			this.sendResponse(response);
+		});
 	}
 
-	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request) {
+	protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments, request?: DebugProtocol.Request) {
 		// get variables at this reference (all vars in scope or vars in object/array)
-		const variablesResponseBody = await this.sendDebugeeRequestAsync(this._activeThreadId, response, args);
-
-		const variables: Variable[] = [];
-		for (const { name, value, type, variablesReference, indexedVariables } of variablesResponseBody) {
-			// if variablesReference is non-zero then it represents an object and will trigger additional variablesRequests when expanded by user
-			let variable: DebugProtocol.Variable = new Variable(name, value, variablesReference, indexedVariables);
-			variable.type = type; // to show type when hovered
-
-			variables.push(variable);
-		}
-
-		response.body = {
-			variables
-		};
-
-		this.sendResponse(response);
+		this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
+			const variables: Variable[] = [];
+			for (const { name, value, type, variablesReference, indexedVariables } of body) {
+				// if variablesReference is non-zero then it represents an object and will trigger additional variablesRequests when expanded by user
+				let variable: DebugProtocol.Variable = new Variable(name, value, variablesReference, indexedVariables);
+				variable.type = type; // to show type when hovered
+				variables.push(variable);
+			}
+			response.body = {
+				variables
+			};
+			this.sendResponse(response);
+		});
 	}
 
-	protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) {
-		// evaluate watch variables
-		const evaluateVariablesResponseBody = await this.sendDebugeeRequestAsync(this._activeThreadId, response, args);
-		response.body = evaluateVariablesResponseBody;
-		this.sendResponse(response);
+	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) {
+		this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
+			response.body = body;
+			this.sendResponse(response);
+		});
 	}
 
-	protected async continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments) {
-		response.body = await this.sendDebugeeRequestAsync(args.threadId, response, args);
-		this.sendResponse(response);
+	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments) {
+		this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
+			response.body = body;
+			this.sendResponse(response);
+		});
 	}
 
-	protected async pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments, request?: DebugProtocol.Request) {
-		response.body = await this.sendDebugeeRequestAsync(args.threadId, response, args);
-		this.sendResponse(response);
+	protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments, request?: DebugProtocol.Request) {
+		this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
+			response.body = body;
+			this.sendResponse(response);
+		});
 	}
 
-	protected async nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments) {
-		response.body = await this.sendDebugeeRequestAsync(args.threadId, response, args);
-		this.sendResponse(response);
+	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments) {
+		this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
+			response.body = body;
+			this.sendResponse(response);
+		});
 	}
 
-	protected async stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments, request?: DebugProtocol.Request) {
-		response.body = await this.sendDebugeeRequestAsync(args.threadId, response, args);
-		this.sendResponse(response);
+	protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments, request?: DebugProtocol.Request) {
+		this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
+			response.body = body;
+			this.sendResponse(response);
+		});
 	}
 
-	protected async stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments, request?: DebugProtocol.Request) {
-		response.body = await this.sendDebugeeRequestAsync(args.threadId, response, args);
-		this.sendResponse(response);
+	protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments, request?: DebugProtocol.Request) {
+		this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
+			response.body = body;
+			this.sendResponse(response);
+		});
 	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
@@ -409,7 +414,7 @@ export class Session extends DebugSession {
 
 		// watch for source map changes
 		this.createSourceMapFileWatcher(this._sourceMapRoot);
-		
+
 		// Now that a connection is established, and capabilities have been delivered, send this event to
 		// tell VSCode to ask Minecraft/debugee for config data (breakpoints etc).
 		// When config is complete VSCode calls 'configurationDoneRequest' and the DA
@@ -456,30 +461,42 @@ export class Session extends DebugSession {
 	// Debugee message send and receive
 	// ------------------------------------------------------------------------
 
-	// Send message of type 'request' and wait for results.
-	// When VSCode wants to 'continue', 'stepIn/out' etc, send request to debugee
-	// and wait within DA request handler for response.
+	// Async send message of type 'request' and await results.
 	private sendDebugeeRequestAsync(thread: number, response: DebugProtocol.Response, args: any): Promise<any> {
 		let promise = new Promise((resolve, reject) => {
 			let requestSeq = response.request_seq;
 			this._requests.set(requestSeq, {
-				resolve,
-				reject
+				onSuccess: resolve,
+				onFail: reject
 			});
 
-			let envelope = {
-				type: 'request',
-				request: {
-					// eslint-disable-next-line @typescript-eslint/naming-convention
-					request_seq: requestSeq,
-					command: response.command,
-					args
-				}
-			};
-
-			this.sendDebuggeeMessage(envelope);
+			this.sendDebuggeeMessage(this.makeRequestPayload(requestSeq, response.command, args));
 		});
 		return promise;
+	}
+
+	// Synchronous send message of type 'request' and callback with results.
+	private sendDebugeeRequest(thread: number, response: DebugProtocol.Response, args: any, callback: Function) {
+		let requestSeq = response.request_seq;
+		this._requests.set(requestSeq, {
+			onSuccess: callback,
+			onFail: undefined
+		});
+
+		this.sendDebuggeeMessage(this.makeRequestPayload(requestSeq, response.command, args));
+	}
+
+	private makeRequestPayload(requestSeq: number, responseCommand: any,  args: any) {
+		let envelope = {
+			type: 'request',
+			request: {
+				// eslint-disable-next-line @typescript-eslint/naming-convention
+				request_seq: requestSeq,
+				command: responseCommand,
+				args
+			}
+		};
+		return envelope;
 	}
 
 	private sendDebuggeeMessage(envelope: any) {
@@ -539,12 +556,20 @@ export class Session extends DebugSession {
 		if (!pending) {
 			return;
 		}
+
+		// release the request
 		this._requests.delete(requestSeq);
+
 		if (envelope.error) {
-			pending.reject(new Error(envelope.error));
+			if (pending.onFail) {
+				pending.onFail(new Error(envelope.error));
+			}
+			this.log(`Debugee response error: ${envelope.error}`, LogLevel.Error);
 		}
 		else {
-			pending.resolve(envelope.body);
+			if (pending.onSuccess) {
+				pending.onSuccess(envelope.body);
+			}
 		}
 	}
 

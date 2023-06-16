@@ -486,7 +486,7 @@ export class Session extends DebugSession {
 		this.sendDebuggeeMessage(this.makeRequestPayload(requestSeq, response.command, args));
 	}
 
-	private makeRequestPayload(requestSeq: number, responseCommand: any,  args: any) {
+	private makeRequestPayload(requestSeq: number, responseCommand: string,  args: any) {
 		let envelope = {
 			type: 'request',
 			request: {

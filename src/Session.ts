@@ -461,7 +461,7 @@ export class Session extends DebugSession {
 	// Debugee message send and receive
 	// ------------------------------------------------------------------------
 
-	// Async send message of type 'request' and await results.
+	// async send message of type 'request' with promise and await results.
 	private sendDebugeeRequestAsync(thread: number, response: DebugProtocol.Response, args: any): Promise<any> {
 		let promise = new Promise((resolve, reject) => {
 			let requestSeq = response.request_seq;
@@ -475,7 +475,7 @@ export class Session extends DebugSession {
 		return promise;
 	}
 
-	// Synchronous send message of type 'request' and callback with results.
+	// send message of type 'request' and callback with results.
 	private sendDebugeeRequest(thread: number, response: DebugProtocol.Response, args: any, callback: Function) {
 		let requestSeq = response.request_seq;
 		this._requests.set(requestSeq, {

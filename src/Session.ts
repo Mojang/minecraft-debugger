@@ -615,11 +615,16 @@ export class Session extends DebugSession {
 		if (!filePath || !extensions) {
 			return false;
 		}
-		let fileNames = fs.readdirSync(filePath);
-		for (let fn of fileNames) {
-			if (extensions.some(ext => fn.endsWith(ext))) {
-				return true;
+		try {
+			let fileNames = fs.readdirSync(filePath);
+			for (let fn of fileNames) {
+				if (extensions.some(ext => fn.endsWith(ext))) {
+					return true;
+				}
 			}
+		}
+		catch (e) {
+			this.log((e as Error).message, LogLevel.Error);
 		}
 		return false;
 	}

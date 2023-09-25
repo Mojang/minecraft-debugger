@@ -8,6 +8,7 @@ import { LogOutputEvent, LogLevel } from 'vscode-debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
 import { FileSystemWatcher, window, workspace } from 'vscode';
+import { StatsProvider } from './StatsProvider';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -56,7 +57,7 @@ export class Session extends DebugSession {
 	private _inlineSourceMap: boolean = false;
 	private _moduleMapping?: ModuleMapping;
 
-	public constructor() {
+	public constructor(private _statsProvider: StatsProvider) {
 		super();
 
 		this.setDebuggerLinesStartAt1(true);
@@ -545,6 +546,9 @@ export class Session extends DebugSession {
 		}
 		else if (eventMessage.type === 'ProtocolEvent') {
 			this.handleProtocolEvent(eventMessage);
+		}
+		else if (eventMessage.type == 'StatEvent') {
+			this._statsProvider.setStats(eventMessage.stats);
 		}
 	}
 

@@ -1,8 +1,8 @@
 {
 	"name": "minecraft-debugger",
 	"displayName": "Minecraft Bedrock Edition Debugger",
-	"description": "Debug your JavaScript code running as part of the GameTest Framework experimental feature in Minecraft Bedrock Edition.",
-	"version": "1.1.2",
+	"description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
+	"version": "1.2.0",
 	"publisher": "mojang-studios",
 	"author": {
 		"name": "Mojang Studios"
@@ -34,6 +34,15 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"views": {
+			"debug": [
+				{
+					"type": "tree",
+					"id": "MinecraftStatsTreeDataProvider",
+					"name": "Minecraft Diagnostics"
+				}
+			]
+		},
 		"breakpoints": [
 			{
 				"language": "javascript"

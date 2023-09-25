@@ -55,3 +55,7 @@
 ## Version 1.1.1 (September 2023)
 
 - Handle uncaught exceptions during .map file discovery against invalid directory. Write to log and pop notification message.
+
+## Version 1.2.0 (September 2023)
+
+- Add 'Minecraft Diagnostics' panel to debugger view. Display script memory stats.

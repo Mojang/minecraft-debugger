@@ -63,22 +63,22 @@ export class StatsProvider implements vscode.TreeDataProvider<StatTreeItem> {
 
 	public setStats(stats: any) {
 		this._statMap.clear();
-			stats?.forEach((stat: StatData) => {
-				if (!stat.parent_id) {
-					if (!this._statMap.has(this._rootKey)) {
-						this._statMap.set(this._rootKey, []);
-					}
-					let rootStats = this._statMap.get(this._rootKey);
-					rootStats?.push(stat);
+		stats?.forEach((stat: StatData) => {
+			if (!stat.parent_id) {
+				if (!this._statMap.has(this._rootKey)) {
+					this._statMap.set(this._rootKey, []);
 				}
-				else {
-					if (!this._statMap.has(stat.parent_id)) {
-						this._statMap.set(stat.parent_id, []);
-					}
-					let parentStats = this._statMap.get(stat.parent_id);
-					parentStats?.push(stat);
+				let rootStats = this._statMap.get(this._rootKey);
+				rootStats?.push(stat);
+			}
+			else {
+				if (!this._statMap.has(stat.parent_id)) {
+					this._statMap.set(stat.parent_id, []);
 				}
-			});
+				let parentStats = this._statMap.get(stat.parent_id);
+				parentStats?.push(stat);
+			}
+		});
 		this._onDidChangeTreeData.fire();
 	}
 

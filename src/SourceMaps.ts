@@ -99,6 +99,12 @@ class SourceMapCache {
 					}
 				} else {
 					mapJson = JSON.parse(mapFile.toString());
+
+					// Assume a .map file aligns 1:1 with a .js file
+					// if there is no file name provided
+					if (mapJson.file === undefined) {
+						mapJson.file = path.basename(mapFileName).replace(SourceMapCache._mapFileExt, '');
+					}
 				}
 				
 				let sourceMapConsumer = await new SourceMapConsumer(mapJson);

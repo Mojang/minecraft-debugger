@@ -88,7 +88,7 @@ export class StatsProvider implements vscode.TreeDataProvider<StatTreeItem> {
 			if (typeof stat.value === 'string') {
 				intVal = parseInt(stat.value, 10);
 			}
-			return (stat.label || "") + ": " + ((intVal || 1) / 1000).toFixed(2) + "  KB"; // show in KB (todo: add user option to display as MB)
+			return (stat.label || "") + ": " + ((intVal || 0) / 1000).toFixed(2) + "  KB"; // show in KB (todo: add user option to display as MB)
 		}
 		return (stat.label || "") + (stat.value || "");
 	}

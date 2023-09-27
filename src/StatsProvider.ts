@@ -83,14 +83,14 @@ export class StatsProvider implements vscode.TreeDataProvider<StatTreeItem> {
 	}
 
 	private _toStatLabel(stat: StatData): string {
-		if (stat.type === "memorySize" && stat.value) {
+		if (stat.type === "memory_size" && stat.value) {
 			let intVal = 0;
 			if (typeof stat.value === 'string') {
 				intVal = parseInt(stat.value, 10);
 			}
-			return stat.label + ": " + (intVal / 1000).toFixed(2) + "  KB"; // show in KB (todo: add user option to display as MB)
+			return (stat.label || "") + ": " + ((intVal || 1) / 1000).toFixed(2) + "  KB"; // show in KB (todo: add user option to display as MB)
 		}
-		return stat.label + (stat.value || "");
+		return (stat.label || "") + (stat.value || "");
 	}
 
 	private _collapsibleState(stat: StatData): vscode.TreeItemCollapsibleState {

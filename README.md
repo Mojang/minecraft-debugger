@@ -68,7 +68,7 @@ You will only need to run this once on your PC.
 6. Within Visual Studio Code, hit Run | Start Debugging to put Visual Studio Code in "Listen for Debug Connections" mode.
 7. Back within Minecraft, use this slash command to connect to Visual Studio Code on a port.
 
-```json
+```
 /script debugger connect localhost 19144 
 ```
 
@@ -125,7 +125,7 @@ These settings configure debugging on Bedrock Dedicated Server:
 4. Within Bedrock Dedicated Server, run the following command:
 
 ```
-script debugger listen 19144 
+/script debugger listen 19144 
 ```
 
 5. Within Visual Studio Code, set a break point inside of your GameTest function.

@@ -34,6 +34,7 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	port: number;
 	inputPort: string;
 	moduleMapping: ModuleMapping;
+	sourceMapBias: string;
 }
 
 // The Debug Adapter for 'minecraft-js'
@@ -56,6 +57,7 @@ export class Session extends DebugSession {
 	private _generatedSourceRoot?: string;
 	private _inlineSourceMap: boolean = false;
 	private _moduleMapping?: ModuleMapping;
+	private _sourceMapBias?: string;
 
 	public constructor(private _statsProvider: StatsProvider) {
 		super();
@@ -110,6 +112,7 @@ export class Session extends DebugSession {
 		this._generatedSourceRoot = args.generatedSourceRoot ? path.normalize(args.generatedSourceRoot) : undefined;
 		this._inlineSourceMap = args.inlineSourceMap ? args.inlineSourceMap : false;
 		this._moduleMapping = args.moduleMapping;
+		this._sourceMapBias = args.sourceMapBias;
 
 		// Listen or connect (default), depending on mode.
 		// Attach makes more sense to use connect, but some MC platforms require using listen.
@@ -411,7 +414,7 @@ export class Session extends DebugSession {
 		this.showNotification("Success! Debugger is now connected.", LogLevel.Log);
 
 		// init source maps
-		this._sourceMaps = new SourceMaps(this._localRoot, this._sourceMapRoot, this._generatedSourceRoot, this._inlineSourceMap);
+		this._sourceMaps = new SourceMaps(this._localRoot, this._sourceMapRoot, this._generatedSourceRoot, this._inlineSourceMap, this._sourceMapBias);
 
 		// watch for source map changes
 		this.createSourceMapFileWatcher(this._sourceMapRoot);

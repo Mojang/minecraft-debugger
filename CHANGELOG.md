@@ -59,3 +59,7 @@
 ## Version 1.2.0 (September 2023)
 
 - Add 'Minecraft Diagnostics' panel to debugger view. Display script memory stats.
+
+## Version 1.3.0 (February 2024)
+
+- Expose source map lookup bias parameter "sourceMapBias" to the launch config to account for variations in how source maps are generated. Changing this from the default can fix breakpoint line number alignment issues between original source (ts) and generated source (js). Defaults to "leastUpperBound" and can be changed to "greatestLowerBound".

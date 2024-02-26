@@ -179,13 +179,15 @@ export class SourceMaps {
 	private _localRoot: string;
 	private _sourceMapRoot?: string;
 	private _sourceMapCache: SourceMapCache;
-	private _inlineSourceMap: boolean;
+	private _sourceMapBias: number = SourceMapConsumer.LEAST_UPPER_BOUND;
+	private _sourceMapBiasAlternate: number = SourceMapConsumer.GREATEST_LOWER_BOUND;
 
-	public constructor(localRoot: string, sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap: boolean = false) {
+	public constructor(localRoot: string, sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap: boolean = false, sourceMapBias?: string) {
 		this._localRoot = path.normalize(localRoot);
 		this._sourceMapRoot = (sourceMapRoot) ? path.normalize(sourceMapRoot) : undefined;
 		this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot, inlineSourceMap, localRoot);
-		this._inlineSourceMap = inlineSourceMap;
+		this._sourceMapBias = (sourceMapBias === 'greatestLowerBound') ? SourceMapConsumer.GREATEST_LOWER_BOUND : SourceMapConsumer.LEAST_UPPER_BOUND;
+		this._sourceMapBiasAlternate = (this._sourceMapBias === SourceMapConsumer.LEAST_UPPER_BOUND) ? SourceMapConsumer.GREATEST_LOWER_BOUND : SourceMapConsumer.LEAST_UPPER_BOUND;
 	}
 
 	public reset() {
@@ -219,15 +221,16 @@ export class SourceMaps {
 			source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
 			line: originalPosition.line,
 			column: originalPosition.column,
-			bias: SourceMapConsumer.LEAST_UPPER_BOUND
+			bias: this._sourceMapBias
 		});
 
+		// if specified bias did not find a result, try the alternate
 		if (generatedPosition.line === null) {
 			generatedPosition = mapInfo.sourceMap.generatedPositionFor({
 				source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
 				line: originalPosition.line,
 				column: originalPosition.column,
-				bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+				bias: this._sourceMapBiasAlternate
 			});
 		}
 
@@ -245,16 +248,17 @@ export class SourceMaps {
 		let mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(generatedPosition.source);
 		if (mapInfo) {
 			let originalPos = mapInfo.sourceMap.originalPositionFor({
-				column: generatedPosition.column,
 				line: generatedPosition.line,
-				bias: SourceMapConsumer.LEAST_UPPER_BOUND
+				column: generatedPosition.column,
+				bias: this._sourceMapBias
 			});
 
+			// if specified bias did not find a result, try the alternate
 			if (originalPos.line === null) {
 				originalPos = mapInfo.sourceMap.originalPositionFor({
 					line: generatedPosition.line,
 					column: generatedPosition.column,
-					bias: SourceMapConsumer.GREATEST_LOWER_BOUND
+					bias: this._sourceMapBiasAlternate
 				});
 			}
 

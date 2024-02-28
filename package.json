@@ -43,6 +43,13 @@
 				}
 			]
 		},
+		"commands": [
+			{
+				"command": "hello-world.helloWorld",
+				"category": "Minecraft",
+				"title": "Hello World"
+			}
+		],
 		"breakpoints": [
 			{
 				"language": "javascript"
@@ -144,14 +151,13 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src --ext ts",
-		"package": "vsce package -o minecraft-debugger-js.vsix"
+		"vscode:prepublish": "npm run package",
+		"compile": "node ./esbuild.js",
+		"package": "NODE_ENV=production node ./esbuild.js",
+		"watch": "node ./esbuild.js --watch"
 	},
 	"dependencies": {
+		"@vscode/webview-ui-toolkit": "^1.4.0",
 		"source-map": "^0.7.4",
 		"stream-parser": "^0.3.1",
 		"vscode-debugadapter": "1.47.0"
@@ -163,7 +169,7 @@
 		"@types/vscode": "^1.55.0",
 		"@typescript-eslint/eslint-plugin": "^4.14.1",
 		"@typescript-eslint/parser": "^4.14.1",
-		"esbuild": "^0.12.5",
+		"esbuild": "^0.16.17",
 		"eslint": "^7.19.0",
 		"glob": "^7.1.6",
 		"mocha": "^10.2.0",

@@ -545,7 +545,7 @@ export class Session extends DebugSession {
 			this.sendEvent(new ThreadEvent(eventMessage.reason, eventMessage.thread));
 		}
 		else if (eventMessage.type === 'PrintEvent') {
-			this.sendEvent(new LogOutputEvent(eventMessage.message + '\n', eventMessage.logLevel));
+			this.sendEvent(new LogOutputEvent(eventMessage.message, eventMessage.logLevel));
 		}
 		else if (eventMessage.type === 'ProtocolEvent') {
 			this.handleProtocolEvent(eventMessage);

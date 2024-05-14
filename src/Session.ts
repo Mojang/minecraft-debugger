@@ -599,11 +599,7 @@ export class Session extends DebugSession {
 		if (Session.DEBUGGER_PROTOCOL_VERSION < protocolCapabilities.version) {
 			this.terminateSession("protocol mismatch. Update Debugger Extension.", LogLevel.Error);
 		}
-		// todo: enable when MC updates with protocol handshake
-		/*else if (Session.DEBUGGER_PROTOCOL_VERSION > protocolCapabilities.version) {
-			this.terminateSession("protocol mismatch. Update Minecraft or roll-back the Debugger Extension.", LogLevel.Error);
-		}*/
-		else {		
+		else {
 			this.sendDebuggeeMessage({
 				type: 'protocol',
 				version: Session.DEBUGGER_PROTOCOL_VERSION,

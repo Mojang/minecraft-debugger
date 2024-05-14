@@ -67,3 +67,7 @@
 ## Version 1.3.1 (April 2024)
 
 - Remove extra line break in logs from MC.
+
+## Version 1.4.0 (May 2024)
+
+- Add targetModuleUuid to launch config, this ensures debugger messages (breakpoints etc) target the correct Minecraft Add-On.

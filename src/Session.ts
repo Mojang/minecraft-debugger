@@ -11,6 +11,7 @@ import { FileSystemWatcher, window, workspace } from 'vscode';
 import { StatsProvider } from './StatsProvider';
 import * as path from 'path';
 import * as fs from 'fs';
+import { isUUID } from './Utils';
 
 interface PendingResponse {
 	onSuccess?: Function;
@@ -25,22 +26,23 @@ interface ModuleMapping {
 // Interface for specific launch arguments.
 // See package.json for schema.
 interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
-	mode: string;
-	localRoot: string;
-	generatedSourceRoot: string;
-	sourceMapRoot: string;
-	inlineSourceMap: boolean;
-	host: string;
-	port: number;
-	inputPort: string;
-	moduleMapping: ModuleMapping;
-	sourceMapBias: string;
+	mode?: string;
+	localRoot?: string;
+	generatedSourceRoot?: string;
+	sourceMapRoot?: string;
+	inlineSourceMap?: boolean;
+	host?: string;
+	port?: number;
+	inputPort?: string;
+	moduleMapping?: ModuleMapping;
+	sourceMapBias?: string;
+	targetModuleUuid?: string;
 }
 
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession {
-	private static DEBUGGER_PROTOCOL_VERSION = 1;
+	private static DEBUGGER_PROTOCOL_VERSION = 2;
 	private static CONNECTION_RETRY_ATTEMPTS = 5;
 	private static CONNECTION_RETRY_WAIT_MS = 2000;
 
@@ -58,6 +60,7 @@ export class Session extends DebugSession {
 	private _inlineSourceMap: boolean = false;
 	private _moduleMapping?: ModuleMapping;
 	private _sourceMapBias?: string;
+	private _targetModuleUuid?: string;
 
 	public constructor(private _statsProvider: StatsProvider) {
 		super();
@@ -101,10 +104,17 @@ export class Session extends DebugSession {
 		this.resolveEnvironmentVariables(args);
 
 		const host = args.host || 'localhost';
-		let port = args.port || parseInt(args.inputPort);
+		let port = args.port || (args.inputPort ? parseInt(args.inputPort) : NaN);
 		if (isNaN(port)) {
 			this.sendErrorResponse(response, 1001, `Failed to attach to Minecraft, invalid port "${args.inputPort}".`);
 			return;
+		}
+
+		if (args.targetModuleUuid === undefined || args.targetModuleUuid === "" || !isUUID(args.targetModuleUuid)) {
+			this.showNotification("Launch config module target (targetModuleUuid) is not a valid uuid. This should be set to the script module uuid from your manifest.json. Omitting this may cause problems when multiple Minecraft Add-Ons are active.", LogLevel.Warn);
+		}
+		else {
+			this._targetModuleUuid = args.targetModuleUuid.toLowerCase();
 		}
 
 		this._localRoot = args.localRoot ? path.normalize(args.localRoot) : "";
@@ -449,7 +459,7 @@ export class Session extends DebugSession {
 
 	// close and terminate session (could be from debugee request)
 	// send terminated event to VSCode to release DA
-	private terminateSession(reason: string) {
+	private terminateSession(reason: string, logLevel: LogLevel = LogLevel.Log) {
 		this.closeServer();
 		this.closeSession();
 
@@ -457,7 +467,7 @@ export class Session extends DebugSession {
 			this._terminated = true;
 			this.sendEvent(new TerminatedEvent());
 
-			this.showNotification(`Session terminated, ${reason}.`, LogLevel.Log);
+			this.showNotification(`Session terminated, ${reason}.`, logLevel);
 		}
 	}
 
@@ -507,8 +517,6 @@ export class Session extends DebugSession {
 		if (!this._connectionSocket) {
 			return;
 		}
-
-		envelope.version = Session.DEBUGGER_PROTOCOL_VERSION;
 
 		let json = JSON.stringify(envelope);
 		let jsonBuffer = Buffer.from(json);
@@ -588,11 +596,25 @@ export class Session extends DebugSession {
 		// handle protocol capabilities here...
 		// can fail connection on errors
 		//
+		if (Session.DEBUGGER_PROTOCOL_VERSION < protocolCapabilities.version) {
+			this.terminateSession("protocol mismatch. Update Debugger Extension.", LogLevel.Error);
+		}
+		// todo: enable when MC updates with protocol handshake
+		/*else if (Session.DEBUGGER_PROTOCOL_VERSION > protocolCapabilities.version) {
+			this.terminateSession("protocol mismatch. Update Minecraft or roll-back the Debugger Extension.", LogLevel.Error);
+		}*/
+		else {		
+			this.sendDebuggeeMessage({
+				type: 'protocol',
+				version: Session.DEBUGGER_PROTOCOL_VERSION,
+				target_module_uuid: this._targetModuleUuid
+			});
 
-		this.checkSourceFilePaths();
+			this.checkSourceFilePaths();
 
-		// success
-		this.onConnectionComplete();
+			// success
+			this.onConnectionComplete();
+		}
 	}
 
 	// check that source and map properties in launch.json are set correctly

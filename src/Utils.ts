@@ -23,7 +23,7 @@ function hasDriveLetter(path: string, isWindowsOS: boolean): boolean {
 	return false;
 }
 
-export function normalizePath(filePath: string): string {	
+export function normalizePath(filePath: string): string {
 	if (hasDriveLetter(filePath, os.type() == 'Windows_NT')) {
 		return path.normalize(filePath.charAt(0).toUpperCase() + filePath.slice(1));
 	}
@@ -36,6 +36,6 @@ export function normalizePathForRemote(filePath: string) {
 }
 
 export function isUUID(uuid: string) {
-	const regex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/i;
+	const regex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
 	return regex.test(uuid);
 }

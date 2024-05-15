@@ -110,7 +110,7 @@ export class Session extends DebugSession {
 			return;
 		}
 
-		if (args.targetModuleUuid === undefined || args.targetModuleUuid === "" || !isUUID(args.targetModuleUuid)) {
+		if (!args.targetModuleUuid || args.targetModuleUuid === "" || !isUUID(args.targetModuleUuid)) {
 			this.showNotification("Launch config module target (targetModuleUuid) is not a valid uuid. This should be set to the script module uuid from your manifest.json. Omitting this may cause problems when multiple Minecraft Add-Ons are active.", LogLevel.Warn);
 		}
 		else {

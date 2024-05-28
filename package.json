@@ -1,177 +1,178 @@
 {
-	"name": "minecraft-debugger",
-	"displayName": "Minecraft Bedrock Edition Debugger",
-	"description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
-	"version": "1.4.0",
-	"publisher": "mojang-studios",
-	"author": {
-		"name": "Mojang Studios"
-	},
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Mojang/minecraft-debugger.git"
-	},
-	"icon": "bedrock-icon.png",
-	"engines": {
-		"node": "^18.0.0",
-		"vscode": "^1.55.0"
-	},
-	"categories": [
-		"Debuggers"
-	],
-	"keywords": [
-		"minecraft",
-		"javascript",
-		"bedrock",
-		"gametest",
-		"add-on"
-	],
-	"private": true,
-	"activationEvents": [
-		"onDebug",
-		"onCommand:extension.minecraft-js.getPort"
-	],
-	"main": "./out/extension.js",
-	"contributes": {
-		"views": {
-			"debug": [
-				{
-					"type": "tree",
-					"id": "MinecraftStatsTreeDataProvider",
-					"name": "Minecraft Diagnostics"
-				}
-			]
-		},
-		"breakpoints": [
-			{
-				"language": "javascript"
-			}
-		],
-		"debuggers": [
-			{
-				"type": "minecraft-js",
-				"label": "Minecraft Debugger",
-				"program": "./out/debugAdapter.js",
-				"runtime": "node",
-				"languages": [
-					"javascript"
-				],
-				"configurationAttributes": {
-					"attach": {
-						"properties": {
-							"mode": {
-								"type": "string",
-								"description": "The debugger connection mode. Use 'listen' to have VSCode wait for Minecraft to connect. Use 'connect' to have VSCode attach to a Minecraft instance that is listening for a debugger.",
-								"enum": [
-									"connect",
-									"listen"
-								],
-								"default": "connect"
-							},
-							"localRoot": {
-								"type": "string",
-								"description": "The local root of the Minecraft Add-On scripts folder.",
-								"default": "${workspaceFolder}/scripts/"
-							},
-							"sourceMapRoot": {
-								"type": "string",
-								"description": "The location of the source maps."
-							},
-							"generatedSourceRoot": {
-								"type": "string",
-								"description": "The location of the generated source files (js). Not required if same as source maps."
-							},
-							"inlineSourceMap": {
-								"type": "boolean",
-								"description": "Whether or not source maps are embedded in the generated source files. Overrides sourceMapRoot and generatedSourceRoot when true.",
-								"default": false
-							},
-							"host": {
-								"type": "string",
-								"description": "The host address the extension will connect to.",
-								"default": "localhost"
-							},
-							"port": {
-								"type": "number",
-								"description": "The port Minecraft is listening on."
-							},
-							"inputPort": {
-								"type": "string",
-								"description": "Prompts for a port at launch."
-							},
-							"moduleMapping": {
-								"type": "object",
-								"description": "Module mapping for imports. Each key is an import name that will be mapped to the provided value. Used if modules are external (i.e. included as part of minecraft). Defaults to an empty object."
-							},
-							"sourceMapBias": {
-								"type": "string",
-								"description": "The bias to use when mapping from generated code to source code. Can be either 'leastUpperBound' or 'greatestLowerBound'. Defaults to 'leastUpperBound'."
-							},
-							"targetModuleUuid": {
-								"type": "string",
-								"description": "The script module uuid from the manifest.json of the Minecraft Add-On being debugged. Necessary if there are multiple Add-Ons active."
-							}
-						}
-					}
-				},
-				"initialConfigurations": [
-					{
-						"type": "minecraft-js",
-						"request": "attach",
-						"name": "Attach to Minecraft",
-						"mode": "connect",
-						"localRoot": "${workspaceFolder}/scripts",
-						"host": "localhost",
-						"port": 19144
-					}
-				],
-				"configurationSnippets": [
-					{
-						"label": "Minecraft Debugger: Attach",
-						"description": "A new configuration for attaching JavaScript debugger to Minecraft.",
-						"body": {
-							"type": "minecraft-js",
-							"request": "attach",
-							"name": "Attach to Minecraft",
-							"mode": "connect",
-							"localRoot": "^\"\\${workspaceFolder}/scripts\"",
-							"host": "localhost",
-							"port": 19144
-						}
-					}
-				],
-				"variables": {
-					"PromptForPort": "extension.minecraft-js.getPort"
-				}
-			}
-		]
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src --ext ts",
-		"package": "vsce package -o minecraft-debugger-js.vsix"
-	},
-	"dependencies": {
-		"source-map": "^0.7.4",
-		"stream-parser": "^0.3.1",
-		"vscode-debugadapter": "1.47.0"
-	},
-	"devDependencies": {
-		"@types/glob": "^7.1.3",
-		"@types/mocha": "^8.0.4",
-		"@types/node": "^12.11.7",
-		"@types/vscode": "^1.55.0",
-		"@typescript-eslint/eslint-plugin": "^4.14.1",
-		"@typescript-eslint/parser": "^4.14.1",
-		"esbuild": "^0.12.5",
-		"eslint": "^7.19.0",
-		"glob": "^7.1.6",
-		"mocha": "^10.2.0",
-		"typescript": "^4.1.3",
-		"vsce": "^2.15.0"
-	}
+    "name": "minecraft-debugger",
+    "displayName": "Minecraft Bedrock Edition Debugger",
+    "description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
+    "version": "1.4.0",
+    "publisher": "mojang-studios",
+    "author": {
+        "name": "Mojang Studios"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Mojang/minecraft-debugger.git"
+    },
+    "icon": "bedrock-icon.png",
+    "engines": {
+        "node": "^20.0.0",
+        "vscode": "^1.55.0"
+    },
+    "categories": [
+        "Debuggers"
+    ],
+    "keywords": [
+        "minecraft",
+        "javascript",
+        "bedrock",
+        "gametest",
+        "add-on"
+    ],
+    "private": true,
+    "activationEvents": [
+        "onDebug",
+        "onCommand:extension.minecraft-js.getPort"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "minecraft-debugger.showMinecraftDiagnostics",
+                "title": "Minecraft Diagnostics: Show"
+            }
+        ],
+        "breakpoints": [
+            {
+                "language": "javascript"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "minecraft-js",
+                "label": "Minecraft Debugger",
+                "program": "./out/debugAdapter.js",
+                "runtime": "node",
+                "languages": [
+                    "javascript"
+                ],
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {
+                            "mode": {
+                                "type": "string",
+                                "description": "The debugger connection mode. Use 'listen' to have VSCode wait for Minecraft to connect. Use 'connect' to have VSCode attach to a Minecraft instance that is listening for a debugger.",
+                                "enum": [
+                                    "connect",
+                                    "listen"
+                                ],
+                                "default": "connect"
+                            },
+                            "localRoot": {
+                                "type": "string",
+                                "description": "The local root of the Minecraft Add-On scripts folder.",
+                                "default": "${workspaceFolder}/scripts/"
+                            },
+                            "sourceMapRoot": {
+                                "type": "string",
+                                "description": "The location of the source maps."
+                            },
+                            "generatedSourceRoot": {
+                                "type": "string",
+                                "description": "The location of the generated source files (js). Not required if same as source maps."
+                            },
+                            "inlineSourceMap": {
+                                "type": "boolean",
+                                "description": "Whether or not source maps are embedded in the generated source files. Overrides sourceMapRoot and generatedSourceRoot when true.",
+                                "default": false
+                            },
+                            "host": {
+                                "type": "string",
+                                "description": "The host address the extension will connect to.",
+                                "default": "localhost"
+                            },
+                            "port": {
+                                "type": "number",
+                                "description": "The port Minecraft is listening on."
+                            },
+                            "inputPort": {
+                                "type": "string",
+                                "description": "Prompts for a port at launch."
+                            },
+                            "moduleMapping": {
+                                "type": "object",
+                                "description": "Module mapping for imports. Each key is an import name that will be mapped to the provided value. Used if modules are external (i.e. included as part of minecraft). Defaults to an empty object."
+                            },
+                            "sourceMapBias": {
+                                "type": "string",
+                                "description": "The bias to use when mapping from generated code to source code. Can be either 'leastUpperBound' or 'greatestLowerBound'. Defaults to 'leastUpperBound'."
+                            },
+                            "targetModuleUuid": {
+                                "type": "string",
+                                "description": "The script module uuid from the manifest.json of the Minecraft Add-On being debugged. Necessary if there are multiple Add-Ons active."
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "type": "minecraft-js",
+                        "request": "attach",
+                        "name": "Attach to Minecraft",
+                        "mode": "connect",
+                        "localRoot": "${workspaceFolder}/scripts",
+                        "host": "localhost",
+                        "port": 19144
+                    }
+                ],
+                "configurationSnippets": [
+                    {
+                        "label": "Minecraft Debugger: Attach",
+                        "description": "A new configuration for attaching JavaScript debugger to Minecraft.",
+                        "body": {
+                            "type": "minecraft-js",
+                            "request": "attach",
+                            "name": "Attach to Minecraft",
+                            "mode": "connect",
+                            "localRoot": "^\"\\${workspaceFolder}/scripts\"",
+                            "host": "localhost",
+                            "port": 19144
+                        }
+                    }
+                ],
+                "variables": {
+                    "PromptForPort": "extension.minecraft-js.getPort"
+                }
+            }
+        ]
+    },
+    "scripts": {
+        "install:all": "npm install && cd webview-ui && npm install",
+        "start:webview": "cd webview-ui && npm run start",
+        "build:webview": "cd webview-ui && npm run build",
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "package": "vsce package -o minecraft-debugger-js.vsix"
+    },
+    "dependencies": {
+        "source-map": "^0.7.4",
+        "stream-parser": "^0.3.1",
+        "vscode-debugadapter": "1.47.0",
+        "@vscode/webview-ui-toolkit": "^1.4.0"
+    },
+    "devDependencies": {
+        "@types/glob": "^7.1.3",
+        "@types/mocha": "^8.0.4",
+        "@types/node": "^12.11.7",
+        "@types/vscode": "^1.55.0",
+        "@typescript-eslint/eslint-plugin": "^4.14.1",
+        "@typescript-eslint/parser": "^4.14.1",
+        "esbuild": "^0.12.5",
+        "eslint": "^7.19.0",
+        "glob": "^7.1.6",
+        "mocha": "^10.2.0",
+        "typescript": "^4.1.3",
+        "vsce": "^2.15.0"
+    }
 }

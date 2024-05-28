@@ -5,6 +5,7 @@ type Options = {
     name: string;
 };
 
+// Note: Not used yet!
 export default function CustomizedStatisticPane({ name }: Options) {
     return (
         <VSCodeDropdown>

@@ -34,13 +34,16 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(descriptorFactory);
     }
 
-    // Create the show hello world command
-    const showHelloWorldCommand = vscode.commands.registerCommand('minecraft-debugger.showMinecraftDiagnostics', () => {
-        MinecraftDiagnosticsPanel.render(context.extensionUri, statProvider2);
-    });
+    // Create the show diagnostics command
+    const showDiagnosticsCommand = vscode.commands.registerCommand(
+        'minecraft-debugger.showMinecraftDiagnostics',
+        () => {
+            MinecraftDiagnosticsPanel.render(context.extensionUri, statProvider2);
+        }
+    );
 
     // Add command to the extension context
-    context.subscriptions.push(showHelloWorldCommand);
+    context.subscriptions.push(showDiagnosticsCommand);
 }
 
 // called when extension is deactivated

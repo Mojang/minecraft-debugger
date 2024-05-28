@@ -69,7 +69,7 @@ function DifferenceStatResolver(
             let newValue = 0;
             let absoluteValue = value;
             if (result.length !== 0) {
-                const previousValue = result[0].absoluteValue;
+                const previousValue = result[result.length - 1].absoluteValue;
                 newValue = value - previousValue;
             }
 

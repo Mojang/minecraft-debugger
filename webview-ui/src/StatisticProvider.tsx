@@ -1,3 +1,5 @@
+import { debug } from 'console';
+
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
     values: number[];

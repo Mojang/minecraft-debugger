@@ -1,12 +1,12 @@
 <h1 align="center">
   <br>
-  Minecraft Bedrock Edition GameTest JavaScript Debugger (experimental)
+  Minecraft Bedrock Edition Script Debugger
   <br>
 </h1>
 
-<h4 align="center">Debug your JavaScript code running as part of the GameTest Framework experimental feature in Minecraft Bedrock Edition, from Visual Studio Code.</h4>
+<h4 align="center">Debug your JavaScript code running as part Minecraft Bedrock Editions Script API features, from Visual Studio Code.</h4>
 
-This Visual Studio Code extension will assist in debugging your JavaScript code when used in the GameTest experiment in Minecraft Bedrock Edition clients and within Bedrock Dedicated Server. See more about the GameTest feature and JavaScript capabilities at https://aka.ms/gametest, and see https://aka.ms/mcscriptdebugging for more on how to get started with script debugging in Minecraft.
+This Visual Studio Code extension will assist in debugging your JavaScript code when using scripting in Minecraft Bedrock Edition clients and within Bedrock Dedicated Server. See more about scripting and script API capabilities at https://aka.ms/startwithmcscript, and see https://aka.ms/mcscriptdebugging for more on how to get started with script debugging in Minecraft.
 
 **Supported features**
 * Setting breakpoints
@@ -17,7 +17,6 @@ This Visual Studio Code extension will assist in debugging your JavaScript code 
 **Unsupported scenarios**
 * Changing variable state
 * Immediate mode
-* Debugging of "Additional Modding Capabilities" JavaScript
 
 
 ## Getting Started
@@ -26,7 +25,7 @@ Your first step will be to install the Visual Studio Code Extension from the Vis
 
 [Install the Minecraft Bedrock Edition Debugger extension](https://aka.ms/vscodescriptdebugger)
 
-See more information on Minecraft Bedrock Edition, GameTest, and debugging at https://aka.ms/mcscriptdebugging.
+See more information on Minecraft Bedrock Edition, Script API, and debugging at https://aka.ms/mcscriptdebugging.
 
 ### For debugging Minecraft Bedrock Edition client inside Visual Studio Code
 

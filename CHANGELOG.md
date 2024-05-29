@@ -71,3 +71,7 @@
 ## Version 1.4.0 (May 2024)
 
 - Add targetModuleUuid to launch config, this ensures debugger messages (breakpoints etc) target the correct Minecraft Add-On.
+
+## Version 1.5.0 (June 2024)
+
+- Add diagnostics window that shows real-time statistics from the game server.  Run the `Minecraft Diagnostics: Show` command to open then window.  **Note:** This window requires Minecraft 1.21.10 or higher to function. 

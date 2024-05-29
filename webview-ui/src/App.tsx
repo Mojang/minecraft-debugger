@@ -18,15 +18,6 @@ interface CustomPageData {
 function App() {
     // State
     const [selectedPlugin, setSelectedPlugin] = useState<string>('no_plugin_selected');
-    const [customPages, setCustomPages] = useState<CustomPageData[]>([{ id: 0, name: 'Page 1' }]);
-
-    const onNewPageBotton = () => {
-        setCustomPages(prevPages => {
-            const newPages = [...prevPages];
-            newPages.push({ id: prevPages.length, name: `Page ${prevPages.length}` });
-            return newPages;
-        });
-    };
 
     return (
         <main>
@@ -37,12 +28,6 @@ function App() {
                 <VSCodePanelTab id="tab-4">Networking - Packets</VSCodePanelTab>
                 <VSCodePanelTab id="tab-5">Networking - Bandwidth</VSCodePanelTab>
                 <VSCodePanelTab id="tab-6">Handle Counts</VSCodePanelTab>
-                {/* {customPages.map(pageData => {
-                    return <VSCodePanelTab id={`tab-${pageData.id + 7}`}>{pageData.name}</VSCodePanelTab>;
-                })}
-                <VSCodePanelTab id="tab-99">
-                    <VSCodeButton onClick={onNewPageBotton}>+</VSCodeButton>
-                </VSCodePanelTab> */}
                 <VSCodePanelView id="view-1" style={{ flexDirection: 'column' }}>
                     <div style={{ flexDirection: 'row', display: 'flex' }}>
                         {statPrefabs.entityCount.reactNode}
@@ -118,14 +103,6 @@ function App() {
                         }}
                     />
                 </VSCodePanelView>
-                {/* {(customPages ?? []).map(pageData => {
-                    return (
-                        <VSCodePanelView id={`view-${pageData.id + 7}`}>
-                            <CustomizedStatisticPane name={pageData.name} />
-                        </VSCodePanelView>
-                    );
-                })}
-                <VSCodePanelView id="view-99">Welcome to the new page page!</VSCodePanelView> */}
             </VSCodePanels>
         </main>
     );

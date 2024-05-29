@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { YAxisType } from '../../StatisticResolver';
 
 type Options = {
@@ -13,12 +13,12 @@ export default function LineChartYAxisSelectionBox({ onChange, defaultValue }: O
     // state
     const [selectedResolver, setSelectedResolver] = useState<YAxisType>(defaultValue);
 
-    const _onChange = (e: Event | React.FormEvent<HTMLElement>): void => {
+    const _onChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
         const selectedOption = (e.target as HTMLSelectElement).value as YAxisType;
 
         onChange(selectedOption);
         setSelectedResolver(selectedOption);
-    };
+    }, []);
 
     return (
         <div className="dropdown-container">

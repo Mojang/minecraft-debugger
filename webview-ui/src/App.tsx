@@ -3,7 +3,7 @@
 import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from '@vscode/webview-ui-toolkit/react';
 import './App.css';
 import ScriptPluginSelectionBox from './controls/ScriptPluginSelectionBox';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StatisticType, YAxisType } from './StatisticResolver';
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import { SimpleStatisticProvider } from './StatisticProvider';
@@ -18,6 +18,11 @@ interface CustomPageData {
 function App() {
     // State
     const [selectedPlugin, setSelectedPlugin] = useState<string>('no_plugin_selected');
+
+    const handlePluginSelection = useCallback((pluginSelectionId: string) => {
+        console.log(`Selected Plugin: ${pluginSelectionId}`);
+        setSelectedPlugin(() => pluginSelectionId);
+    }, []);
 
     return (
         <main>
@@ -66,12 +71,7 @@ function App() {
                     {statPrefabs.packetDataSent.reactNode}
                 </VSCodePanelView>
                 <VSCodePanelView id="view-6">
-                    <ScriptPluginSelectionBox
-                        onChange={(pluginSelectionId: string) => {
-                            console.log(`Selected Plugin: ${pluginSelectionId}`);
-                            setSelectedPlugin(() => pluginSelectionId);
-                        }}
-                    />
+                    <ScriptPluginSelectionBox onChange={handlePluginSelection} />
                     <MinecraftStatisticLineChart
                         title="Entity Handles"
                         yLabel="Number of Entities"

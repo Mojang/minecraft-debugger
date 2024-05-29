@@ -1,6 +1,6 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StatisticOptions, YAxisType } from '../StatisticResolver';
 import LineChartYAxisSelectionBox from './LineChart/LineChartYAxisSelectionBox';
 import { LineChart } from './LineChart/LineChart';
@@ -23,11 +23,11 @@ export default function MinecraftStatisticLineChart({
 }: Options) {
     const [_statisticOptions, _setStatisticOptions] = useState<StatisticOptions>(statisticOptions);
 
-    const yAxisResolverChanged = (selectedType: YAxisType): void => {
+    const yAxisResolverChanged = useCallback((selectedType: YAxisType): void => {
         _setStatisticOptions(previousValue => {
             return { ...previousValue, yAxisType: selectedType };
         });
-    };
+    }, []);
 
     return (
         <div style={{ flexDirection: 'column' }}>

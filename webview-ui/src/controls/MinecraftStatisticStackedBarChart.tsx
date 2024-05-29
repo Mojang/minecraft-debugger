@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { useEffect, useRef, useState } from 'react';
 import * as Plot from '@observablehq/plot';
 import { ascending } from 'd3-array';

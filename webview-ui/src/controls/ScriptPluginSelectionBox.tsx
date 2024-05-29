@@ -1,4 +1,6 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
+import { useEffect, useState } from 'react';
 import { VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 
 //chart component

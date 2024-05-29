@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { useState } from 'react';
 import { StatisticOptions, YAxisType } from '../StatisticResolver';
 import LineChartYAxisSelectionBox from './LineChart/LineChartYAxisSelectionBox';

@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from '@vscode/webview-ui-toolkit/react';
 import './App.css';
 import ScriptPluginSelectionBox from './controls/ScriptPluginSelectionBox';

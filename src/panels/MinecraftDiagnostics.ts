@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from 'vscode';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';

@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 import * as statPrefabs from './StatisticPrefabs';
 

@@ -1,4 +1,4 @@
-import { debug } from 'console';
+// Copyright (C) Microsoft Corporation.  All rights reserved.
 
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';

@@ -18,7 +18,7 @@ export default function ScriptPluginSelectionBox({ onChange }: ScriptPluginSelec
     // state
     const [pluginEntries, setPluginEntries] = useState<PluginEntry[]>([{ id: 'no_plugin_selected', name: 'n/a' }]);
 
-    const onSelectionChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
+    const _onChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
         const target = e.target as HTMLSelectElement;
         onChange(pluginEntries[target.selectedIndex].id);
     }, []);
@@ -62,7 +62,7 @@ export default function ScriptPluginSelectionBox({ onChange }: ScriptPluginSelec
     return (
         <div className="dropdown-container">
             <label htmlFor="my-dropdown">Script Plugin</label>
-            <VSCodeDropdown id="my-dropdown" onChange={onSelectionChange}>
+            <VSCodeDropdown id="my-dropdown" onChange={_onChange}>
                 {(pluginEntries ?? []).map(option => {
                     return <VSCodeOption key={option.id}>{option.name}</VSCodeOption>;
                 })}

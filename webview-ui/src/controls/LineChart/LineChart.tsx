@@ -7,7 +7,7 @@ import { createYAxisDomainResolver } from './LineChartYAxisResolvers';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 
-type LineChartProperties = {
+type LineChartProps = {
     title: string;
     yLabel: string;
     xLabel: string;
@@ -18,7 +18,7 @@ type LineChartProperties = {
 type PlotResult = ((SVGSVGElement | HTMLElement) & Plot.Plot) | undefined;
 
 //chart component
-export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDataProvider }: LineChartProperties) {
+export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDataProvider }: LineChartProps) {
     // state
     const [data, setData] = useState<TrackedStat[]>([]);
 

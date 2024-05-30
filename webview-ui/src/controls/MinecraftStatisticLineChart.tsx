@@ -6,7 +6,7 @@ import LineChartYAxisSelectionBox from './LineChart/LineChartYAxisSelectionBox';
 import { LineChart } from './LineChart/LineChart';
 import { StatisticProvider } from '../StatisticProvider';
 
-type Options = {
+type MinecraftStatisticLineChartProps = {
     title: string;
     yLabel: string;
     xLabel?: string;
@@ -20,7 +20,7 @@ export default function MinecraftStatisticLineChart({
     yLabel,
     xLabel = 'Time',
     statisticDataProvider,
-}: Options) {
+}: MinecraftStatisticLineChartProps) {
     const [_statisticOptions, _setStatisticOptions] = useState<StatisticOptions>(statisticOptions);
 
     const yAxisResolverChanged = useCallback((selectedType: YAxisType): void => {

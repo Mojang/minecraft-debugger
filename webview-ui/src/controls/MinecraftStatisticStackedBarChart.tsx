@@ -6,7 +6,7 @@ import { ascending } from 'd3-array';
 import { StatisticOptions, StatisticResolver, TrackedStat } from '../StatisticResolver';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 
-type Options = {
+type MinecraftStatisticStackedBarChartProps = {
     title: string;
     yLabel: string;
     xLabel?: string;
@@ -20,7 +20,7 @@ export default function MinecraftStatisticStackedBarChart({
     xLabel = 'Time',
     statisticDataProvider,
     statisticResolver,
-}: Options) {
+}: MinecraftStatisticStackedBarChartProps) {
     // states
     const [data, setData] = useState<TrackedStat[]>([]);
 
@@ -93,7 +93,7 @@ export default function MinecraftStatisticStackedBarChart({
                 plot.remove();
             }
         };
-    });
+    }, [data]);
 
     return <div ref={containerRef} />;
 }

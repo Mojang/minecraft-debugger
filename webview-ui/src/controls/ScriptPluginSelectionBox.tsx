@@ -1,11 +1,11 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 
 //chart component
 
-type Options = {
+type ScriptPluginSelectionBoxProps = {
     onChange: (pluginSelectionId: string) => void;
 };
 
@@ -14,9 +14,14 @@ interface PluginEntry {
     name: string;
 }
 
-export default function ScriptPluginSelectionBox({ onChange }: Options) {
+export default function ScriptPluginSelectionBox({ onChange }: ScriptPluginSelectionBoxProps) {
     // state
     const [pluginEntries, setPluginEntries] = useState<PluginEntry[]>([{ id: 'no_plugin_selected', name: 'n/a' }]);
+
+    const onSelectionChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
+        const target = e.target as HTMLSelectElement;
+        onChange(pluginEntries[target.selectedIndex].id);
+    }, []);
 
     const eventHandler = (e: MessageEvent): void => {
         // Object containing type prop and value prop
@@ -57,13 +62,7 @@ export default function ScriptPluginSelectionBox({ onChange }: Options) {
     return (
         <div className="dropdown-container">
             <label htmlFor="my-dropdown">Script Plugin</label>
-            <VSCodeDropdown
-                id="my-dropdown"
-                onChange={e => {
-                    const target = e.target as HTMLSelectElement;
-                    onChange(pluginEntries[target.selectedIndex].id);
-                }}
-            >
+            <VSCodeDropdown id="my-dropdown" onChange={onSelectionChange}>
                 {(pluginEntries ?? []).map(option => {
                     return <VSCodeOption key={option.id}>{option.name}</VSCodeOption>;
                 })}

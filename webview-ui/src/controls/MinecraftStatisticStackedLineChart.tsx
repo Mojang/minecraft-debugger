@@ -5,7 +5,7 @@ import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver, TrackedStat } from '../StatisticResolver';
 
-type Options = {
+type MinecraftStatisticStackedLineChartProps = {
     title: string;
     yLabel: string;
     xLabel?: string;
@@ -25,7 +25,7 @@ export default function MinecraftStatisticStackedLineChart({
     statisticDataProvider,
     statisticResolver,
     catageoryLabels,
-}: Options) {
+}: MinecraftStatisticStackedLineChartProps) {
     // states
     const [data, setData] = useState<TrackedStat[]>([]);
 
@@ -118,7 +118,7 @@ export default function MinecraftStatisticStackedLineChart({
                 plot.remove();
             }
         };
-    });
+    }, [data]);
 
     return <div ref={containerRef} />;
 }

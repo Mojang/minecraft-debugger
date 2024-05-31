@@ -15,6 +15,8 @@ interface MapInfo {
 	preferAbsolute: boolean;				// if true, use absolute paths as that is what the source map contained
 }
 
+class InlineSourceMapError extends Error{}
+
 class MapLookup {
 	private _sourceToMapInfo = new Map<string, MapInfo>();
 	public get(sourcePath: string) {
@@ -95,7 +97,7 @@ class SourceMapCache {
 						mapJson.file = path.basename(mapFileName);
 						mapJson.sourceRoot = sourceRoot;
 					} else {
-						throw new Error('Could not find inline source map');
+						throw new InlineSourceMapError(`Failed to load inline source maps for file: ${mapFileName}`);
 					}
 				} else {
 					mapJson = JSON.parse(mapFile.toString());
@@ -106,7 +108,6 @@ class SourceMapCache {
 						mapJson.file = path.basename(mapFileName).replace(SourceMapCache._mapFileExt, '');
 					}
 				}
-				
 				let sourceMapConsumer = await new SourceMapConsumer(mapJson);
 
 				// map has relative path to generated source, resolve for absolute path
@@ -151,7 +152,12 @@ class SourceMapCache {
 			}
 		}
 		catch (e) {
-			throw new Error(`Failed to load source maps at [${this._sourceMapRoot}], check that 'sourceMapRoot' is set correctly.`);
+			if(e instanceof InlineSourceMapError) { 
+				throw e;
+			}
+			else {
+				throw new Error(`Failed to load source maps at [${this._sourceMapRoot}], check that 'sourceMapRoot' is set correctly.`);
+			}
 		}
 
 		this._mapsLoaded = true;

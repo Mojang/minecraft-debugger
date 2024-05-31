@@ -152,7 +152,9 @@ class SourceMapCache {
 			}
 		}
 		catch (e) {
-			if(e instanceof InlineSourceMapError) throw e;
+			if(e instanceof InlineSourceMapError) { 
+				throw e;
+			}
 			else {
 				throw new Error(`Failed to load source maps at [${this._sourceMapRoot}], check that 'sourceMapRoot' is set correctly.`);
 			}

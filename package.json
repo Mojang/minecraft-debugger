@@ -2,7 +2,7 @@
     "name": "minecraft-debugger",
     "displayName": "Minecraft Bedrock Edition Debugger",
     "description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "publisher": "mojang-studios",
     "author": {
         "name": "Mojang Studios"
@@ -149,7 +149,7 @@
         "start:webview": "cd webview-ui && npm run start",
         "build:webview": "cd webview-ui && npm run build",
         "build:all": "npm run build:webview && npm run compile",
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run build:all",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",

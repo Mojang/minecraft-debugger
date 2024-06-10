@@ -75,3 +75,7 @@
 ## Version 1.5.0 (June 2024)
 
 - Add diagnostics window that shows real-time statistics from the game server.  Run the `Minecraft Diagnostics: Show` command to open then window.  **Note:** This window requires Minecraft 1.21.10 or higher to function. 
+
+## Version 1.5.1 (June 2024)
+
+- Fixed packaging issue which prevented the `Minecraft Diagnostics: Show` window from working.

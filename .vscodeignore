@@ -2,6 +2,7 @@
 .vscode-test/**
 out/test/**
 src/**
+webview-ui/src/**
 .gitignore
 .yarnrc
 .ado/**

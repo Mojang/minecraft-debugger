@@ -1,8 +1,9 @@
 .vscode/**
 .vscode-test/**
+.github/**
+
 out/test/**
 src/**
-webview-ui/src/**
 .gitignore
 .yarnrc
 .ado/**
@@ -10,3 +11,6 @@ webview-ui/src/**
 **/.eslintrc.json
 **/*.map
 **/*.ts
+
+webview-ui/src/**
+webview-ui/node_modules/**

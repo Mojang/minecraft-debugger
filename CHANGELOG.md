@@ -79,3 +79,7 @@
 ## Version 1.5.1 (June 2024)
 
 - Fixed packaging issue which prevented the `Minecraft Diagnostics: Show` window from working.
+
+## Version 1.5.2 (June 2024)
+
+- Fixed packaging bug which bloated the extension size by 50x.

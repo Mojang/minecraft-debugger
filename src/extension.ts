@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import { ConfigProvider } from './ConfigProvider';
 import { ServerDebugAdapterFactory } from './ServerDebugAdapterFactory';
+import { HomeViewProvider } from './panels/HomeViewProvider';
 import { MinecraftDiagnosticsPanel } from './panels/MinecraftDiagnostics';
 import { StatsProvider2 } from './StatsProvider2';
 
@@ -12,9 +13,13 @@ export function activate(context: vscode.ExtensionContext) {
     // create tree data providers and register them
     const statProvider2 = new StatsProvider2();
 
+    // home view
+    const homeViewProvider = new HomeViewProvider(context.extensionUri);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(HomeViewProvider.viewType, homeViewProvider));
+
     // register commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('extension.minecraft-js.getPort', config => {
+        vscode.commands.registerCommand('extension.minecraft-js.getPort', _config => {
             return vscode.window.showInputBox({
                 placeHolder: 'Please enter the port Minecraft is listening on.',
                 value: '',

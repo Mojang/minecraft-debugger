@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 function App() {

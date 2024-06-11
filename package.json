@@ -2,7 +2,7 @@
     "name": "minecraft-debugger",
     "displayName": "Minecraft Bedrock Edition Debugger",
     "description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
-    "version": "1.5.2",
+    "version": "1.6.0",
     "publisher": "mojang-studios",
     "author": {
         "name": "Mojang Studios"
@@ -34,6 +34,24 @@
     ],
     "main": "./out/extension.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "minecraft-debugger-home-view",
+                    "title": "Minecraft Debugger",
+                    "icon": "icons/creeper_icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "minecraft-debugger-home-view": [
+                {
+                    "type": "webview",
+                    "id": "minecraft-debugger-home-panel",
+                    "name": "Actions"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "minecraft-debugger.showMinecraftDiagnostics",

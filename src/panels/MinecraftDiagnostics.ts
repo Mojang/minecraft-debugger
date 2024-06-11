@@ -118,9 +118,9 @@ export class MinecraftDiagnosticsPanel {
      */
     private _getWebviewContent(webview: Webview, extensionUri: Uri) {
         // The CSS file from the React build output
-        const stylesUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'index.css']);
+        const stylesUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'diagnosticsPanel.css']);
         // The JS file from the React build output
-        const scriptUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'index.js']);
+        const scriptUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'diagnosticsPanel.js']);
 
         const nonce = getNonce();
 

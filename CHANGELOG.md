@@ -83,3 +83,7 @@
 ## Version 1.5.2 (June 2024)
 
 - Fixed packaging bug which bloated the extension size by 50x.
+
+## Version 1.6.0 (June 2024)
+
+- Add 'Minecraft' activity bar icon and button panel.

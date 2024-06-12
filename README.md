@@ -170,6 +170,27 @@ Now, hit "Start Debugging" inside of Visual Studio Code.
 
 As with when you debug against Minecraft clients, you can set breakpoints in your code by clicking on the left-hand side of the editor, on specific lines of code.
 
+#### Diagnostics Window
+When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnost performance issues.
+
+To open this view, run the command `Minecraft Diagnostics: Show` or click the sidebar icon for the exension ![image](/icons/creeper_icon.png) and click the "Show Diagnostics" button.
+
+The server statistics it displays currently are:
+- Number of entities in the level (all dimensions)
+- Chunks (loaded state, per dimension)
+- Commands run per tick based on high level category
+- Memory usage of the entire Minecraft executable
+- Memory usage of the scripting JavaScript runtime
+- Server tick time (target of 20Hz/50ms) with high level categories
+- Network packet bandwidth usage
+- Network packet packet count (all and specific packet counts)
+- Entity handle counts per scripting pack (useful for detecting handle leaks)
+
+
+Example diagnostics view
+![image](https://github.com/Mojang/minecraft-debugger/assets/1000311/fcafd4da-6017-4348-86df-571974b50012)
+
+
 ## Feedback
 
 Send us your feedback by [filing an issue](https://github.com/mojang/minecraft-debugger/issues/new) against this extension's [GitHub repo](https://github.com/mojang/minecraft-debugger).

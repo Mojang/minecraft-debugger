@@ -173,7 +173,7 @@ As with when you debug against Minecraft clients, you can set breakpoints in you
 #### Diagnostics Window
 When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnost performance issues.
 
-To open this view, run the command `Minecraft Diagnostics: Show` or click the sidebar icon for the exension ![image](/icons/creeper_icon.svg) and click the "Show Diagnostics" button.
+To open this view, run the command `Minecraft Diagnostics: Show` or click the sidebar icon for the exension ![image](/icons/creeper_icon.png) and click the "Show Diagnostics" button.
 
 The server statistics it displays currently are:
 - Number of entities in the level (all dimensions)

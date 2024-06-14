@@ -637,11 +637,13 @@ export class Session extends DebugSession {
                     column: 0,
                     line: javaScriptLineNumber,
                 });
+                //Resolve generatedPosition.source to be relative to the active workspace. If there is no workspace, it will be the absolute path.
+                const generatedPositionSourceRelative = workspace.asRelativePath(generatedPosition.source);
 
                 if (generatedPosition) {
                     message = message.replace(
                         fullMatch,
-                        `(${generatedPosition.source}:${generatedPosition.line}) (${javaScriptFilePath}:${javaScriptLineNumber})`
+                        `(${generatedPositionSourceRelative}:${generatedPosition.line}) (${javaScriptFilePath}:${javaScriptLineNumber})`
                     );
                 }
             } catch (e) {

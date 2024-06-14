@@ -87,3 +87,7 @@
 ## Version 1.6.0 (June 2024)
 
 - Add 'Minecraft' activity bar icon and button panel.
+
+## Version 1.6.1 (June 2024)
+
+- Updated logging messages in the Debug Console to attempt to use source maps to display TypeScript file and line numbers in Minecraft logs messages. 

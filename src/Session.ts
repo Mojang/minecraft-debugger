@@ -614,7 +614,7 @@ export class Session extends DebugSession {
             this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
             this.sendEvent(new ThreadEvent(eventMessage.reason, eventMessage.thread));
         } else if (eventMessage.type === 'PrintEvent') {
-            this.sendEvent(new LogOutputEvent(eventMessage.message, eventMessage.logLevel));
+            this.handlePrintEvent(eventMessage.message, eventMessage.logLevel);
         } else if (eventMessage.type === 'ProtocolEvent') {
             this.handleProtocolEvent(eventMessage);
         } else if (eventMessage.type === 'StatEvent2') {
@@ -622,6 +622,35 @@ export class Session extends DebugSession {
         }
     }
 
+    private async handlePrintEvent(message: string, logLevel: LogLevel) {
+        // Attempt to resolve type maps for file paths/line numbers in each message
+        const jsFileLineNoColumRegex = /\(([a-zA-Z0-9_\-./\\ ]+\.js):(\d+)\)/g;
+        let matches = message.matchAll(jsFileLineNoColumRegex);
+        for (const match of matches) {
+            try {
+                const fullMatch = match[0];
+                const javaScriptFilePath = match[1];
+                const javaScriptLineNumber = parseInt(match[2]);
+
+                const generatedPosition = await this._sourceMaps.getOriginalPositionFor({
+                    source: javaScriptFilePath,
+                    column: 0,
+                    line: javaScriptLineNumber,
+                });
+
+                if (generatedPosition) {
+                    message = message.replace(
+                        fullMatch,
+                        `(${generatedPosition.source}:${generatedPosition.line}) (${javaScriptFilePath}:${javaScriptLineNumber})`
+                    );
+                }
+            } catch (e) {
+                // Eat the error, sometimes source map lookups just ain't happening
+            }
+        }
+
+        this.sendEvent(new LogOutputEvent(message, logLevel));
+    }
     // Debugee (MC) responses to pending VSCode requests. Promises contained in a map keyed by
     // the sequence number of the request. Fascilitates the 'await sendDebugeeRequestAsync(...)' pattern.
     private handleDebugeeResponse(envelope: any) {

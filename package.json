@@ -2,7 +2,7 @@
     "name": "minecraft-debugger",
     "displayName": "Minecraft Bedrock Edition Debugger",
     "description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
-    "version": "1.6.0",
+    "version": "1.6.1",
     "publisher": "mojang-studios",
     "author": {
         "name": "Mojang Studios"

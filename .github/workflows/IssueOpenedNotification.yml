@@ -7,7 +7,8 @@ env:
   SLACK_NOTIFICATION_CHANNEL: '#nt-api-infra-oss-contributions'
 
 jobs:
-  greet:
+  slack:
+    name: Slack Notifications
     runs-on: ubuntu-latest
     steps:
     - name: Send issue to Slack

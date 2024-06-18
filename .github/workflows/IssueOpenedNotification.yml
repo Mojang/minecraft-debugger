@@ -1,0 +1,35 @@
+name: Issue Activity
+on:
+  issues:
+    types: [opened]
+
+env:
+  SLACK_NOTIFICATION_CHANNEL: '#nt-api-infra-oss-contributions'
+
+jobs:
+  slack:
+    name: Slack Notifications
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send issue to Slack
+      shell: pwsh
+      run: |
+        $messageBody = @'
+        A new issue has been opened by <https://github.com/${{ github.event.issue.user.login }}|${{ github.event.issue.user.login }}> in *${{ github.repository }}*
+        > Title: <${{ github.event.issue.html_url }}|${{ github.event.issue.title }} #${{ github.event.issue.number }}>
+        > Body: ${{ github.event.issue.body }}
+        '@
+
+        $headers = @{
+            "Authorization" = "Bearer  ${{ secrets.SLACK_APP_TOKEN }}"
+        }
+
+        $body = @{
+            "text" = $messageBody
+            "channel" = $env:SLACK_NOTIFICATION_CHANNEL
+            "mrkdwn" = $true
+            "parse" = "none"
+        }
+
+        # Post the message
+        Invoke-WebRequest -Uri "https://slack.com/api/chat.postMessage" -Method POST -Headers $headers -Body $body

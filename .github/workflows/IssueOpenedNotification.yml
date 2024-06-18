@@ -15,8 +15,8 @@ jobs:
       shell: pwsh
       run: |
         $messageBody = @'
-        A new issue has been opened by <https://github.com/${{ github.event.issue.user.login }}|${{ github.event.issue.user.login }}> in *${{ github.repository }}*
-        > Title: <${{ github.event.issue.html_url }}|${{ github.event.issue.title }} #${{ github.event.issue.number }}>
+        A <${{ github.event.issue.html_url }}|new issue> has been opened by _${{ github.event.issue.user.login }}_ in *${{ github.repository }}*
+        > Title: ${{ github.event.issue.title }} `#${{ github.event.issue.number }}`
         > Body: ${{ github.event.issue.body }}
         '@
 

@@ -15,7 +15,9 @@ jobs:
       shell: pwsh
       run: |
         # Format issue as a quote
-        $issueBody = "${{ github.event.issue.body }}" -replace "`n" "`n>"
+        $issueBody = @"
+        ${{ github.event.issue.body }}
+        "@ -replace "`n" "`n>"
 
         $messageBody = @"
         A <${{ github.event.issue.html_url }}|new issue> has been opened by _${{ github.event.issue.user.login }}_ in *${{ github.repository }}*

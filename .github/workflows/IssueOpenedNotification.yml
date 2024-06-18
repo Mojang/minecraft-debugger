@@ -4,7 +4,7 @@ on:
     types: [opened]
 
 env:
-  SLACK_NOTIFICATION_CHANNEL: '#nt-api-infra-oss-contributions'
+  SLACK_NOTIFICATION_CHANNEL: ${{ secrets.SLACK_APP_NOTIFICATION_CHANNEL }}
 
 jobs:
   slack:

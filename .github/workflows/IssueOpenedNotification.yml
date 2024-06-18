@@ -16,8 +16,9 @@ jobs:
       run: |
         $messageBody = @'
         A <${{ github.event.issue.html_url }}|new issue> has been opened by _${{ github.event.issue.user.login }}_ in *${{ github.repository }}*
-        > Title: ${{ github.event.issue.title }} `#${{ github.event.issue.number }}`
-        > Body: ${{ github.event.issue.body }}
+        > *#${{ github.event.issue.number }} ${{ github.event.issue.title }}*
+        >
+        > ${{ github.event.issue.body }}
         '@
 
         $headers = @{

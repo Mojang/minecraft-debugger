@@ -67,6 +67,7 @@ export default function MinecraftStatisticStackedLineChart({
         const latestTime = data.length !== 0 ? data[data.length - 1].time : 0;
 
         const plot = Plot.plot({
+            className: 'minecraft-statistic-stacked-line-chart',
             color: {
                 legend: true,
                 tickFormat: d => {

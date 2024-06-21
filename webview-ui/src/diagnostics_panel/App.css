@@ -22,3 +22,24 @@ main {
   line-height: normal;
   margin-bottom: 2px;
 }
+
+.plot-d6a7b5-swatches {
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  margin-bottom: 0.5em;
+}
+.plot-d6a7b5-swatch > svg {
+  margin-right: 0.5em;
+  overflow: visible;
+}
+.plot-d6a7b5-swatches-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 33px;
+  flex-wrap: wrap;
+}
+.plot-d6a7b5-swatches-wrap .plot-d6a7b5-swatch {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1em;
+}

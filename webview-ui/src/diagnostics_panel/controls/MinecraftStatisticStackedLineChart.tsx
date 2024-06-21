@@ -105,6 +105,8 @@ export default function MinecraftStatisticStackedLineChart({
             ],
         });
 
+        console.log(plot);
+
         if (containerRef.current !== null) {
             containerRef.current.append(plot);
         }

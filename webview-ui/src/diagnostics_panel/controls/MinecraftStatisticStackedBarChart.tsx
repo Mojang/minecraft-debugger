@@ -47,6 +47,7 @@ export default function MinecraftStatisticStackedBarChart({
         const latestTime = data.length !== 0 ? data[data.length - 1].time : 0;
 
         const plot = Plot.plot({
+            className: 'minecraft-statistic-stacked-bar-chart',
             color: {
                 legend: true,
                 tickFormat: d => {
@@ -79,6 +80,32 @@ export default function MinecraftStatisticStackedBarChart({
                 Plot.ruleY([0]),
             ],
         });
+
+        // Remove all style elements and attributes
+        const styleElement = plot.querySelector('style');
+        const svgElements = plot.querySelectorAll('svg');
+        const styleAttribute = plot.getAttributeNode('style');
+
+        if (styleElement !== null) {
+            styleElement.parentNode?.removeChild(styleElement);
+        }
+
+        for (const svgElement of svgElements) {
+            const svgStyleElement = svgElement.querySelector('style');
+            const svgImageElement = svgElement.querySelector('image');
+
+            if (svgStyleElement !== null) {
+                svgStyleElement.parentNode?.removeChild(svgStyleElement);
+            }
+
+            if (svgImageElement !== null) {
+                svgImageElement.parentNode?.removeChild(svgImageElement);
+            }
+        }
+
+        if (styleAttribute !== null) {
+            plot.removeAttributeNode(styleAttribute);
+        }
 
         if (containerRef.current !== null) {
             containerRef.current.append(plot);

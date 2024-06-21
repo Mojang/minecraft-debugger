@@ -62,6 +62,7 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
 
         const generateLineChart = (enableFilledChart: boolean): PlotResult => {
             return Plot.plot({
+                className: 'line-chart',
                 title: title,
                 marginLeft: 50, // Y Axis labels were getting cut off
                 x: {
@@ -114,6 +115,7 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
                 //negativeFill: "blue",
                 tip: true,
             }).plot({
+                className: 'difference-chart',
                 title: title,
                 marginLeft: 50, // Y Axis labels were getting cut off
                 x: {
@@ -153,6 +155,17 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
         }
 
         if (plot !== undefined && containerRef.current) {
+            const styleElement = plot.querySelector('style');
+            const styleAttribute = plot.getAttributeNode('style');
+
+            if (styleElement !== null) {
+                styleElement.parentNode?.removeChild(styleElement);
+            }
+
+            if (styleAttribute !== null) {
+                plot.removeAttributeNode(styleAttribute);
+            }
+
             containerRef.current.append(plot);
         }
 

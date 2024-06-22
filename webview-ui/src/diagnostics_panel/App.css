@@ -107,30 +107,6 @@ main {
   max-width: initial;
 }
 
-.line-chart-swatches {
-  font-family: system-ui, sans-serif;
-  font-size: 10px;
-  margin-bottom: 0.5em;
-}
-
-.line-chart-swatch>svg {
-  margin-right: 0.5em;
-  overflow: visible;
-}
-
-.line-chart-swatches-wrap {
-  display: flex;
-  align-items: center;
-  min-height: 33px;
-  flex-wrap: wrap;
-}
-
-.line-chart-swatches-wrap .line-chart-swatch {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 1em;
-}
-
 /* .line-chart {
   --plot-background: white;
   display: block;
@@ -145,30 +121,6 @@ main {
 
 .difference-chart-figure {
   max-width: initial;
-}
-
-.difference-chart-swatches {
-  font-family: system-ui, sans-serif;
-  font-size: 10px;
-  margin-bottom: 0.5em;
-}
-
-.difference-chart-swatch>svg {
-  margin-right: 0.5em;
-  overflow: visible;
-}
-
-.difference-chart-swatches-wrap {
-  display: flex;
-  align-items: center;
-  min-height: 33px;
-  flex-wrap: wrap;
-}
-
-.difference-chart-swatches-wrap .difference-chart-swatch {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 1em;
 }
 
 /* .difference-chart {

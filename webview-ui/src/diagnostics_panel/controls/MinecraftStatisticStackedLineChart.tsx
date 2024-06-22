@@ -70,6 +70,8 @@ export default function MinecraftStatisticStackedLineChart({
             className: 'minecraft-statistic-stacked-line-chart',
             color: {
                 legend: true,
+                type: 'ordinal',
+                scheme: 'Observable10',
                 tickFormat: d => {
                     const label = catageoryLabels !== undefined ? catageoryLabels[d] : undefined;
                     if (label !== undefined) {

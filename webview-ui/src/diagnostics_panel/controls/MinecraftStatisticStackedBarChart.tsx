@@ -50,6 +50,8 @@ export default function MinecraftStatisticStackedBarChart({
             className: 'minecraft-statistic-stacked-bar-chart',
             color: {
                 legend: true,
+                type: 'ordinal',
+                scheme: 'Observable10',
                 tickFormat: d => {
                     return d;
                 },
@@ -92,14 +94,9 @@ export default function MinecraftStatisticStackedBarChart({
 
         for (const svgElement of svgElements) {
             const svgStyleElement = svgElement.querySelector('style');
-            const svgImageElement = svgElement.querySelector('image');
 
             if (svgStyleElement !== null) {
                 svgStyleElement.parentNode?.removeChild(svgStyleElement);
-            }
-
-            if (svgImageElement !== null) {
-                svgImageElement.parentNode?.removeChild(svgImageElement);
             }
         }
 

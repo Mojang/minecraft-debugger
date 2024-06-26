@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver, TrackedStat } from '../StatisticResolver';
+import { removeAllStyleElements } from '../../util/CPSUtilities';
 
 type MinecraftStatisticStackedLineChartProps = {
     title: string;
@@ -108,26 +109,8 @@ export default function MinecraftStatisticStackedLineChart({
             ],
         });
 
-        // Remove all style elements and attributes
-        const styleElement = plot.querySelector('style');
-        const svgElements = plot.querySelectorAll('svg');
-        const styleAttribute = plot.getAttributeNode('style');
-
-        if (styleElement !== null) {
-            styleElement.parentNode?.removeChild(styleElement);
-        }
-
-        for (const svgElement of svgElements) {
-            const svgStyleElement = svgElement.querySelector('style');
-
-            if (svgStyleElement !== null) {
-                svgStyleElement.parentNode?.removeChild(svgStyleElement);
-            }
-        }
-
-        if (styleAttribute !== null) {
-            plot.removeAttributeNode(styleAttribute);
-        }
+        // Remove all style elements
+        removeAllStyleElements(plot);
 
         if (containerRef.current !== null) {
             containerRef.current.append(plot);

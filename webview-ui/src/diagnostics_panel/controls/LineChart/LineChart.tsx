@@ -6,6 +6,7 @@ import { StatisticOptions, TrackedStat, YAxisType, createStatResolver } from '..
 import { createYAxisDomainResolver } from './LineChartYAxisResolvers';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
+import { removeAllStyleElements } from '../../../util/CPSUtilities';
 
 type LineChartProps = {
     title: string;
@@ -155,16 +156,7 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
         }
 
         if (plot !== undefined && containerRef.current) {
-            const styleElement = plot.querySelector('style');
-            const styleAttribute = plot.getAttributeNode('style');
-
-            if (styleElement !== null) {
-                styleElement.parentNode?.removeChild(styleElement);
-            }
-
-            if (styleAttribute !== null) {
-                plot.removeAttributeNode(styleAttribute);
-            }
+            removeAllStyleElements(plot);
 
             containerRef.current.append(plot);
         }

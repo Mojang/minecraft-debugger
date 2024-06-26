@@ -5,6 +5,7 @@ import * as Plot from '@observablehq/plot';
 import { ascending } from 'd3-array';
 import { StatisticOptions, StatisticResolver, TrackedStat } from '../StatisticResolver';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
+import { removeAllStyleElements } from '../../util/CSPUtilities';
 
 type MinecraftStatisticStackedBarChartProps = {
     title: string;
@@ -47,8 +48,11 @@ export default function MinecraftStatisticStackedBarChart({
         const latestTime = data.length !== 0 ? data[data.length - 1].time : 0;
 
         const plot = Plot.plot({
+            className: 'minecraft-statistic-stacked-bar-chart',
             color: {
                 legend: true,
+                type: 'ordinal',
+                scheme: 'Observable10',
                 tickFormat: d => {
                     return d;
                 },
@@ -79,6 +83,9 @@ export default function MinecraftStatisticStackedBarChart({
                 Plot.ruleY([0]),
             ],
         });
+
+        // Remove all style elements
+        removeAllStyleElements(plot);
 
         if (containerRef.current !== null) {
             containerRef.current.append(plot);

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver, TrackedStat } from '../StatisticResolver';
+import { removeAllStyleElements } from '../../util/CSPUtilities';
 
 type MinecraftStatisticStackedLineChartProps = {
     title: string;
@@ -67,8 +68,11 @@ export default function MinecraftStatisticStackedLineChart({
         const latestTime = data.length !== 0 ? data[data.length - 1].time : 0;
 
         const plot = Plot.plot({
+            className: 'minecraft-statistic-stacked-line-chart',
             color: {
                 legend: true,
+                type: 'ordinal',
+                scheme: 'Observable10',
                 tickFormat: d => {
                     const label = catageoryLabels !== undefined ? catageoryLabels[d] : undefined;
                     if (label !== undefined) {
@@ -104,6 +108,9 @@ export default function MinecraftStatisticStackedLineChart({
                 targetValue ? Plot.ruleY([targetValue]) : undefined,
             ],
         });
+
+        // Remove all style elements
+        removeAllStyleElements(plot);
 
         if (containerRef.current !== null) {
             containerRef.current.append(plot);

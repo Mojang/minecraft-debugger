@@ -6,6 +6,7 @@ import { StatisticOptions, TrackedStat, YAxisType, createStatResolver } from '..
 import { createYAxisDomainResolver } from './LineChartYAxisResolvers';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
+import { removeAllStyleElements } from '../../../util/CSPUtilities';
 
 type LineChartProps = {
     title: string;
@@ -62,6 +63,7 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
 
         const generateLineChart = (enableFilledChart: boolean): PlotResult => {
             return Plot.plot({
+                className: 'line-chart',
                 title: title,
                 marginLeft: 50, // Y Axis labels were getting cut off
                 x: {
@@ -114,6 +116,7 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
                 //negativeFill: "blue",
                 tip: true,
             }).plot({
+                className: 'difference-chart',
                 title: title,
                 marginLeft: 50, // Y Axis labels were getting cut off
                 x: {
@@ -153,6 +156,8 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
         }
 
         if (plot !== undefined && containerRef.current) {
+            removeAllStyleElements(plot);
+
             containerRef.current.append(plot);
         }
 

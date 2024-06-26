@@ -22,3 +22,115 @@ main {
   line-height: normal;
   margin-bottom: 2px;
 }
+
+.minecraft-statistic-stacked-line-chart-figure {
+  max-width: initial;
+}
+
+.minecraft-statistic-stacked-line-chart-swatches {
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  margin-bottom: 0.5em;
+}
+
+.minecraft-statistic-stacked-line-chart-swatch>svg {
+  margin-right: 0.5em;
+  overflow: visible;
+}
+
+.minecraft-statistic-stacked-line-chart-swatches-wrap {
+  display: flex;
+  align-items: center;
+  /* min-height: 33px; */
+  flex-wrap: wrap;
+}
+
+.minecraft-statistic-stacked-line-chart-swatches-wrap .minecraft-statistic-stacked-line-chart-swatch {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1em;
+}
+
+/* .minecraft-statistic-stacked-line-chart {
+  --plot-background: white;
+  display: block;
+  height: auto;
+  height: intrinsic;
+  max-width: 100%;
+} */
+
+/* .minecraft-statistic-stacked-line-chart text .minecraft-statistic-stacked-line-chart tspan {
+  white-space: pre;
+} */
+
+.minecraft-statistic-stacked-bar-chart-figure {
+  max-width: initial;
+}
+
+.minecraft-statistic-stacked-bar-chart-swatches {
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+  margin-bottom: 0.5em;
+}
+
+.minecraft-statistic-stacked-bar-chart-swatch>svg {
+  margin-right: 0.5em;
+  overflow: visible;
+}
+
+.minecraft-statistic-stacked-bar-chart-swatches-wrap {
+  display: flex;
+  align-items: center;
+  /* min-height: 33px; */
+  flex-wrap: wrap;
+}
+
+.minecraft-statistic-stacked-bar-chart-swatches-wrap .minecraft-statistic-stacked-bar-chart-swatch {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1em;
+}
+
+/* .minecraft-statistic-stacked-bar-chart {
+  --plot-background: white;
+  display: block;
+  height: auto;
+  height: intrinsic;
+  max-width: 100%;
+} */
+
+/* .minecraft-statistic-stacked-bar-chart text .minecraft-statistic-stacked-bar-chart tspan {
+  white-space: pre;
+} */
+
+.line-chart-figure {
+  max-width: initial;
+}
+
+/* .line-chart {
+  --plot-background: white;
+  display: block;
+  height: auto;
+  height: intrinsic;
+  max-width: 100%;
+} */
+
+/* .line-chart text .line-chart tspan {
+  white-space: pre;
+} */
+
+.difference-chart-figure {
+  max-width: initial;
+}
+
+/* .difference-chart {
+  --plot-background: white;
+  display: block;
+  height: auto;
+  height: intrinsic;
+  max-width: 100%;
+} */
+
+/* .difference-chart text .difference-chart tspan {
+  white-space: pre;
+} */

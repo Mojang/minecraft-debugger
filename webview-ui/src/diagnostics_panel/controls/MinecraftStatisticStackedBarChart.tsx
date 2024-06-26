@@ -5,7 +5,7 @@ import * as Plot from '@observablehq/plot';
 import { ascending } from 'd3-array';
 import { StatisticOptions, StatisticResolver, TrackedStat } from '../StatisticResolver';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
-import { removeAllStyleElements } from '../../util/CPSUtilities';
+import { removeAllStyleElements } from '../../util/CSPUtilities';
 
 type MinecraftStatisticStackedBarChartProps = {
     title: string;

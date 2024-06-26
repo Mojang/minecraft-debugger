@@ -6,7 +6,7 @@ import { StatisticOptions, TrackedStat, YAxisType, createStatResolver } from '..
 import { createYAxisDomainResolver } from './LineChartYAxisResolvers';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
-import { removeAllStyleElements } from '../../../util/CPSUtilities';
+import { removeAllStyleElements } from '../../../util/CSPUtilities';
 
 type LineChartProps = {
     title: string;

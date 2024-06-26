@@ -1,3 +1,8 @@
+/*
+    Due to CSP restrictions, we cannot use inline styles in our SVGs.
+    More information: 
+        https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP 
+*/
 export function removeAllStyleElements(root: HTMLElement | SVGSVGElement) {
     // Remove all style elements
     const allStyleElements = root.querySelectorAll('style');

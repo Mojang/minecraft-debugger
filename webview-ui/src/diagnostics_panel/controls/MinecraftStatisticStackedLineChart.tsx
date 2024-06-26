@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver, TrackedStat } from '../StatisticResolver';
-import { removeAllStyleElements } from '../../util/CPSUtilities';
+import { removeAllStyleElements } from '../../util/CSPUtilities';
 
 type MinecraftStatisticStackedLineChartProps = {
     title: string;

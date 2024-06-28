@@ -54,6 +54,10 @@ function App() {
                     <div style={{ flexDirection: 'row', display: 'flex' }}>
                         {statPrefabs.serverTickTimings.reactNode}
                     </div>
+                    <div style={{ flexDirection: 'row', display: 'flex' }}>
+                        {statPrefabs.clientFrameTimings.reactNode}
+                        {statPrefabs.clientFPS.reactNode}
+                    </div>
                     <div style={{ flexDirection: 'row', display: 'flex' }}>{statPrefabs.commandsRan.reactNode}</div>
                 </VSCodePanelView>
                 <VSCodePanelView id="view-4">

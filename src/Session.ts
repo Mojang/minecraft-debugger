@@ -654,7 +654,7 @@ export class Session extends DebugSession {
             }
         }
 
-        this.sendEvent(new LogOutputEvent(message, logLevel));
+        this.sendEvent(new LogOutputEvent(message.trimEnd() + '\n', logLevel));
     }
     // Debugee (MC) responses to pending VSCode requests. Promises contained in a map keyed by
     // the sequence number of the request. Fascilitates the 'await sendDebugeeRequestAsync(...)' pattern.

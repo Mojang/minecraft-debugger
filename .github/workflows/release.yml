@@ -2,7 +2,7 @@ name: release
 
 on:
   push:
-    branches: [main, test]
+    branches: [main]
 
 jobs:
   release:
@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npx semantic-release --dry-run
+      - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # In case you want to publish to Visual Studio Marketplace

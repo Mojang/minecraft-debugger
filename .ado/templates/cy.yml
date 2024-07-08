@@ -1,0 +1,10 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Conventional Commit In Pull Requests
+      uses: ytanikin/PRConventionalCommits@1.2.0

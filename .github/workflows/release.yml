@@ -1,8 +1,10 @@
 name: release
 
 on:
+  pull_request: # REMOVE!!
+    branches: [main] # REMOVE!!
   push:
-    branches: [master]
+    branches: [main]
 
 jobs:
   release:

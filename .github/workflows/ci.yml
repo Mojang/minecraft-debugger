@@ -1,0 +1,25 @@
+name: CI
+
+on: [pull_request]
+
+jobs:
+  lint_pr_title:
+    name: Lint PR Title
+    runs-on: ubuntu-latest
+    steps:
+    - name: Conventional Commit In Pull Requests
+      uses: ytanikin/PRConventionalCommits@1.2.0
+      with:
+        task_types: '["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
+        add_label: 'true'
+
+  build_and_test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - run: npm run ci:all
+      - run: npm run build:all

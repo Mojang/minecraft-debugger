@@ -1,0 +1,22 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # In case you want to publish to Visual Studio Marketplace
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          # In case you want to publish to Open VSX Registry
+          #OVSX_PAT: ${{ secrets.OVSX_PAT }}

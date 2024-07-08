@@ -12,6 +12,38 @@
         "type": "git",
         "url": "https://github.com/Mojang/minecraft-debugger.git"
     },
+    "release": {
+        "branches": [
+            "main",
+            "test"
+        ],
+        "plugins": [
+            "@semantic-release/commit-analyzer",
+            "@semantic-release/release-notes-generator",
+            [
+                "@semantic-release/changelog",
+                {
+                    "changelogFile": "CHANGELOG.md"
+                }
+            ],
+            [
+                "semantic-release-vsce",
+                {
+                    "packageVsix": true
+                }
+            ],
+            [
+                "@semantic-release/github",
+                {
+                    "assets": [
+                        {
+                            "path": "*.vsix"
+                        }
+                    ]
+                }
+            ]
+        ]
+    },
     "icon": "bedrock-icon.png",
     "engines": {
         "node": "^20.0.0",
@@ -164,6 +196,7 @@
     },
     "scripts": {
         "install:all": "npm install && cd webview-ui && npm install",
+        "ci:all": "npm ci && cd webview-ui && npm ci",
         "start:webview": "cd webview-ui && npm run start && cd ..",
         "build:webview": "cd webview-ui && npm run build && cd ..",
         "build:all": "npm run build:webview && npm run compile",
@@ -172,18 +205,21 @@
         "watch": "tsc -watch",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
-        "package": "vsce package -o minecraft-debugger-js.vsix"
+        "package": "vsce package -o minecraft-debugger-js.vsix",
+        "release": "npx semantic-release"
     },
     "dependencies": {
+        "@vscode/webview-ui-toolkit": "^1.4.0",
         "source-map": "^0.7.4",
         "stream-parser": "^0.3.1",
-        "vscode-debugadapter": "1.47.0",
-        "@vscode/webview-ui-toolkit": "^1.4.0"
+        "vscode-debugadapter": "1.47.0"
     },
     "devDependencies": {
+        "@semantic-release/changelog": "^6.0.3",
         "@types/glob": "^7.1.3",
         "@types/mocha": "^8.0.4",
         "@types/node": "^12.11.7",
+        "@types/react": "^18.3.3",
         "@types/vscode": "^1.55.0",
         "@typescript-eslint/eslint-plugin": "^4.14.1",
         "@typescript-eslint/parser": "^4.14.1",
@@ -191,6 +227,8 @@
         "eslint": "^7.19.0",
         "glob": "^7.1.6",
         "mocha": "^10.2.0",
+        "semantic-release": "^24.0.0",
+        "semantic-release-vsce": "^5.7.2",
         "typescript": "^4.1.3",
         "vsce": "^2.15.0"
     }

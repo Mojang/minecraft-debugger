@@ -3,27 +3,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 
-//chart component
-
-type ScriptPluginSelectionBoxProps = {
-    onChange: (pluginSelectionId: string) => void;
+type SelectionBoxProps = {
+    labelName: string;
+    defaultDropdownId: string;
+    statParentId: string;
+    onChange: (selectedGroupId: string) => void;
 };
 
-interface PluginEntry {
+interface StatGroupEntry {
     id: string;
     name: string;
 }
 
-export default function ScriptPluginSelectionBox({ onChange }: ScriptPluginSelectionBoxProps) {
-    // state
-    const [pluginEntries, setPluginEntries] = useState<PluginEntry[]>([{ id: 'no_plugin_selected', name: 'n/a' }]);
+export function StatGroupSelectionBox({ labelName, defaultDropdownId, statParentId, onChange }: SelectionBoxProps) {
+    // the groups directly under the 'statParentId'
+    const [groups, setGroup] = useState<StatGroupEntry[]>([{ id: defaultDropdownId, name: 'n/a' }]);
 
     const _onChange = useCallback(
         (e: Event | React.FormEvent<HTMLElement>): void => {
             const target = e.target as HTMLSelectElement;
-            onChange(pluginEntries[target.selectedIndex].id);
+            onChange(groups[target.selectedIndex].id);
         },
-        [pluginEntries]
+        [groups]
     );
 
     //draws chart
@@ -34,12 +35,12 @@ export default function ScriptPluginSelectionBox({ onChange }: ScriptPluginSelec
 
             switch (msg.data.type) {
                 case 'statistic-updated': {
-                    if (msg.data.group !== 'handle_counts') {
+                    if (msg.data.group !== statParentId) {
                         return;
                     }
                     // Add it to the list
-                    setPluginEntries(prevState => {
-                        // See if the plugin is not in the list
+                    setGroup(prevState => {
+                        // See if the group is not in the list
                         if (
                             prevState === undefined ||
                             prevState?.findIndex(x => {
@@ -60,13 +61,13 @@ export default function ScriptPluginSelectionBox({ onChange }: ScriptPluginSelec
         return () => {
             window.removeEventListener('message', eventHandler);
         };
-    }, [pluginEntries]);
+    }, [groups]);
 
     return (
         <div className="dropdown-container">
-            <label htmlFor="my-dropdown">Script Plugin</label>
+            <label htmlFor="my-dropdown">{labelName}</label>
             <VSCodeDropdown id="my-dropdown" onChange={_onChange}>
-                {(pluginEntries ?? []).map(option => {
+                {(groups ?? []).map(option => {
                     return <VSCodeOption key={option.id}>{option.name}</VSCodeOption>;
                 })}
             </VSCodeDropdown>

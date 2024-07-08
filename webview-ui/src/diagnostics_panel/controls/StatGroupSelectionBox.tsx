@@ -16,7 +16,7 @@ interface StatGroupEntry {
 }
 
 export function StatGroupSelectionBox({ labelName, defaultDropdownId, statParentId, onChange }: SelectionBoxProps) {
-    // the groups directly under the parent
+    // the groups directly under the 'statParentId'
     const [groups, setGroup] = useState<StatGroupEntry[]>([{ id: defaultDropdownId, name: 'n/a' }]);
 
     const _onChange = useCallback(

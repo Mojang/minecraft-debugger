@@ -25,7 +25,7 @@ interface StatisticPrefab {
 
 //
 // TODO: add prefabs for stats within sub groups.
-// Entity counts are per plugin and client timings are grouped by player name.
+// ex: entity counts are per plugin and client timings are grouped by player name.
 //
 
 export const entityCount: StatisticPrefab = {

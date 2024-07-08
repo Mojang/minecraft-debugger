@@ -70,18 +70,14 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
                     //domain: [0, _maxDataPoints - 1],
                     grid: true,
                     tickFormat: function (d: d3.NumberValue, i: number) {
-                        if (i >= data.length) {
-                            return '';
-                        } else {
-                            const tickDifference = latestTime - data[i].time;
+                        const tickDifference = latestTime - d.valueOf();
 
-                            if (tickDifference < 20) {
-                                return 'now';
-                            }
-
-                            // Assume 20 ticks per second
-                            return Math.floor(tickDifference / 20) + 's';
+                        if (tickDifference < 20) {
+                            return 'now';
                         }
+
+                        // Assume 20 ticks per second
+                        return Math.floor(tickDifference / 20) + 's';
                     },
                     label: xLabel,
                 },
@@ -122,13 +118,14 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
                 x: {
                     grid: true,
                     tickFormat: function (d: d3.NumberValue, i: number) {
-                        const now = Date.now();
-                        if (i >= data.length) {
-                            return '';
-                        } else {
-                            // Generate string for number of seconds between now and data[i].time
-                            return Math.floor((latestTime - data[i].time) / 1000) + 's';
+                        const tickDifference = latestTime - d.valueOf();
+
+                        if (tickDifference < 20) {
+                            return 'now';
                         }
+
+                        // Assume 20 ticks per second
+                        return Math.floor(tickDifference / 20) + 's';
                     },
                     label: xLabel,
                 },

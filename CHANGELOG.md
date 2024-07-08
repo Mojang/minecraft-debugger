@@ -91,3 +91,7 @@
 ## Version 1.6.1 (June 2024)
 
 - Updated logging messages in the Debug Console to attempt to use source maps to display TypeScript file and line numbers in Minecraft logs messages. 
+
+## Version 1.7.0 (June 2024)
+
+- Add diagnostics graphs for client frame timings and FPS.

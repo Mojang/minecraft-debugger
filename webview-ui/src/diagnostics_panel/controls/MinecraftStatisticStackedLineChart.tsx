@@ -125,7 +125,7 @@ export default function MinecraftStatisticStackedLineChart({
                 plot.remove();
             }
         };
-    }, [data]);
+    }, [data, statisticDataProvider]);
 
     return <div ref={containerRef} />;
 }

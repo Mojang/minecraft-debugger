@@ -94,6 +94,7 @@ export const appMemoryFree: StatisticPrefab = {
         />
     ),
 };
+
 export const javaScriptMemoryFree: StatisticPrefab = {
     name: 'JavaScript Memory Used',
     reactNode: (
@@ -115,6 +116,7 @@ export const javaScriptMemoryFree: StatisticPrefab = {
         />
     ),
 };
+
 export const javaScriptMemoryAllocated: StatisticPrefab = {
     name: 'JavaScript Memory Free',
     reactNode: (
@@ -136,6 +138,7 @@ export const javaScriptMemoryAllocated: StatisticPrefab = {
         />
     ),
 };
+
 export const serverTickTimings: StatisticPrefab = {
     name: 'Server Tick Timings',
     reactNode: (
@@ -163,6 +166,70 @@ export const serverTickTimings: StatisticPrefab = {
         />
     ),
 };
+
+export const clientFPS: StatisticPrefab = {
+    name: 'Client FPS',
+    reactNode: (
+        <MinecraftStatisticStackedLineChart
+            title="Client FPS"
+            statisticDataProvider={
+                new SimpleStatisticProvider({
+                    statisticId: 'avg_fps',
+                    statisticParentId: new RegExp('client_frame_timings_steve'),
+                })
+            }
+            catageoryLabels={{
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                avg_fps: 'Avg FPS',
+            }}
+            statisticResolver={createStatResolver({
+                type: StatisticType.Absolute,
+                tickRange: 20 * 10 /* About 10 seconds */,
+                yAxisType: YAxisType.Absolute,
+            })}
+            yLabel="Client FPS"
+        />
+    ),
+};
+
+export const clientFrameTimings: StatisticPrefab = {
+    name: 'Client Frame Timings',
+    reactNode: (
+        <MinecraftStatisticStackedLineChart
+            title="Client Frame Timing"
+            statisticDataProvider={
+                new MultipleStatisticProvider({
+                    statisticIds: [
+                        'avg_server_simtick_time',
+                        'avg_client_simtick_time',
+                        'avg_begin_frame_time',
+                        'avg_input_time',
+                        'avg_render_time',
+                        'avg_end_frame_time',
+                    ],
+                    statisticParentId: 'client_frame_timings',
+                })
+            }
+            catageoryLabels={{
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                avg_server_simtick_time: 'Avg Server Tick Time',
+                avg_client_simtick_time: 'Avg Client Tick Time',
+                avg_begin_frame_time: 'Avg Begin Frame Time',
+                avg_input_time: 'Avg Input Time',
+                avg_render_time: 'Avg Render Time',
+                avg_end_frame_time: 'Avg End Frame Time',
+            }}
+            statisticResolver={createStatResolver({
+                type: StatisticType.Absolute,
+                tickRange: 20 * 10 /* About 10 seconds */,
+                yAxisType: YAxisType.Absolute,
+                valueScalar: 1 / 1000, // Microseconds to milliseconds
+            })}
+            yLabel="Client Frame Timings (ms)"
+        />
+    ),
+};
+
 export const commandsRan: StatisticPrefab = {
     name: 'Commands Ran',
     reactNode: (
@@ -182,6 +249,7 @@ export const commandsRan: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsReceivedLineChart: StatisticPrefab = {
     name: 'Packets Received (Line)',
     reactNode: (
@@ -202,6 +270,7 @@ export const packetsReceivedLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsReceivedStackedLineChart: StatisticPrefab = {
     name: 'Packets Recieved (Stack)',
     reactNode: (
@@ -225,6 +294,7 @@ export const packetsReceivedStackedLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsSentLineChart: StatisticPrefab = {
     name: 'Packets Sent (Line)',
     reactNode: (
@@ -245,6 +315,7 @@ export const packetsSentLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsSentStackedLineChart: StatisticPrefab = {
     name: 'Packets Sent (Stack)',
     reactNode: (
@@ -268,6 +339,7 @@ export const packetsSentStackedLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetDataReceived: StatisticPrefab = {
     name: 'Packet Data Received',
     reactNode: (
@@ -289,6 +361,7 @@ export const packetDataReceived: StatisticPrefab = {
         />
     ),
 };
+
 export const packetDataSent: StatisticPrefab = {
     name: 'Packet Data Sent',
     reactNode: (
@@ -332,6 +405,7 @@ export const entityHandleCount: StatisticPrefab = {
         />
     ),
 };
+
 export const entityHandleCountDiff: StatisticPrefab = {
     name: 'Entity Handle Count (Diff)',
     reactNode: (

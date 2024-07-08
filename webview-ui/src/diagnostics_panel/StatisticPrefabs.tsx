@@ -23,6 +23,11 @@ interface StatisticPrefab {
     reactNode: ReactNode;
 }
 
+//
+// TODO: add prefabs for stats within sub groups.
+// Entity counts are per plugin and client timings are grouped by player name.
+//
+
 export const entityCount: StatisticPrefab = {
     name: 'Entity Count',
     reactNode: (
@@ -94,6 +99,7 @@ export const appMemoryFree: StatisticPrefab = {
         />
     ),
 };
+
 export const javaScriptMemoryFree: StatisticPrefab = {
     name: 'JavaScript Memory Used',
     reactNode: (
@@ -115,6 +121,7 @@ export const javaScriptMemoryFree: StatisticPrefab = {
         />
     ),
 };
+
 export const javaScriptMemoryAllocated: StatisticPrefab = {
     name: 'JavaScript Memory Free',
     reactNode: (
@@ -136,6 +143,7 @@ export const javaScriptMemoryAllocated: StatisticPrefab = {
         />
     ),
 };
+
 export const serverTickTimings: StatisticPrefab = {
     name: 'Server Tick Timings',
     reactNode: (
@@ -163,6 +171,7 @@ export const serverTickTimings: StatisticPrefab = {
         />
     ),
 };
+
 export const commandsRan: StatisticPrefab = {
     name: 'Commands Ran',
     reactNode: (
@@ -182,6 +191,7 @@ export const commandsRan: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsReceivedLineChart: StatisticPrefab = {
     name: 'Packets Received (Line)',
     reactNode: (
@@ -202,6 +212,7 @@ export const packetsReceivedLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsReceivedStackedLineChart: StatisticPrefab = {
     name: 'Packets Recieved (Stack)',
     reactNode: (
@@ -225,6 +236,7 @@ export const packetsReceivedStackedLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsSentLineChart: StatisticPrefab = {
     name: 'Packets Sent (Line)',
     reactNode: (
@@ -245,6 +257,7 @@ export const packetsSentLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetsSentStackedLineChart: StatisticPrefab = {
     name: 'Packets Sent (Stack)',
     reactNode: (
@@ -268,6 +281,7 @@ export const packetsSentStackedLineChart: StatisticPrefab = {
         />
     ),
 };
+
 export const packetDataReceived: StatisticPrefab = {
     name: 'Packet Data Received',
     reactNode: (
@@ -289,6 +303,7 @@ export const packetDataReceived: StatisticPrefab = {
         />
     ),
 };
+
 export const packetDataSent: StatisticPrefab = {
     name: 'Packet Data Sent',
     reactNode: (
@@ -310,46 +325,3 @@ export const packetDataSent: StatisticPrefab = {
         />
     ),
 };
-
-/* TODO: Figure out this stuff
-export const entityHandleCount: StatisticPrefab = {
-    name: 'Entity Handle Count',
-    reactNode: (
-        <MinecraftStatisticLineChart
-            title="Entity Handles"
-            yLabel="Number of Entities"
-            statisticDataProvider={
-                new SimpleStatisticProvider({
-                    statisticId: 'entity',
-                    statisticParentId: selectedPlugin,
-                })
-            }
-            statisticOptions={{
-                type: StatisticType.Absolute,
-                yAxisType: YAxisType.Absolute,
-                tickRange: 20 * 30, // About 30 seconds
-            }}
-        />
-    ),
-};
-export const entityHandleCountDiff: StatisticPrefab = {
-    name: 'Entity Handle Count (Diff)',
-    reactNode: (
-        <MinecraftStatisticLineChart
-            title="Entity Changes"
-            yLabel="Difference in Number of Entities"
-            statisticDataProvider={
-                new SimpleStatisticProvider({
-                    statisticId: 'entity',
-                    statisticParentId: selectedPlugin,
-                })
-            }
-            statisticOptions={{
-                type: StatisticType.Difference,
-                yAxisType: YAxisType.Mirrored,
-                tickRange: 20 * 30, // About 30 seconds
-            }}
-        />
-    ),
-};
-*/

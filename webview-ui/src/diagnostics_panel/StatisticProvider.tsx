@@ -90,7 +90,7 @@ export class SimpleStatisticProvider extends StatisticProvider {
 
 interface MultipleStatisticProviderOptions {
     statisticIds?: string[]; // If not included, all stats will be included
-    statisticParentId: string;
+    statisticParentId: string | RegExp;
 }
 // Used for things like stacked bar charts
 export class MultipleStatisticProvider extends StatisticProvider {
@@ -105,7 +105,11 @@ export class MultipleStatisticProvider extends StatisticProvider {
         }
 
         // Check for wrong group
-        if (event.group.indexOf(this.options.statisticParentId) === -1) {
+        if (this.options.statisticParentId instanceof RegExp) {
+            if (!this.options.statisticParentId.test(event.group_full_id)) {
+                return;
+            }
+        } else if (event.group !== this.options.statisticParentId) {
             return;
         }
 

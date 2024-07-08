@@ -190,6 +190,7 @@
     },
     "scripts": {
         "install:all": "npm install && cd webview-ui && npm install",
+        "ci:all": "npm ci && cd webview-ui && npm ci",
         "start:webview": "cd webview-ui && npm run start && cd ..",
         "build:webview": "cd webview-ui && npm run build && cd ..",
         "build:all": "npm run build:webview && npm run compile",

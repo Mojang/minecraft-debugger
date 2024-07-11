@@ -37,6 +37,7 @@ function App() {
                 <VSCodePanelTab id="tab-5">Networking - Packets</VSCodePanelTab>
                 <VSCodePanelTab id="tab-6">Networking - Bandwidth</VSCodePanelTab>
                 <VSCodePanelTab id="tab-7">Handle Counts</VSCodePanelTab>
+                <VSCodePanelTab id="tab-8">Subscriber Counts</VSCodePanelTab>
                 <VSCodePanelView id="view-1" style={{ flexDirection: 'column' }}>
                     <div style={{ flexDirection: 'row', display: 'flex' }}>
                         {statPrefabs.entityCount.reactNode}
@@ -162,6 +163,29 @@ function App() {
                         statisticOptions={{
                             type: StatisticType.Difference,
                             yAxisType: YAxisType.Mirrored,
+                            tickRange: 20 * 30, // About 30 seconds
+                        }}
+                    />
+                </VSCodePanelView>
+                <VSCodePanelView id="view-8">
+                    <StatGroupSelectionBox
+                        labelName="Script Plugin"
+                        defaultDropdownId="no_plugin_selected"
+                        statParentId="subscribers"
+                        onChange={handlePluginSelection}
+                    />
+                    <MinecraftStatisticLineChart
+                        title="Subscribers"
+                        yLabel="Number of World and System Before and After Event Subscribers"
+                        statisticDataProvider={
+                            new SimpleStatisticProvider({
+                                statisticId: 'plugin_subscribers',
+                                statisticParentId: new RegExp(`subscribers_${selectedPlugin}`),
+                            })
+                        }
+                        statisticOptions={{
+                            type: StatisticType.Absolute,
+                            yAxisType: YAxisType.Absolute,
                             tickRange: 20 * 30, // About 30 seconds
                         }}
                     />

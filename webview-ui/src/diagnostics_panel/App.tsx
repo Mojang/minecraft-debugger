@@ -7,9 +7,26 @@ import { useCallback, useState } from 'react';
 import { StatisticType, YAxisType, createStatResolver } from './StatisticResolver';
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
-import { MultipleStatisticProvider, SimpleStatisticProvider } from './StatisticProvider';
+import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
+import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
 
 import * as statPrefabs from './StatisticPrefabs';
+
+// Filter out events with a value of zero that haven't been previously subscribed to
+function constructSubscribedSignalFilter() {
+    const nonFilteredValues: string[] = [];
+
+    const func = (event: StatisticUpdatedMessage) => {
+        if (event.values.length === 1 && event.values[0] === 0 && !nonFilteredValues.includes(event.id)) {
+            return false;
+        }
+
+        nonFilteredValues.push(event.id);
+        return true;
+    };
+
+    return func;
+}
 
 function App() {
     // State
@@ -171,23 +188,23 @@ function App() {
                     <StatGroupSelectionBox
                         labelName="Script Plugin"
                         defaultDropdownId="no_plugin_selected"
-                        statParentId="subscribers"
+                        statParentId="fine_grained_subscribers"
                         onChange={handlePluginSelection}
                     />
-                    <MinecraftStatisticLineChart
-                        title="Subscribers"
-                        yLabel="Number of World and System Before and After Event Subscribers"
+                    <MinecraftStatisticStackedBarChart
+                        title="Signal Subscribers"
+                        yLabel="Number of World and System Before and After Event Subscribers Broken Down By Signal"
                         statisticDataProvider={
-                            new SimpleStatisticProvider({
-                                statisticId: 'plugin_subscribers',
-                                statisticParentId: new RegExp(`subscribers_${selectedPlugin}`),
+                            new MultipleStatisticProvider({
+                                statisticParentId: new RegExp(`fine_grained_subscribers_${selectedPlugin}`),
+                                valuesFilter: constructSubscribedSignalFilter(),
                             })
                         }
-                        statisticOptions={{
+                        statisticResolver={createStatResolver({
                             type: StatisticType.Absolute,
+                            tickRange: 20 * 15 /* About 15 seconds */,
                             yAxisType: YAxisType.Absolute,
-                            tickRange: 20 * 30, // About 30 seconds
-                        }}
+                        })}
                     />
                 </VSCodePanelView>
             </VSCodePanels>

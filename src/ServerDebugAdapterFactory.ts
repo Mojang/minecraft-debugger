@@ -3,14 +3,14 @@
 import * as Net from 'net';
 import * as vscode from 'vscode';
 import { Session } from './Session';
-import { StatsProvider2 } from './StatsProvider2';
+import { DebuggerStatsProvider } from './DebuggerStatsProvider';
 
 // Factory for creating a Debug Adapter that runs as a server inside the extension and communicates via a socket.
 //
 export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private server?: Net.Server;
 
-    constructor(private _statProvider2: StatsProvider2) {}
+    constructor(private _statProvider: DebuggerStatsProvider) {}
 
     createDebugAdapterDescriptor(
         session: vscode.DebugSession,
@@ -19,7 +19,7 @@ export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         if (!this.server) {
             // start listening on a random port
             this.server = Net.createServer(socket => {
-                const session = new Session(this._statProvider2);
+                const session = new Session(this._statProvider);
                 session.setRunAsServer(true);
                 session.start(socket as NodeJS.ReadableStream, socket);
             }).listen(0);

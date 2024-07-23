@@ -21,7 +21,8 @@ import { FileSystemWatcher, window, workspace } from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { isUUID } from './Utils';
-import { StatMessageModel, StatsProvider2 } from './StatsProvider2';
+import { DebuggerStatsProvider } from './DebuggerStatsProvider';
+import { StatMessageModel } from './StatsProvider';
 
 interface PendingResponse {
     onSuccess?: Function;
@@ -72,7 +73,7 @@ export class Session extends DebugSession {
     private _sourceMapBias?: string;
     private _targetModuleUuid?: string;
 
-    public constructor(private _statsProvider2: StatsProvider2) {
+    public constructor(private _statsProvider: DebuggerStatsProvider) {
         super();
 
         this.setDebuggerLinesStartAt1(true);
@@ -618,7 +619,7 @@ export class Session extends DebugSession {
         } else if (eventMessage.type === 'ProtocolEvent') {
             this.handleProtocolEvent(eventMessage);
         } else if (eventMessage.type === 'StatEvent2') {
-            this._statsProvider2.setStats(eventMessage as StatMessageModel);
+            this._statsProvider.setStats(eventMessage as StatMessageModel);
         }
     }
 

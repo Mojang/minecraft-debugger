@@ -31,6 +31,18 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     vscode.commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
                     break;
                 }
+                case 'open-diagnostics-report': {
+                    vscode.commands.executeCommand('minecraft-debugger.openMinecraftDiagnosticsReport');
+                    break;
+                }
+                case 'start-diagnostics-recording': {
+                    vscode.commands.executeCommand('minecraft-debugger.startMinecraftDiagnosticsRecording');
+                    break;
+                }
+                case 'stop-diagnostics-recording': {
+                    vscode.commands.executeCommand('minecraft-debugger.stopMinecraftDiagnosticsRecording');
+                    break;
+                }
             }
         });
     }

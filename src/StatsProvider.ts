@@ -23,7 +23,7 @@ export interface StatMessageModel {
 
 export type StatsListener = (stat: StatData) => void;
 
-export class StatsProvider2 {
+export abstract class StatsProvider {
     private _statListeners: StatsListener[] = [];
 
     public addStatListener(listener: StatsListener) {
@@ -34,7 +34,7 @@ export class StatsProvider2 {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
-    private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
+    protected _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
         this._statListeners.forEach((listener: StatsListener) => {
             const statId = stat.name.toLowerCase();
 
@@ -55,11 +55,5 @@ export class StatsProvider2 {
                 });
             }
         });
-    }
-
-    public setStats(stats: StatMessageModel) {
-        for (const stat of stats.stats) {
-            this._fireStatUpdated(stat, stats.tick);
-        }
     }
 }

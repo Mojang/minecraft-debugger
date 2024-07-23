@@ -56,6 +56,18 @@
             {
                 "command": "minecraft-debugger.showMinecraftDiagnostics",
                 "title": "Minecraft Diagnostics: Show"
+            },
+            {
+                "command": "minecraft-debugger.openMinecraftDiagnosticsReport",
+                "title": "Minecraft Diagnostics: Open Report"
+            },
+            {
+                "command": "minecraft-debugger.startMinecraftDiagnosticsRecording",
+                "title": "Minecraft Diagnostics: Start Recording"
+            },
+            {
+                "command": "minecraft-debugger.stopMinecraftDiagnosticsRecording",
+                "title": "Minecraft Diagnostics: Stop Recording"
             }
         ],
         "breakpoints": [

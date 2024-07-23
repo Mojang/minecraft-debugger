@@ -3,19 +3,19 @@
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from 'vscode';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
-import { StatData, StatsListener, StatsProvider2 } from '../StatsProvider2';
+import { StatData, StatsListener, StatsProvider } from '../StatsProvider';
 
 export class MinecraftDiagnosticsPanel {
     public static currentPanel: MinecraftDiagnosticsPanel | undefined;
     private readonly _panel: WebviewPanel;
     private _disposables: Disposable[] = [];
 
-    private _statsTracker: StatsProvider2;
+    private _statsProvider: StatsProvider;
     private _statsCallback: StatsListener | undefined = undefined;
 
-    private constructor(panel: WebviewPanel, extensionUri: Uri, statsTracker: StatsProvider2) {
+    private constructor(panel: WebviewPanel, extensionUri: Uri, statsTracker: StatsProvider) {
         this._panel = panel;
-        this._statsTracker = statsTracker;
+        this._statsProvider = statsTracker;
 
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
@@ -44,7 +44,7 @@ export class MinecraftDiagnosticsPanel {
             }
         };
 
-        this._statsTracker.addStatListener(this._statsCallback);
+        this._statsProvider.addStatListener(this._statsCallback);
     }
 
     /**
@@ -53,7 +53,7 @@ export class MinecraftDiagnosticsPanel {
      *
      * @param extensionUri The URI of the directory containing the extension.
      */
-    public static render(extensionUri: Uri, statsTracker: StatsProvider2) {
+    public static render(extensionUri: Uri, statsTracker: StatsProvider) {
         if (MinecraftDiagnosticsPanel.currentPanel) {
             // If the webview panel already exists reveal it
             MinecraftDiagnosticsPanel.currentPanel._panel.reveal(ViewColumn.One);
@@ -87,7 +87,7 @@ export class MinecraftDiagnosticsPanel {
      */
     public dispose() {
         if (this._statsCallback !== undefined) {
-            this._statsTracker.removeStatListener(this._statsCallback);
+            this._statsProvider.removeStatListener(this._statsCallback);
             this._statsCallback = undefined;
         }
 

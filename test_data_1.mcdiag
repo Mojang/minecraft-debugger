@@ -1,0 +1,43 @@
+[
+    {
+        "tick": 48758,
+        "type": "StatEvent2",
+        "stats": [
+            {
+                "name": "commands",
+                "children": [
+                    {
+                        "name": "GameDirectorEntityServer",
+                        "values": [40]
+                    },
+                    {
+                        "name": "DedicatedServer",
+                        "values": [19]
+                    },
+                    {
+                        "name": "Scripting",
+                        "values": [4]
+                    }
+                ]
+            },
+            {
+                "name": "handle_counts",
+                "children": [
+                    {
+                        "name": "Universal Studios Experience Behaviors",
+                        "children": [
+                            {
+                                "name": "Entity",
+                                "values": [154]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "entities",
+                "values": [117]
+            }
+        ]
+    }
+]

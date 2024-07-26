@@ -100,7 +100,7 @@ export default function MinecraftStatisticStackedBarChart({
                 plot.remove();
             }
         };
-    }, [data]);
+    }, [data, statisticDataProvider]);
 
     return <div ref={containerRef} />;
 }

@@ -91,6 +91,7 @@ export class SimpleStatisticProvider extends StatisticProvider {
 interface MultipleStatisticProviderOptions {
     statisticIds?: string[]; // If not included, all stats will be included
     statisticParentId: string | RegExp;
+    valuesFilter?: (event: StatisticUpdatedMessage) => boolean;
 }
 // Used for things like stacked bar charts
 export class MultipleStatisticProvider extends StatisticProvider {
@@ -114,6 +115,10 @@ export class MultipleStatisticProvider extends StatisticProvider {
         }
 
         if (event.values.length === 0) {
+            return;
+        }
+
+        if (this.options.valuesFilter && !this.options.valuesFilter(event)) {
             return;
         }
 

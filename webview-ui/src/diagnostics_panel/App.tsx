@@ -7,9 +7,26 @@ import { useCallback, useState } from 'react';
 import { StatisticType, YAxisType, createStatResolver } from './StatisticResolver';
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
-import { MultipleStatisticProvider, SimpleStatisticProvider } from './StatisticProvider';
+import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
+import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
 
 import * as statPrefabs from './StatisticPrefabs';
+
+// Filter out events with a value of zero that haven't been previously subscribed to
+function constructSubscribedSignalFilter() {
+    const nonFilteredValues: string[] = [];
+
+    const func = (event: StatisticUpdatedMessage) => {
+        if (event.values.length === 1 && event.values[0] === 0 && !nonFilteredValues.includes(event.id)) {
+            return false;
+        }
+
+        nonFilteredValues.push(event.id);
+        return true;
+    };
+
+    return func;
+}
 
 function App() {
     // State
@@ -37,6 +54,7 @@ function App() {
                 <VSCodePanelTab id="tab-5">Networking - Packets</VSCodePanelTab>
                 <VSCodePanelTab id="tab-6">Networking - Bandwidth</VSCodePanelTab>
                 <VSCodePanelTab id="tab-7">Handle Counts</VSCodePanelTab>
+                <VSCodePanelTab id="tab-8">Subscriber Counts</VSCodePanelTab>
                 <VSCodePanelView id="view-1" style={{ flexDirection: 'column' }}>
                     <div style={{ flexDirection: 'row', display: 'flex' }}>
                         {statPrefabs.entityCount.reactNode}
@@ -164,6 +182,29 @@ function App() {
                             yAxisType: YAxisType.Mirrored,
                             tickRange: 20 * 30, // About 30 seconds
                         }}
+                    />
+                </VSCodePanelView>
+                <VSCodePanelView id="view-8">
+                    <StatGroupSelectionBox
+                        labelName="Script Plugin"
+                        defaultDropdownId="no_plugin_selected"
+                        statParentId="fine_grained_subscribers"
+                        onChange={handlePluginSelection}
+                    />
+                    <MinecraftStatisticStackedBarChart
+                        title="Signal Subscribers"
+                        yLabel="Number of World and System Before and After Event Subscribers Broken Down By Signal"
+                        statisticDataProvider={
+                            new MultipleStatisticProvider({
+                                statisticParentId: new RegExp(`fine_grained_subscribers_${selectedPlugin}`),
+                                valuesFilter: constructSubscribedSignalFilter(),
+                            })
+                        }
+                        statisticResolver={createStatResolver({
+                            type: StatisticType.Absolute,
+                            tickRange: 20 * 15 /* About 15 seconds */,
+                            yAxisType: YAxisType.Absolute,
+                        })}
                     />
                 </VSCodePanelView>
             </VSCodePanels>

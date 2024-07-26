@@ -1,1 +1,1 @@
-See the [G]itHub Releases page](https://github.com/Mojang/minecraft-debugger/releases) for changelogs and releases.
+See the [GitHub Releases page](https://github.com/Mojang/minecraft-debugger/releases) for changelogs and releases.

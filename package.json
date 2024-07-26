@@ -12,38 +12,6 @@
         "type": "git",
         "url": "https://github.com/Mojang/minecraft-debugger.git"
     },
-    "release": {
-        "branches": [
-            "main",
-            "test"
-        ],
-        "plugins": [
-            "@semantic-release/commit-analyzer",
-            "@semantic-release/release-notes-generator",
-            [
-                "@semantic-release/changelog",
-                {
-                    "changelogFile": "CHANGELOG.md"
-                }
-            ],
-            [
-                "semantic-release-vsce",
-                {
-                    "packageVsix": true
-                }
-            ],
-            [
-                "@semantic-release/github",
-                {
-                    "assets": [
-                        {
-                            "path": "*.vsix"
-                        }
-                    ]
-                }
-            ]
-        ]
-    },
     "icon": "bedrock-icon.png",
     "engines": {
         "node": "^20.0.0",

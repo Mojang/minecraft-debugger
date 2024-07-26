@@ -94,7 +94,7 @@ class SourceMapCache {
 
                 let mapJson;
                 if (this._inlineSourceMap) {
-                    const inlineSourceMapRegex = /\/\/# sourceMappingURL=data:application\/json;base64,(.*)$/gm;
+                    const inlineSourceMapRegex = /\/\/# sourceMappingURL=data:application\/json;.*;base64,(.*)$/gm;
                     const match = inlineSourceMapRegex.exec(mapFile.toString());
                     const sourceRoot = path.join(
                         this._localRoot ?? '',

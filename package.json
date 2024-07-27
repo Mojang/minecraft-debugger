@@ -197,7 +197,7 @@
         "@vscode/vsce": "^2.31.1",
         "esbuild": "^0.12.29",
         "eslint": "^7.19.0",
-        "glob": "^7.1.6",
+        "glob": "^11.0.0",
         "mocha": "^10.2.0",
         "path-browserify": "^1.0.1",
         "semantic-release": "^24.0.0",

@@ -2,7 +2,6 @@
 .vscode-test/**
 .github/**
 
-out/test/**
 src/**
 .gitignore
 .yarnrc
@@ -14,3 +13,9 @@ src/**
 
 webview-ui/src/**
 webview-ui/node_modules/**
+
+node_modules/**
+
+# Config files
+esbuild.js
+*.config.js

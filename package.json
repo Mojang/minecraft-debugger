@@ -193,7 +193,7 @@
         "@types/react": "^18.3.3",
         "@types/vscode": "^1.91.0",
         "@typescript-eslint/eslint-plugin": "^4.14.1",
-        "@typescript-eslint/parser": "^4.14.1",
+        "@typescript-eslint/parser": "^6.21.0",
         "@vscode/vsce": "^2.31.1",
         "esbuild": "^0.12.29",
         "eslint": "^7.19.0",

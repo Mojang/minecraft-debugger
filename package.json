@@ -32,7 +32,7 @@
         "onDebug",
         "onCommand:extension.minecraft-js.getPort"
     ],
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
     "contributes": {
         "viewsContainers": {
             "activitybar": [
@@ -67,7 +67,6 @@
             {
                 "type": "minecraft-js",
                 "label": "Minecraft Debugger",
-                "program": "./out/debugAdapter.js",
                 "runtime": "node",
                 "languages": [
                     "javascript"
@@ -168,13 +167,16 @@
         "start:webview": "cd webview-ui && npm run start && cd ..",
         "build:webview": "cd webview-ui && npm run build && cd ..",
         "build:all": "npm run build:webview && npm run compile",
-        "vscode:prepublish": "npm run build:all",
-        "compile": "tsc",
-        "watch": "tsc -watch",
+        "vscode:prepublish": "npm run package:all",
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
-        "package": "vsce package -o minecraft-debugger-js.vsix",
-        "release": "npx semantic-release"
+        "release": "npx semantic-release",
+        "compile": "npm run check-types && node esbuild.js",
+        "check-types": "tsc --noEmit",
+        "watch": "npm-run-all -p watch:*",
+        "watch:esbuild": "node esbuild.js --watch",
+        "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+        "package:all": "npm run build:webview && npm run check-types && node esbuild.js --production"
     },
     "dependencies": {
         "@vscode/webview-ui-toolkit": "^1.4.0",
@@ -192,13 +194,15 @@
         "@types/vscode": "^1.55.0",
         "@typescript-eslint/eslint-plugin": "^4.14.1",
         "@typescript-eslint/parser": "^4.14.1",
-        "esbuild": "^0.12.5",
+        "@vscode/vsce": "^2.31.1",
+        "esbuild": "^0.12.29",
         "eslint": "^7.19.0",
         "glob": "^7.1.6",
         "mocha": "^10.2.0",
+        "path-browserify": "^1.0.1",
         "semantic-release": "^24.0.0",
         "semantic-release-vsce": "github:JakeShirley/semantic-release-vsce",
-        "typescript": "^4.1.3",
-        "@vscode/vsce": "^2.31.1"
+        "ts-loader": "^9.5.1",
+        "typescript": "^4.9.5"
     }
 }

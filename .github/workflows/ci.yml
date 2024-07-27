@@ -52,4 +52,4 @@ jobs:
         run: |
           npm install -g @vscode/vsce
           npm install
-          vsce --azure-credential --verify-pat
+          vsce verify-pat --azure-credential

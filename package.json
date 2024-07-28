@@ -15,7 +15,7 @@
     "icon": "bedrock-icon.png",
     "engines": {
         "node": "^20.0.0",
-        "vscode": "^1.55.0"
+        "vscode": "^1.91.0"
     },
     "categories": [
         "Debuggers"

@@ -79,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
 
                         // Hack to delay the eventing until the panel is ready
                         setTimeout(() => {
-                            fileReport.fireData();
+                            fileReport.startFiringReport();
                         }, 200);
                     });
                 }

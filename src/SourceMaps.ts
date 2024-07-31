@@ -165,7 +165,7 @@ class SourceMapCache {
                 throw e;
             } else {
                 throw new Error(
-                    `Failed to load source maps at [${this._sourceMapRoot}], check that 'sourceMapRoot' is set correctly.`
+                    `Failed to load source maps at [${this._sourceMapRoot}], check that 'sourceMapRoot' is set correctly.\nInternal Error: ${e}`
                 );
             }
         }

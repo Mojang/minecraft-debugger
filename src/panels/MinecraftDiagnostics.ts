@@ -34,6 +34,7 @@ export class MinecraftDiagnosticsPanel {
                     values: stat.values,
                     id: stat.id,
                     name: stat.name,
+                    group_name: stat.parent_name,
                     group: stat.parent_id,
                     full_id: stat.full_id,
                     time: stat.tick,

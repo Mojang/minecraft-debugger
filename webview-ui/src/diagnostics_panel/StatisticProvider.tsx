@@ -8,6 +8,7 @@ export interface StatisticUpdatedMessage {
     group: string;
     full_id: string;
     group_full_id: string;
+    group_name: string;
     time: number;
 }
 

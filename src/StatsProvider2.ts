@@ -2,6 +2,7 @@
 
 export interface StatData {
     name: string;
+    parent_name: string;
     id: string;
     full_id: string;
     parent_id: string;
@@ -42,6 +43,7 @@ export class StatsProvider2 {
                 ...stat,
                 id: statId,
                 full_id: parent !== undefined ? parent.full_id + '_' + statId : statId,
+                parent_name: parent !== undefined ? parent.name : '',
                 parent_id: parent !== undefined ? parent.id : '',
                 parent_full_id: parent !== undefined ? parent.full_id : '',
                 values: stat.values ?? [],

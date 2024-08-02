@@ -12,9 +12,9 @@ import {
     Thread,
     ThreadEvent,
     Variable,
-} from 'vscode-debugadapter';
-import { DebugProtocol } from 'vscode-debugprotocol';
-import { LogOutputEvent, LogLevel } from 'vscode-debugadapter/lib/logger';
+} from '@vscode/debugadapter';
+import { DebugProtocol } from '@vscode/debugprotocol';
+import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
 import { FileSystemWatcher, window, workspace } from 'vscode';

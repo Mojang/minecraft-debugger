@@ -8,9 +8,15 @@ import { StatisticType, YAxisType, createStatResolver } from './StatisticResolve
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
 import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
-import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
+import {
+    MultipleStatisticProvider,
+    RegexStatisticProvider,
+    SimpleStatisticProvider,
+    StatisticUpdatedMessage,
+} from './StatisticProvider';
 
 import * as statPrefabs from './StatisticPrefabs';
+import { MinecraftEventTable } from './controls/MinecraftEventTable';
 
 // Filter out events with a value of zero that haven't been previously subscribed to
 function constructSubscribedSignalFilter() {
@@ -53,8 +59,9 @@ function App() {
                 <VSCodePanelTab id="tab-4">Client Timing</VSCodePanelTab>
                 <VSCodePanelTab id="tab-5">Networking - Packets</VSCodePanelTab>
                 <VSCodePanelTab id="tab-6">Networking - Bandwidth</VSCodePanelTab>
-                <VSCodePanelTab id="tab-7">Handle Counts</VSCodePanelTab>
-                <VSCodePanelTab id="tab-8">Subscriber Counts</VSCodePanelTab>
+                <VSCodePanelTab id="tab-7">Networking - Packet Ordering</VSCodePanelTab>
+                <VSCodePanelTab id="tab-8">Handle Counts</VSCodePanelTab>
+                <VSCodePanelTab id="tab-9">Subscriber Counts</VSCodePanelTab>
                 <VSCodePanelView id="view-1" style={{ flexDirection: 'column' }}>
                     <div style={{ flexDirection: 'row', display: 'flex' }}>
                         {statPrefabs.entityCount.reactNode}
@@ -146,7 +153,24 @@ function App() {
                     {statPrefabs.packetDataReceived.reactNode}
                     {statPrefabs.packetDataSent.reactNode}
                 </VSCodePanelView>
-                <VSCodePanelView id="view-7">
+                <VSCodePanelView id="view-9">
+                    <MinecraftEventTable
+                        title="Packet Logs"
+                        statisticDataProviders={{
+                            'Packets Received': new RegexStatisticProvider({
+                                statisticParentId: /networking_packets_details_.*/,
+                                statisticId: 'received',
+                                ignoredValues: [0],
+                            }),
+                            'Packets Sent': new RegexStatisticProvider({
+                                statisticParentId: /networking_packets_details_.*/,
+                                statisticId: 'sent',
+                                ignoredValues: [0],
+                            }),
+                        }}
+                    />
+                </VSCodePanelView>
+                <VSCodePanelView id="view-8">
                     <StatGroupSelectionBox
                         labelName="Script Plugin"
                         defaultDropdownId="no_plugin_selected"
@@ -184,7 +208,7 @@ function App() {
                         }}
                     />
                 </VSCodePanelView>
-                <VSCodePanelView id="view-8">
+                <VSCodePanelView id="view-9">
                     <StatGroupSelectionBox
                         labelName="Script Plugin"
                         defaultDropdownId="no_plugin_selected"

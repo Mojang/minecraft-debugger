@@ -17,6 +17,7 @@ import {
     RegexStatisticProvider,
     SimpleStatisticProvider,
 } from './StatisticProvider';
+import { MinecraftEventTable } from './controls/MinecraftEventTable';
 
 interface StatisticPrefab {
     name: string;
@@ -321,6 +322,27 @@ export const packetDataSent: StatisticPrefab = {
                 yAxisType: YAxisType.Absolute,
                 tickRange: 20 * 15, // About 15 seconds
                 valueScalar: 1 / 1000, // byte to kilobyte
+            }}
+        />
+    ),
+};
+
+export const packetLogs: StatisticPrefab = {
+    name: 'Packet Logs',
+    reactNode: (
+        <MinecraftEventTable
+            title="Packet Logs"
+            statisticDataProviders={{
+                'Packets Received': new RegexStatisticProvider({
+                    statisticParentId: /networking_packets_details_.*/,
+                    statisticId: 'received',
+                    ignoredValues: [0],
+                }),
+                'Packets Sent': new RegexStatisticProvider({
+                    statisticParentId: /networking_packets_details_.*/,
+                    statisticId: 'sent',
+                    ignoredValues: [0],
+                }),
             }}
         />
     ),

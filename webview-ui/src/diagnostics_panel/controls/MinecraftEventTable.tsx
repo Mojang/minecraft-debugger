@@ -106,7 +106,9 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
                                 {eventTick.events[statisticDataProviderName]?.map(event => {
                                     return (
                                         <a>
-                                            {`${event.group_name}}`}
+                                            {`${event.group_name}${
+                                                event.values.length > 1 ? ` x${event.values.length}` : ''
+                                            }`}
                                             <br />
                                         </a>
                                     );

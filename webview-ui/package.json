@@ -12,7 +12,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "@observablehq/plot": "^0.6.14",
+        "@observablehq/plot": "^0.6.16",
         "@types/node": "^22.1.0",
         "@vscode/webview-ui-toolkit": "^1.2.2",
         "d3": "^7.9.0",

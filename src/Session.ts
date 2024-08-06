@@ -740,7 +740,7 @@ export class Session extends DebugSession {
             return false;
         }
         try {
-            let fileNames = fs.readdirSync(filePath);
+            let fileNames = fs.readdirSync(filePath, { encoding: null, recursive: true });
             for (let fn of fileNames) {
                 if (extensions.some(ext => fn.endsWith(ext))) {
                     return true;

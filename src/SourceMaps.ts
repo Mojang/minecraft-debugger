@@ -132,13 +132,13 @@ class SourceMapCache {
                     if (path.isAbsolute(originalSource)) {
                         // we have an absolute path already, so generate a relative path to the current dir
                         originalSourceAbsolutePath = originalSource;
-                        originalSourceRelative = path.relative(this._sourceMapRoot, originalSourceAbsolutePath);
+                        originalSourceRelative = path.relative(path.dirname(mapFullPath), originalSourceAbsolutePath);
                         preferAbsolute = true;
                     } else {
                         // generate relative path from map to ts file
                         originalSourceRelative = normalizePathForRemote(originalSource);
                         // map has relative path back to original source, resolve for absolute path
-                        originalSourceAbsolutePath = path.resolve(this._sourceMapRoot, originalSourceRelative);
+                        originalSourceAbsolutePath = path.resolve(path.dirname(mapFullPath), originalSourceRelative);
                     }
 
                     // collect all relevant path info, used for resolving original->generated and generated->original

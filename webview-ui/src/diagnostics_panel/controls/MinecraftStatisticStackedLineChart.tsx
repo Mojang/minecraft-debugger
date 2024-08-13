@@ -102,7 +102,10 @@ export default function MinecraftStatisticStackedLineChart({
                     x: 'time',
                     y: 'value',
                     fill: 'category',
-                    title: 'category',
+                    title: d => `category: ${d.category}\nvalue: ${parseFloat(d.value.toFixed(3))}`,
+                    tip: {
+                        fontSize: 12,
+                    },
                 }),
                 Plot.ruleY([0]),
                 targetValue ? Plot.ruleY([targetValue]) : undefined,

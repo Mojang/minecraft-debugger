@@ -27,6 +27,10 @@ main {
   max-width: initial;
 }
 
+.minecraft-statistic-stacked-line-chart-figure tspan {
+  fill: black;
+}
+
 .minecraft-statistic-stacked-line-chart-swatches {
   font-family: system-ui, sans-serif;
   font-size: 10px;
@@ -89,6 +93,10 @@ main {
   display: inline-flex;
   align-items: center;
   margin-right: 1em;
+}
+
+.minecraft-statistic-stacked-bar-chart tspan {
+  fill: black;
 }
 
 /* .minecraft-statistic-stacked-bar-chart {

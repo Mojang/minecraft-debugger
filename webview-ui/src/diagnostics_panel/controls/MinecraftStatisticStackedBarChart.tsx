@@ -78,7 +78,10 @@ export default function MinecraftStatisticStackedBarChart({
                     x: 'time',
                     y: 'value',
                     fill: 'category',
-                    title: 'category',
+                    title: d => `category: ${d.category}\nvalue: ${d.value}`,
+                    tip: {
+                        fontSize: 12,
+                    },
                 }),
                 Plot.ruleY([0]),
             ],

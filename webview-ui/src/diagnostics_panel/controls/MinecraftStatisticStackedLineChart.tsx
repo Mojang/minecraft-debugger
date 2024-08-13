@@ -102,7 +102,7 @@ export default function MinecraftStatisticStackedLineChart({
                     x: 'time',
                     y: 'value',
                     fill: 'category',
-                    title: d => `category: ${d.category}\nvalue: ${d.value.toFixed(3)}`,
+                    title: d => `category: ${d.category}\nvalue: ${parseFloat(d.value.toFixed(3))}`,
                     tip: {
                         fontSize: 12,
                     },

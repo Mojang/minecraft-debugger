@@ -17,7 +17,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
-import { FileSystemWatcher, window, workspace } from 'vscode';
+import { FileSystemWatcher, window, workspace, commands } from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { isUUID } from './Utils';
@@ -498,6 +498,11 @@ export class Session extends DebugSession {
         // When config is complete VSCode calls 'configurationDoneRequest' and the DA
         // sends a 'resume' message to the debugee, which had paused following the attach.
         this.sendEvent(new InitializedEvent());
+
+        // If the user has set the configuration to show the diagnostic view on connect in settings.json, show it now.
+        if (workspace.getConfiguration('minecraft-debugger').get('showDiagnosticViewOnConnect')) {
+            commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
+        }
     }
 
     // stop listening for connections

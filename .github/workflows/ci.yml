@@ -5,8 +5,8 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  pull-requests: read
-  contents: write
+  contents: read
+  pull-requests: write
 
 jobs:
   lint_pr_title:

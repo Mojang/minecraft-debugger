@@ -159,7 +159,16 @@
                     "PromptForPort": "extension.minecraft-js.getPort"
                 }
             }
-        ]
+        ],
+        "configuration": {
+            "properties": {
+                "minecraft-debugger.showDiagnosticViewOnConnect": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Open the diagnostics view on connection to Minecraft."
+                }
+            }
+        }
     },
     "scripts": {
         "install:all": "npm install && cd webview-ui && npm install",

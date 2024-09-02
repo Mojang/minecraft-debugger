@@ -188,7 +188,7 @@
         "package:all": "npm run build:webview && npm run check-types && node esbuild.mjs --production"
     },
     "dependencies": {
-        "@vscode/debugadapter": "^1.66.0",
+        "@vscode/debugadapter": "^1.67.0",
         "@vscode/webview-ui-toolkit": "^1.4.0",
         "source-map": "^0.7.4",
         "stream-parser": "^0.3.1"

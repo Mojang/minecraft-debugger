@@ -180,6 +180,7 @@
         "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
         "release": "npx semantic-release",
+        "release:dry-run": "npx semantic-release --dry-run",
         "compile": "npm run check-types && node esbuild.mjs",
         "check-types": "tsc --noEmit",
         "watch": "npm-run-all -p watch:*",

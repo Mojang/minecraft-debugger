@@ -19,3 +19,8 @@ jobs:
           node-version: 20
       - run: npm run ci:all
       - run: npm run build:all
+
+      - run: rpm run release:dry-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VSCE_AZURE_CREDENTIAL: true

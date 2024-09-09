@@ -13,11 +13,11 @@ import {
     ThreadEvent,
     Variable,
 } from '@vscode/debugadapter';
+import { commands, FileSystemWatcher, QuickPickItem, QuickPickOptions, workspace, window } from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
-import { FileSystemWatcher, window, workspace, commands } from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { isUUID } from './Utils';
@@ -31,6 +31,17 @@ interface PendingResponse {
 // Module mapping for getting line numbers for a given module
 interface ModuleMapping {
     [moduleName: string]: string;
+}
+
+interface PluginDetails {
+    name: string;
+    module_uuid: string;
+}
+
+interface ProtocolCapabilities {
+    type: string;
+    version: number;
+    plugins: PluginDetails[];
 }
 
 // Interface for specific launch arguments.
@@ -49,10 +60,33 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
     targetModuleUuid?: string;
 }
 
+class TargetPluginItem implements QuickPickItem {
+    public label: string;
+    public detail: string;
+    public targetModuleId: string;
+
+    constructor(pluginDetails: PluginDetails) {
+        this.label = pluginDetails.name;
+        this.detail = 'Script module uuid ' + pluginDetails.module_uuid;
+        this.targetModuleId = pluginDetails.module_uuid;
+    }
+}
+
+// protocol version history
+// 1 - initial version
+// 2 - add targetModuleUuid to protocol event
+// 3 - add array of plugins and target module ids to incoming protocol event
+enum ProtcolVersion {
+    Initial = 1,
+    SupportTargetModuleUuid = 2,
+    SupportTargetSelection = 3,
+}
+
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession {
-    private static DEBUGGER_PROTOCOL_VERSION = 2;
+    private static DEBUGGER_PROTOCOL_VERSION = ProtcolVersion.SupportTargetSelection;
+
     private static CONNECTION_RETRY_ATTEMPTS = 5;
     private static CONNECTION_RETRY_WAIT_MS = 2000;
 
@@ -132,13 +166,7 @@ export class Session extends DebugSession {
             this.sendErrorResponse(response, 1001, `Failed to attach to Minecraft, invalid port "${args.inputPort}".`);
             return;
         }
-
-        if (!args.targetModuleUuid || args.targetModuleUuid === '' || !isUUID(args.targetModuleUuid)) {
-            this.showNotification(
-                'Launch config module target (targetModuleUuid) is not a valid uuid. This should be set to the script module uuid from your manifest.json. Omitting this may cause problems when multiple Minecraft Add-Ons are active.',
-                LogLevel.Warn
-            );
-        } else {
+        if (args.targetModuleUuid && isUUID(args.targetModuleUuid)) {
             this._targetModuleUuid = args.targetModuleUuid.toLowerCase();
         }
 
@@ -477,7 +505,19 @@ export class Session extends DebugSession {
         //
     }
 
-    private onConnectionComplete() {
+    private onConnectionComplete(targetModuleUuid?: string) {
+        this._targetModuleUuid = targetModuleUuid;
+
+        // respond with protocol version and chosen debugee target
+        this.sendDebuggeeMessage({
+            type: 'protocol',
+            version: Session.DEBUGGER_PROTOCOL_VERSION,
+            target_module_uuid: targetModuleUuid,
+        });
+
+        // show notifications for source map issues
+        this.checkSourceFilePaths();
+
         // success
         this.showNotification('Success! Debugger is now connected.', LogLevel.Log);
 
@@ -620,8 +660,10 @@ export class Session extends DebugSession {
             this.sendEvent(new ThreadEvent(eventMessage.reason, eventMessage.thread));
         } else if (eventMessage.type === 'PrintEvent') {
             this.handlePrintEvent(eventMessage.message, eventMessage.logLevel);
+        } else if (eventMessage.type === 'NotificationEvent') {
+            this.showNotification(eventMessage.message, eventMessage.logLevel);
         } else if (eventMessage.type === 'ProtocolEvent') {
-            this.handleProtocolEvent(eventMessage);
+            this.handleProtocolEvent(eventMessage as ProtocolCapabilities);
         } else if (eventMessage.type === 'StatEvent2') {
             this._statsProvider2.setStats(eventMessage as StatMessageModel);
         }
@@ -688,7 +730,7 @@ export class Session extends DebugSession {
     // ------------------------------------------------------------------------
 
     // the final client event before connection is complete
-    private handleProtocolEvent(protocolCapabilities: any) {
+    private handleProtocolEvent(protocolCapabilities: ProtocolCapabilities) {
         //
         // handle protocol capabilities here...
         // can fail connection on errors
@@ -696,16 +738,58 @@ export class Session extends DebugSession {
         if (Session.DEBUGGER_PROTOCOL_VERSION < protocolCapabilities.version) {
             this.terminateSession('protocol mismatch. Update Debugger Extension.', LogLevel.Error);
         } else {
-            this.sendDebuggeeMessage({
-                type: 'protocol',
-                version: Session.DEBUGGER_PROTOCOL_VERSION,
-                target_module_uuid: this._targetModuleUuid,
-            });
+            if (protocolCapabilities.version == ProtcolVersion.SupportTargetModuleUuid) {
+                this.onConnectionComplete(this._targetModuleUuid);
+            } else if (protocolCapabilities.version == ProtcolVersion.SupportTargetSelection) {
+                if (!protocolCapabilities.plugins || protocolCapabilities.plugins.length === 0) {
+                    this.terminateSession('protocol error. No Minecraft Add-Ons found.', LogLevel.Error);
+                    return;
+                } else if (this._targetModuleUuid) {
+                    const isValidTarget = protocolCapabilities.plugins.some(
+                        plugin => plugin.module_uuid === this._targetModuleUuid
+                    );
+                    if (isValidTarget) {
+                        this.onConnectionComplete(this._targetModuleUuid);
+                        return;
+                    } else {
+                        this.showNotification(
+                            `Minecraft Add-On script module not found with targetModuleUuid ${this._targetModuleUuid} specified in launch.json. Prompting for debug target.`,
+                            LogLevel.Warn
+                        );
+                    }
+                } else if (protocolCapabilities.plugins.length === 1) {
+                    this.onConnectionComplete(protocolCapabilities.plugins[0].module_uuid);
+                    return;
+                } else {
+                    this.showNotification(
+                        'The targetModuleUuid in launch.json is not set to a valid uuid. Set this to a script module uuid (manifest.json) to avoid the selection prompt.',
+                        LogLevel.Warn
+                    );
+                }
 
-            this.checkSourceFilePaths();
-
-            // success
-            this.onConnectionComplete();
+                //
+                // Could not connect automatically, prompt user to select target.
+                //
+                const items: TargetPluginItem[] = protocolCapabilities.plugins.map(
+                    plugin => new TargetPluginItem(plugin)
+                );
+                const options: QuickPickOptions = {
+                    title: 'Choose the Minecraft Add-On to debug',
+                    ignoreFocusOut: true,
+                };
+                window.showQuickPick(items, options).then(value => {
+                    if (!value) {
+                        this.terminateSession(
+                            'could not determine target Minecraft Add-On. You must specify the targetModuleUuid.',
+                            LogLevel.Error
+                        );
+                    } else {
+                        this.onConnectionComplete(value?.targetModuleId);
+                    }
+                });
+            } else {
+                this.terminateSession('protocol unsupported. Update Debugger Extension.', LogLevel.Error);
+            }
         }
     }
 

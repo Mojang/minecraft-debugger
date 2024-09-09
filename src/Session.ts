@@ -779,7 +779,10 @@ export class Session extends DebugSession {
                 };
                 window.showQuickPick(items, options).then(value => {
                     if (!value) {
-                        this.terminateSession('could not determine target Minecraft Add-On.', LogLevel.Error);
+                        this.terminateSession(
+                            'could not determine target Minecraft Add-On. You must specify the targetModuleUuid.',
+                            LogLevel.Error
+                        );
                     } else {
                         this.onConnectionComplete(value?.targetModuleId);
                     }

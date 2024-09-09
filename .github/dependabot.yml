@@ -10,10 +10,10 @@ updates:
     schedule:
       interval: "daily"
     commit-message:
-      prefix: "dependencies(dependabot): "
+      prefix: "build(dependabot): "
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/webview-ui/" # Location of package manifests
     schedule:
       interval: "daily"
     commit-message:
-      prefix: "dependencies(dependabot): "
+      prefix: "build(dependabot): "

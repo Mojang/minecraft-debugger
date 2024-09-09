@@ -207,7 +207,7 @@
         "@vscode/vsce": "^3.1.0",
         "esbuild": "^0.23.1",
         "esbuild-plugin-copy": "^2.1.1",
-        "eslint": "^9.9.1",
+        "eslint": "^9.10.0",
         "glob": "^7.1.6",
         "mocha": "^10.7.3",
         "path-browserify": "^1.0.1",

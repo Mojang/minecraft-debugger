@@ -753,7 +753,7 @@ export class Session extends DebugSession {
                         return;
                     } else {
                         this.showNotification(
-                            `Minecraft Add-On not found with targetModuleUuid ${this._targetModuleUuid} specified in launch.json. Prompting for debug target.`,
+                            `Minecraft Add-On script module not found with targetModuleUuid ${this._targetModuleUuid} specified in launch.json. Prompting for debug target.`,
                             LogLevel.Warn
                         );
                     }

@@ -214,6 +214,6 @@
         "semantic-release": "^24.1.0",
         "semantic-release-vsce": "github:JakeShirley/semantic-release-vsce",
         "ts-loader": "^9.5.1",
-        "typescript": "^5.5.4"
+        "typescript": "^5.6.2"
     }
 }

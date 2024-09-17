@@ -125,6 +125,10 @@
                             "targetModuleUuid": {
                                 "type": "string",
                                 "description": "The script module uuid from the manifest.json of the Minecraft Add-On being debugged. Necessary if there are multiple Add-Ons active."
+                            },
+                            "passcode": {
+                                "type": "string",
+                                "description": "If set, user will not be prompted for passcode if Minecraft is expecting one."
                             }
                         }
                     }

@@ -68,6 +68,7 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
     moduleMapping?: ModuleMapping;
     sourceMapBias?: string;
     targetModuleUuid?: string;
+    passcode?: string;
 }
 
 class TargetPluginItem implements QuickPickItem {
@@ -117,6 +118,7 @@ export class Session extends DebugSession {
     private _moduleMapping?: ModuleMapping;
     private _sourceMapBias?: string;
     private _targetModuleUuid?: string;
+    private _passcode?: string;
     private _statsProvider: StatsProvider2;
     private _eventEmitter: any;
 
@@ -195,6 +197,7 @@ export class Session extends DebugSession {
         if (args.targetModuleUuid && isUUID(args.targetModuleUuid)) {
             this._targetModuleUuid = args.targetModuleUuid.toLowerCase();
         }
+        this._passcode = args.passcode;
 
         this._localRoot = args.localRoot ? path.normalize(args.localRoot) : '';
         this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
@@ -819,11 +822,15 @@ export class Session extends DebugSession {
 
     private async promptForPasscode(requirePasscode?: boolean): Promise<string | undefined> {
         if (requirePasscode) {
-            const options: InputBoxOptions = {
-                title: 'Enter Passcode',
-                ignoreFocusOut: true,
-            };
-            return await window.showInputBox(options);
+            if (this._passcode) {
+                return this._passcode;
+            } else {
+                const options: InputBoxOptions = {
+                    title: 'Enter Passcode',
+                    ignoreFocusOut: true,
+                };
+                return await window.showInputBox(options);
+            }
         }
         return undefined;
     }

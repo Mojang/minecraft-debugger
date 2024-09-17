@@ -6,15 +6,17 @@ import { ServerDebugAdapterFactory } from './ServerDebugAdapterFactory';
 import { HomeViewProvider } from './panels/HomeViewProvider';
 import { MinecraftDiagnosticsPanel } from './panels/MinecraftDiagnostics';
 import { StatsProvider2 } from './StatsProvider2';
+import { EventEmitter } from 'stream';
 
 // called when extension is activated
 //
 export function activate(context: vscode.ExtensionContext) {
     // create tree data providers and register them
     const statProvider2 = new StatsProvider2();
+    const eventEmitter = new EventEmitter();
 
     // home view
-    const homeViewProvider = new HomeViewProvider(context.extensionUri);
+    const homeViewProvider = new HomeViewProvider(context.extensionUri, eventEmitter);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(HomeViewProvider.viewType, homeViewProvider));
 
     // register commands
@@ -32,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('minecraft-js', configProvider));
 
     // register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
-    let descriptorFactory = new ServerDebugAdapterFactory(statProvider2);
+    let descriptorFactory = new ServerDebugAdapterFactory(statProvider2, eventEmitter);
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
 
     if ('dispose' in descriptorFactory) {

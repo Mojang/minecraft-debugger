@@ -10,7 +10,7 @@ import { StatsProvider2 } from './StatsProvider2';
 export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private server?: Net.Server;
 
-    constructor(private _statProvider2: StatsProvider2) {}
+    constructor(private _statProvider2: StatsProvider2, private _eventEmitter: any) {}
 
     createDebugAdapterDescriptor(
         session: vscode.DebugSession,
@@ -19,7 +19,7 @@ export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         if (!this.server) {
             // start listening on a random port
             this.server = Net.createServer(socket => {
-                const session = new Session(this._statProvider2);
+                const session = new Session(this._statProvider2, this._eventEmitter);
                 session.setRunAsServer(true);
                 session.start(socket as NodeJS.ReadableStream, socket);
             }).listen(0);

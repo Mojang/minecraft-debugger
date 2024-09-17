@@ -1,0 +1,41 @@
+.title-style {
+    margin: 8px 0,
+}
+
+.standard-button-style {
+    width: 90%;
+    margin-bottom: 10px;
+}
+
+.section-style {
+    border: 1px solid #ccc;
+    padding: 4px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.command-button-style {
+    width: 90px;
+    margin-right: 10px;
+}
+
+.delete-button-style .command-input-style {
+    width: 60px;
+}
+
+.command-input-style {
+    flex: 1;
+    margin-right: 10px;
+}
+
+/* wrap the command input and buttons */
+.command-container-style {
+    align-items: center;
+    display: flex;
+    width: 90%;
+    height: 30px;
+    margin-bottom: 10px;
+}

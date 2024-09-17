@@ -23,6 +23,10 @@ main {
   margin-bottom: 2px;
 }
 
+.margin-bottom {
+  margin-bottom: 20px;
+}
+
 .minecraft-statistic-stacked-line-chart-figure {
   max-width: initial;
 }
@@ -54,18 +58,6 @@ main {
   align-items: center;
   margin-right: 1em;
 }
-
-/* .minecraft-statistic-stacked-line-chart {
-  --plot-background: white;
-  display: block;
-  height: auto;
-  height: intrinsic;
-  max-width: 100%;
-} */
-
-/* .minecraft-statistic-stacked-line-chart text .minecraft-statistic-stacked-line-chart tspan {
-  white-space: pre;
-} */
 
 .minecraft-statistic-stacked-bar-chart-figure {
   max-width: initial;
@@ -99,46 +91,10 @@ main {
   fill: black;
 }
 
-/* .minecraft-statistic-stacked-bar-chart {
-  --plot-background: white;
-  display: block;
-  height: auto;
-  height: intrinsic;
-  max-width: 100%;
-} */
-
-/* .minecraft-statistic-stacked-bar-chart text .minecraft-statistic-stacked-bar-chart tspan {
-  white-space: pre;
-} */
-
 .line-chart-figure {
   max-width: initial;
 }
 
-/* .line-chart {
-  --plot-background: white;
-  display: block;
-  height: auto;
-  height: intrinsic;
-  max-width: 100%;
-} */
-
-/* .line-chart text .line-chart tspan {
-  white-space: pre;
-} */
-
 .difference-chart-figure {
   max-width: initial;
 }
-
-/* .difference-chart {
-  --plot-background: white;
-  display: block;
-  height: auto;
-  height: intrinsic;
-  max-width: 100%;
-} */
-
-/* .difference-chart text .difference-chart tspan {
-  white-space: pre;
-} */

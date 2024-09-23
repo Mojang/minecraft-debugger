@@ -3,13 +3,19 @@
 import * as vscode from 'vscode';
 import { getNonce } from '../utilities/getNonce';
 import { getUri } from '../utilities/getUri';
+import { EventEmitter } from 'stream';
 
 export class HomeViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'minecraft-debugger-home-panel';
 
+    private readonly _extensionUri: vscode.Uri;
+    private _eventEmitter: EventEmitter;
     private _view?: vscode.WebviewView;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {}
+    constructor(extensionUri: vscode.Uri, eventEmitter: EventEmitter) {
+        this._extensionUri = extensionUri;
+        this._eventEmitter = eventEmitter;
+    }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -18,17 +24,21 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
-        webviewView.webview.options = {
+        this._view.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri],
         };
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview, this._extensionUri);
+        this._view.webview.html = this._getHtmlForWebview(this._view.webview, this._extensionUri);
 
-        webviewView.webview.onDidReceiveMessage(data => {
+        this._view.webview.onDidReceiveMessage(data => {
             switch (data.type) {
                 case 'show-diagnostics': {
                     vscode.commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
+                    break;
+                }
+                case 'run-minecraft-command': {
+                    this._eventEmitter.emit('run-minecraft-command', data.command);
                     break;
                 }
             }
@@ -36,6 +46,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
+        const stylesUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'homePanel.css']);
+
         // The JS file from the React build output
         const scriptUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'homePanel.js']);
 
@@ -48,6 +60,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                 <meta charset="UTF-8" />
                 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <link rel="stylesheet" type="text/css" href="${stylesUri}">
                 <title>Minecraft Home</title>
             </head>
             <body>

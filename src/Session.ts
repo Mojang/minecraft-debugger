@@ -13,15 +13,24 @@ import {
     ThreadEvent,
     Variable,
 } from '@vscode/debugadapter';
-import { commands, FileSystemWatcher, QuickPickItem, QuickPickOptions, workspace, window } from 'vscode';
+import {
+    commands,
+    FileSystemWatcher,
+    InputBoxOptions,
+    QuickPickItem,
+    QuickPickOptions,
+    workspace,
+    window,
+} from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
+import { EventEmitter } from 'events';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
+import { StatMessageModel, StatsProvider2 } from './StatsProvider2';
 import * as path from 'path';
 import * as fs from 'fs';
 import { isUUID } from './Utils';
-import { StatMessageModel, StatsProvider2 } from './StatsProvider2';
 
 interface PendingResponse {
     onSuccess?: Function;
@@ -42,6 +51,7 @@ interface ProtocolCapabilities {
     type: string;
     version: number;
     plugins: PluginDetails[];
+    require_passcode?: boolean;
 }
 
 // Interface for specific launch arguments.
@@ -58,6 +68,7 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
     moduleMapping?: ModuleMapping;
     sourceMapBias?: string;
     targetModuleUuid?: string;
+    passcode?: string;
 }
 
 class TargetPluginItem implements QuickPickItem {
@@ -76,16 +87,18 @@ class TargetPluginItem implements QuickPickItem {
 // 1 - initial version
 // 2 - add targetModuleUuid to protocol event
 // 3 - add array of plugins and target module ids to incoming protocol event
+// 4 - mc can require a passcode to connect
 enum ProtcolVersion {
     Initial = 1,
     SupportTargetModuleUuid = 2,
     SupportTargetSelection = 3,
+    SupportPasscode = 4,
 }
 
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession {
-    private static DEBUGGER_PROTOCOL_VERSION = ProtcolVersion.SupportTargetSelection;
+    private static DEBUGGER_PROTOCOL_VERSION = ProtcolVersion.SupportPasscode;
 
     private static CONNECTION_RETRY_ATTEMPTS = 5;
     private static CONNECTION_RETRY_WAIT_MS = 2000;
@@ -105,12 +118,27 @@ export class Session extends DebugSession {
     private _moduleMapping?: ModuleMapping;
     private _sourceMapBias?: string;
     private _targetModuleUuid?: string;
+    private _passcode?: string;
+    private _statsProvider: StatsProvider2;
+    private _eventEmitter: any;
 
-    public constructor(private _statsProvider2: StatsProvider2) {
+    public constructor(statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
         super();
+
+        this._statsProvider = statsProvider;
+        this._eventEmitter = eventEmitter;
 
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
+
+        // listen for events from the HomeViewProvider
+        this._eventEmitter.on('run-minecraft-command', (command: string) => {
+            this.sendDebuggeeMessage({
+                type: 'minecraftCommand',
+                command: command,
+                dimension_type: 'overworld', // todo: get this from the user
+            });
+        });
     }
 
     // ------------------------------------------------------------------------
@@ -169,6 +197,7 @@ export class Session extends DebugSession {
         if (args.targetModuleUuid && isUUID(args.targetModuleUuid)) {
             this._targetModuleUuid = args.targetModuleUuid.toLowerCase();
         }
+        this._passcode = args.passcode;
 
         this._localRoot = args.localRoot ? path.normalize(args.localRoot) : '';
         this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
@@ -505,7 +534,7 @@ export class Session extends DebugSession {
         //
     }
 
-    private onConnectionComplete(targetModuleUuid?: string) {
+    private onConnectionComplete(targetModuleUuid?: string, passcode?: string) {
         this._targetModuleUuid = targetModuleUuid;
 
         // respond with protocol version and chosen debugee target
@@ -513,6 +542,7 @@ export class Session extends DebugSession {
             type: 'protocol',
             version: Session.DEBUGGER_PROTOCOL_VERSION,
             target_module_uuid: targetModuleUuid,
+            passcode: passcode,
         });
 
         // show notifications for source map issues
@@ -665,7 +695,7 @@ export class Session extends DebugSession {
         } else if (eventMessage.type === 'ProtocolEvent') {
             this.handleProtocolEvent(eventMessage as ProtocolCapabilities);
         } else if (eventMessage.type === 'StatEvent2') {
-            this._statsProvider2.setStats(eventMessage as StatMessageModel);
+            this._statsProvider.setStats(eventMessage as StatMessageModel);
         }
     }
 
@@ -730,7 +760,7 @@ export class Session extends DebugSession {
     // ------------------------------------------------------------------------
 
     // the final client event before connection is complete
-    private handleProtocolEvent(protocolCapabilities: ProtocolCapabilities) {
+    private async handleProtocolEvent(protocolCapabilities: ProtocolCapabilities): Promise<void> {
         //
         // handle protocol capabilities here...
         // can fail connection on errors
@@ -739,17 +769,24 @@ export class Session extends DebugSession {
             this.terminateSession('protocol mismatch. Update Debugger Extension.', LogLevel.Error);
         } else {
             if (protocolCapabilities.version == ProtcolVersion.SupportTargetModuleUuid) {
-                this.onConnectionComplete(this._targetModuleUuid);
-            } else if (protocolCapabilities.version == ProtcolVersion.SupportTargetSelection) {
+                this.onConnectionComplete(this._targetModuleUuid, undefined);
+            } else if (protocolCapabilities.version >= ProtcolVersion.SupportTargetSelection) {
+                // no add-ons found, nothing to do
                 if (!protocolCapabilities.plugins || protocolCapabilities.plugins.length === 0) {
                     this.terminateSession('protocol error. No Minecraft Add-Ons found.', LogLevel.Error);
                     return;
-                } else if (this._targetModuleUuid) {
+                }
+
+                // if passcode is required, prompt user for it
+                let passcode = await this.promptForPasscode(protocolCapabilities.require_passcode);
+
+                // if a targetuuid was provided, make sure it's valid
+                if (this._targetModuleUuid) {
                     const isValidTarget = protocolCapabilities.plugins.some(
                         plugin => plugin.module_uuid === this._targetModuleUuid
                     );
                     if (isValidTarget) {
-                        this.onConnectionComplete(this._targetModuleUuid);
+                        this.onConnectionComplete(this._targetModuleUuid, passcode);
                         return;
                     } else {
                         this.showNotification(
@@ -758,7 +795,7 @@ export class Session extends DebugSession {
                         );
                     }
                 } else if (protocolCapabilities.plugins.length === 1) {
-                    this.onConnectionComplete(protocolCapabilities.plugins[0].module_uuid);
+                    this.onConnectionComplete(protocolCapabilities.plugins[0].module_uuid, passcode);
                     return;
                 } else {
                     this.showNotification(
@@ -767,30 +804,48 @@ export class Session extends DebugSession {
                     );
                 }
 
-                //
                 // Could not connect automatically, prompt user to select target.
-                //
-                const items: TargetPluginItem[] = protocolCapabilities.plugins.map(
-                    plugin => new TargetPluginItem(plugin)
-                );
-                const options: QuickPickOptions = {
-                    title: 'Choose the Minecraft Add-On to debug',
-                    ignoreFocusOut: true,
-                };
-                window.showQuickPick(items, options).then(value => {
-                    if (!value) {
-                        this.terminateSession(
-                            'could not determine target Minecraft Add-On. You must specify the targetModuleUuid.',
-                            LogLevel.Error
-                        );
-                    } else {
-                        this.onConnectionComplete(value?.targetModuleId);
-                    }
-                });
+                const targetUuid = await this.promptForTargetPlugin(protocolCapabilities.plugins);
+                if (!targetUuid) {
+                    this.terminateSession(
+                        'could not determine target Minecraft Add-On. You must specify the targetModuleUuid.',
+                        LogLevel.Error
+                    );
+                    return;
+                }
+                this.onConnectionComplete(targetUuid, passcode);
             } else {
                 this.terminateSession('protocol unsupported. Update Debugger Extension.', LogLevel.Error);
             }
         }
+    }
+
+    private async promptForPasscode(requirePasscode?: boolean): Promise<string | undefined> {
+        if (requirePasscode) {
+            if (this._passcode) {
+                return this._passcode;
+            } else {
+                const options: InputBoxOptions = {
+                    title: 'Enter Passcode',
+                    ignoreFocusOut: true,
+                };
+                return await window.showInputBox(options);
+            }
+        }
+        return undefined;
+    }
+
+    private async promptForTargetPlugin(plugins: PluginDetails[]): Promise<string | undefined> {
+        const items: TargetPluginItem[] = plugins.map(plugin => new TargetPluginItem(plugin));
+        const options: QuickPickOptions = {
+            title: 'Choose the Minecraft Add-On to debug',
+            ignoreFocusOut: true,
+        };
+        const targetItem = await window.showQuickPick(items, options);
+        if (targetItem) {
+            return targetItem.targetModuleId;
+        }
+        return undefined;
     }
 
     // check that source and map properties in launch.json are set correctly

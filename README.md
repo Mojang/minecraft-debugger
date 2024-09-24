@@ -14,6 +14,8 @@ This Visual Studio Code extension will assist in debugging your JavaScript code 
 * Stepping through the code
 * The Locals pane
 * Watches
+* Performance diagnostics
+* Running Minecraft slash commands
 
 ### Unsupported scenarios
 

@@ -8,12 +8,12 @@ updates:
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "monthly"
     commit-message:
       prefix: "build(dependabot): "
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/webview-ui/" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "monthly"
     commit-message:
       prefix: "build(dependabot): "

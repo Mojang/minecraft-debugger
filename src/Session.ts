@@ -534,13 +534,13 @@ export class Session extends DebugSession {
         //
     }
 
-    private onConnectionComplete(targetModuleUuid?: string, passcode?: string) {
+    private onConnectionComplete(protocolVersion?: number, targetModuleUuid?: string, passcode?: string) {
         this._targetModuleUuid = targetModuleUuid;
 
         // respond with protocol version and chosen debugee target
         this.sendDebuggeeMessage({
             type: 'protocol',
-            version: Session.DEBUGGER_PROTOCOL_VERSION,
+            version: protocolVersion,
             target_module_uuid: targetModuleUuid,
             passcode: passcode,
         });
@@ -769,7 +769,7 @@ export class Session extends DebugSession {
             this.terminateSession('protocol mismatch. Update Debugger Extension.', LogLevel.Error);
         } else {
             if (protocolCapabilities.version == ProtcolVersion.SupportTargetModuleUuid) {
-                this.onConnectionComplete(this._targetModuleUuid, undefined);
+                this.onConnectionComplete(protocolCapabilities.version, undefined);
             } else if (protocolCapabilities.version >= ProtcolVersion.SupportTargetSelection) {
                 // no add-ons found, nothing to do
                 if (!protocolCapabilities.plugins || protocolCapabilities.plugins.length === 0) {
@@ -786,7 +786,7 @@ export class Session extends DebugSession {
                         plugin => plugin.module_uuid === this._targetModuleUuid
                     );
                     if (isValidTarget) {
-                        this.onConnectionComplete(this._targetModuleUuid, passcode);
+                        this.onConnectionComplete(protocolCapabilities.version, this._targetModuleUuid, passcode);
                         return;
                     } else {
                         this.showNotification(
@@ -795,7 +795,11 @@ export class Session extends DebugSession {
                         );
                     }
                 } else if (protocolCapabilities.plugins.length === 1) {
-                    this.onConnectionComplete(protocolCapabilities.plugins[0].module_uuid, passcode);
+                    this.onConnectionComplete(
+                        protocolCapabilities.version,
+                        protocolCapabilities.plugins[0].module_uuid,
+                        passcode
+                    );
                     return;
                 } else {
                     this.showNotification(
@@ -813,7 +817,7 @@ export class Session extends DebugSession {
                     );
                     return;
                 }
-                this.onConnectionComplete(targetUuid, passcode);
+                this.onConnectionComplete(protocolCapabilities.version, targetUuid, passcode);
             } else {
                 this.terminateSession('protocol unsupported. Update Debugger Extension.', LogLevel.Error);
             }

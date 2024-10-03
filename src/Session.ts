@@ -88,7 +88,7 @@ class TargetPluginItem implements QuickPickItem {
 // 2 - add targetModuleUuid to protocol event
 // 3 - add array of plugins and target module ids to incoming protocol event
 // 4 - mc can require a passcode to connect
-enum ProtcolVersion {
+enum ProtocolVersion {
     Initial = 1,
     SupportTargetModuleUuid = 2,
     SupportTargetSelection = 3,
@@ -98,7 +98,7 @@ enum ProtcolVersion {
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession {
-    private static DEBUGGER_PROTOCOL_VERSION = ProtcolVersion.SupportPasscode;
+    private static DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportPasscode;
 
     private static CONNECTION_RETRY_ATTEMPTS = 5;
     private static CONNECTION_RETRY_WAIT_MS = 2000;
@@ -768,9 +768,9 @@ export class Session extends DebugSession {
         if (Session.DEBUGGER_PROTOCOL_VERSION < protocolCapabilities.version) {
             this.terminateSession('protocol mismatch. Update Debugger Extension.', LogLevel.Error);
         } else {
-            if (protocolCapabilities.version == ProtcolVersion.SupportTargetModuleUuid) {
+            if (protocolCapabilities.version == ProtocolVersion.SupportTargetModuleUuid) {
                 this.onConnectionComplete(protocolCapabilities.version, undefined);
-            } else if (protocolCapabilities.version >= ProtcolVersion.SupportTargetSelection) {
+            } else if (protocolCapabilities.version >= ProtocolVersion.SupportTargetSelection) {
                 // no add-ons found, nothing to do
                 if (!protocolCapabilities.plugins || protocolCapabilities.plugins.length === 0) {
                     this.terminateSession('protocol error. No Minecraft Add-Ons found.', LogLevel.Error);

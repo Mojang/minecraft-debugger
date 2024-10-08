@@ -70,12 +70,12 @@ function App() {
         setSelectedClient(() => clientSelectionId);
     }, []);
 
-    const handlePanelChange = (event: VSCodePanelsChangeEvent): void => {
+    const handlePanelChange = useCallback((event: VSCodePanelsChangeEvent): void => {
         const newTabId = event.target.activeid;
         if (newTabId) {
             setCurrentTab(newTabId);
         }
-    };
+    }, []);
 
     return (
         <main>

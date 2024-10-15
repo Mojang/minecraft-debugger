@@ -69,7 +69,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'stop-profiler': {
-                    this._eventEmitter.emit('stop-profiler', message.capturesPath);
+                    this._eventEmitter.emit('stop-profiler', message.capturesBasePath);
                     break;
                 }
                 case 'refresh-captures': {

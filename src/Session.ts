@@ -152,8 +152,6 @@ export class Session extends DebugSession {
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
 
-        eventEmitter.removeAllListeners('new-profiler-capture');
-
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
 
@@ -201,11 +199,11 @@ export class Session extends DebugSession {
         });
     }
 
-    private onStopProfiler(capturesPath: string): void {
+    private onStopProfiler(capturesBasePath: string): void {
         this.sendDebuggeeMessage({
             type: 'stopProfiler',
             profiler: {
-                captures_path: capturesPath,
+                captures_path: capturesBasePath,
                 target_module_uuid: this._targetModuleUuid,
             }
         });

@@ -1,7 +1,7 @@
 
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import CommandShortcutsSection, { CommandButton } from './controls/CommandShortcutsSection'
 import DiagnosticSection from './controls/DiagnosticsSection';
 import ProfilerSection, { CaptureItem } from './controls/ProfilerSection';
@@ -21,6 +21,10 @@ const onShowDiagnosticsPanel = () => {
 
 const onRunCommand = (command: string) => {
     vscode.postMessage({ type: 'run-minecraft-command', command: command });
+};
+
+const onCaptureBasePathBrowseButtonPressed = () => {
+    vscode.postMessage({ type: 'browse-captures-base-path' });
 };
 
 const App = () => {
@@ -69,7 +73,7 @@ const App = () => {
     const [capturesBasePath, setCapturesBasePath] = useState<string>('');
     const [isProfilerCapturing, setProfilerCapturing] = useState(false);
     const [captureItems, setCaptureItems] = useState<CaptureItem[]>([]);
-    const [selectedCaptureItem, setSelectedCaptureItem] = useState<CaptureItem | null>(null);
+    const [selectedCaptureItem, setSelectedCaptureItem] = useState<CaptureItem | undefined>(undefined);
 
     // watch for changes to the capture path
     useEffect(() => {
@@ -83,11 +87,6 @@ const App = () => {
             scrollingListRef.current.scrollTop = 0;
         }
     }, [captureItems]);
-
-    // choose save path for profiler captures
-    const onCaptureBasePathBrowseButtonPressed = () => {
-        vscode.postMessage({ type: 'browse-captures-base-path' });
-    };
 
     // handle change in save path, manual or from file picker dialog
     const onCaptureBasePathEdited = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,7 +107,7 @@ const App = () => {
     const onDeleteCaptureItem = (toDelete: CaptureItem) => {
         setCaptureItems(prevItems => prevItems.filter(item => item.fileName !== toDelete.fileName));
         if (selectedCaptureItem?.fileName === toDelete.fileName) {
-            setSelectedCaptureItem(null);
+            setSelectedCaptureItem(undefined);
         }
         vscode.postMessage({
             type: 'delete-capture-file',
@@ -126,7 +125,7 @@ const App = () => {
     // send stop profiler event to MC
     const onStopProfiler = () => {
         setProfilerCapturing(false);
-        vscode.postMessage({ type: 'stop-profiler', capturesPath: capturesBasePath });
+        vscode.postMessage({ type: 'stop-profiler', capturesBasePath: capturesBasePath });
     }
 
     //-------------------------------------------------------------------------

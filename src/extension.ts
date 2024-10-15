@@ -11,8 +11,7 @@ import { EventEmitter } from 'stream';
 // called when extension is activated
 //
 export function activate(context: vscode.ExtensionContext) {
-    // create tree data providers and register them
-    const statProvider2 = new StatsProvider2();
+    const statsProvider = new StatsProvider2();
     const eventEmitter = new EventEmitter();
 
     // home view
@@ -34,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('minecraft-js', configProvider));
 
     // register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
-    let descriptorFactory = new ServerDebugAdapterFactory(statProvider2, eventEmitter);
+    let descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, statsProvider, eventEmitter);
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
 
     if ('dispose' in descriptorFactory) {
@@ -45,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
     const showDiagnosticsCommand = vscode.commands.registerCommand(
         'minecraft-debugger.showMinecraftDiagnostics',
         () => {
-            MinecraftDiagnosticsPanel.render(context.extensionUri, statProvider2);
+            MinecraftDiagnosticsPanel.render(context.extensionUri, statsProvider);
         }
     );
 

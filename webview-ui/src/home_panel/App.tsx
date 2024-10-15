@@ -117,16 +117,16 @@ const App = () => {
     };
 
     // send start profiler event to MC
-    const onStartProfiler = () => {
+    const onStartProfiler = useCallback(() => {
         setProfilerCapturing(true);
         vscode.postMessage({ type: 'start-profiler' });
-    }
+    }, []);
 
     // send stop profiler event to MC
-    const onStopProfiler = () => {
+    const onStopProfiler = useCallback(() => {
         setProfilerCapturing(false);
         vscode.postMessage({ type: 'stop-profiler', capturesBasePath: capturesBasePath });
-    }
+    }, [capturesBasePath]);
 
     //-------------------------------------------------------------------------
     // State and Event Handlers

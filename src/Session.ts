@@ -33,7 +33,7 @@ import { StatMessageModel, StatsProvider2 } from './StatsProvider2';
 import { HomeViewProvider } from './panels/HomeViewProvider';
 import * as path from 'path';
 import * as fs from 'fs';
-import { isUUID, formatDate } from './Utils';
+import { isUUID } from './Utils';
 
 interface PendingResponse {
     onSuccess?: Function;
@@ -138,6 +138,7 @@ export class Session extends DebugSession {
     private _sourceMapBias?: string;
     private _targetModuleUuid?: string;
     private _clientProtocolVersion: number = ProtocolVersion._Unknown; // determined after connection
+    private _minecraftCapabilities: MinecraftCapabilities = { supportsCommands: false, supportsProfiler: false };
     private _passcode?: string;
 
     // external communication
@@ -210,13 +211,13 @@ export class Session extends DebugSession {
     }
 
     private onRequestDebuggerStatus(): void {
-        this._homeViewProvider.setDebuggerStatus(this._connected, this.getMinecraftCapabilities());
+        this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
     }
 
     // MC has sent the profiler capture results to the debugger
     private handleProfilerCapture(profilerCapture: ProfilerCapture): void {
-        const date = formatDate(new Date());
-        const newCaptureFileName = `Capture_${date}.cpuprofile`;
+        const formattedDate = new Date().toISOString().replace(/:/g, '-');
+        const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
         const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
         const data = Buffer.from(profilerCapture.capture_data, 'base64');
         fs.writeFile(captureFullPath, data, err => {
@@ -631,9 +632,10 @@ export class Session extends DebugSession {
         this._targetModuleUuid = targetModuleUuid;
         this._clientProtocolVersion = protocolVersion;
         this._connected = true;
+        this._minecraftCapabilities = this.getMinecraftCapabilities();
 
         // notify home view of session connection
-        this._homeViewProvider.setDebuggerStatus(true, this.getMinecraftCapabilities());
+        this._homeViewProvider.setDebuggerStatus(true, this._minecraftCapabilities);
 
         // respond with protocol version and chosen debugee target
         this.sendDebuggeeMessage({
@@ -708,7 +710,7 @@ export class Session extends DebugSession {
 
             this.sendEvent(new TerminatedEvent());
             this.showNotification(`Session terminated, ${reason}.`, logLevel);
-            this._homeViewProvider.setDebuggerStatus(false, this.getMinecraftCapabilities());
+            this._homeViewProvider.setDebuggerStatus(false, this._minecraftCapabilities);
             this.dispose();
         }
     }

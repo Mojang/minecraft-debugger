@@ -14,7 +14,7 @@ interface ProfilerSectionProps {
     onCaptureBasePathEdited: (event: React.ChangeEvent<HTMLInputElement>) => void;
     scrollingListRef: React.RefObject<HTMLDivElement>;
     captureItems: CaptureItem[];
-    selectedCaptureItem: CaptureItem | null;
+    selectedCaptureItem: CaptureItem | undefined;
     onSelectCaptureItem: (captureItem: CaptureItem) => void;
     onDeleteCaptureItem: (captureItem: CaptureItem) => void;
     onStartProfiler: () => void;

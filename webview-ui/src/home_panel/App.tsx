@@ -76,7 +76,7 @@ function App() {
     //-------------------------------------------------------------------------
     // Profiler
     //-------------------------------------------------------------------------
-    
+
     const scrollingListRef = useRef<HTMLDivElement>(null);
     const [capturesBasePath, setCapturesBasePath] = useState<string>('');
     const [isProfilerCapturing, setProfilerCapturing] = useState(false);
@@ -100,7 +100,7 @@ function App() {
     const onCaptureBasePathBrowseButtonPressed = () => {
         vscode.postMessage({ type: 'browse-captures-base-path' });
     };
-    
+
     // handle change in save path, manual or from file picker dialog
     const onCaptureBasePathEdited = (event: React.ChangeEvent<HTMLInputElement>) => {
         setCapturesBasePath(event.target.value);
@@ -110,7 +110,7 @@ function App() {
     const onSelectCaptureItem = (captureItem: CaptureItem) => {
         setSelectedCaptureItem(captureItem);
         vscode.postMessage({
-            type: 'open-capture-file', 
+            type: 'open-capture-file',
             capturesBasePath: capturesBasePath,
             fileName: captureItem.fileName
         });
@@ -122,8 +122,8 @@ function App() {
         if (selectedCaptureItem?.fileName === toDelete.fileName) {
             setSelectedCaptureItem(null);
         }
-        vscode.postMessage({ 
-            type: 'delete-capture-file', 
+        vscode.postMessage({
+            type: 'delete-capture-file',
             capturesBasePath: capturesBasePath,
             fileName: toDelete.fileName
         });
@@ -177,7 +177,7 @@ function App() {
         };
 
         window.addEventListener('message', handleMessage);
-        
+
         return () => {
             window.removeEventListener('message', handleMessage);
         };
@@ -202,9 +202,9 @@ function App() {
 
     // save state on change
     useEffect(() => {
-        vscode.setState({ 
-            commandButtons: commandButtons, 
-            capturesBasePath: capturesBasePath 
+        vscode.setState({
+            commandButtons: commandButtons,
+            capturesBasePath: capturesBasePath
         });
     }, [commandButtons, capturesBasePath]);
 
@@ -225,7 +225,7 @@ function App() {
                 <VSCodeButton className="standard-button" onClick={onShowDiagnosticsPanel}>
                     Show Diagnostics
                 </VSCodeButton>
-            </div>            
+            </div>
             <div className="section">
                 <h3 className="title">Minecraft Command Shortcuts</h3>
                 <VSCodeButton className="standard-button" onClick={onAddCommand}>
@@ -271,7 +271,7 @@ function App() {
                     </VSCodeButton>
                 </div>
                 <div className="profiler-button-container">
-                    <VSCodeButton 
+                    <VSCodeButton
                         className="profiler-button"
                         onClick={isProfilerCapturing ? onStopProfiler : onStartProfiler}
                         disabled={!debuggerConnected || !supportsProfiler || capturesBasePath === ''}
@@ -281,13 +281,13 @@ function App() {
                     <div className={`profiler-spinner ${isProfilerCapturing ? "profiler-spinner-spinning" : ""}`}></div>
                 </div>
                 <h4 className={`sub-title ${captureItems.length === 0 ? 'hidden' : ''}`}>Captures</h4>
-                <div 
+                <div
                     className={`capture-scrolling-list-box ${captureItems.length === 0 ? 'hidden' : ''}`}
                     ref={scrollingListRef}
                 >
                     {captureItems.map(captureItem => (
-                        <div 
-                            key={captureItem.fileName} 
+                        <div
+                            key={captureItem.fileName}
                             className={`capture-item ${selectedCaptureItem?.fileName === captureItem.fileName ? 'capture-item-selected' : ''}`}
                             onClick={() => onSelectCaptureItem(captureItem)}
                         >
@@ -295,7 +295,7 @@ function App() {
                                 {captureItem.fileName}
                             </span>
                             <button
-                                className="capture-item-delete-button" 
+                                className="capture-item-delete-button"
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     onDeleteCaptureItem(captureItem)

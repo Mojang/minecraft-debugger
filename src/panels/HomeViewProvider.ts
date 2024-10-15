@@ -1,3 +1,4 @@
+
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
@@ -21,8 +22,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     }
 
     public setDebuggerStatus(isConnected: boolean, minecraftCapabilities: MinecraftCapabilities) {
-        this._view?.webview.postMessage({ 
-            type: 'debugger-status', 
+        this._view?.webview.postMessage({
+            type: 'debugger-status',
             isConnected: isConnected,
             supportsCommands: minecraftCapabilities.supportsCommands,
             supportsProfiler: minecraftCapabilities.supportsProfiler
@@ -119,8 +120,8 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                 return;
             }
             const allCaptureFileNames = files.filter(file => path.extname(file) === '.cpuprofile');
-            this._view?.webview.postMessage({ 
-                type: 'capture-files-refreshed', 
+            this._view?.webview.postMessage({
+                type: 'capture-files-refreshed',
                 allCaptureFileNames: allCaptureFileNames,
                 newCaptureFileName: newCaptureFileName
             });

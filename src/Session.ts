@@ -110,7 +110,7 @@ enum ProtocolVersion {
 
 // capabilites based on protocol version
 export interface MinecraftCapabilities {
-    supportsCommands: boolean; 
+    supportsCommands: boolean;
     supportsProfiler: boolean;
 }
 
@@ -223,7 +223,7 @@ export class Session extends DebugSession {
             if (err) {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
                 return;
-            }            
+            }
             commands.executeCommand('vscode.open', Uri.file(captureFullPath))
                 .then(undefined, error => {
                     this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
@@ -699,13 +699,13 @@ export class Session extends DebugSession {
     private terminateSession(reason: string, logLevel: LogLevel = LogLevel.Log) {
         this.closeServer();
         this.closeSession();
-        
+
         this._connected = false;
         this._clientProtocolVersion = ProtocolVersion._Unknown;
 
         if (!this._terminated) {
             this._terminated = true;
-            
+
             this.sendEvent(new TerminatedEvent());
             this.showNotification(`Session terminated, ${reason}.`, logLevel);
             this._homeViewProvider.setDebuggerStatus(false, this.getMinecraftCapabilities());

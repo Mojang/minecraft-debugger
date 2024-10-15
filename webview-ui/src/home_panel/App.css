@@ -1,5 +1,5 @@
 
-/* 
+/*
  * General Section
  */
 
@@ -39,10 +39,10 @@
     background-color: var(--vscode-button-hoverBackground);
 }
 
-/* 
+/*
  * Status Section
  */
- 
+
  .status-container {
     padding: 10px;
     color: var(--vscode-foreground);

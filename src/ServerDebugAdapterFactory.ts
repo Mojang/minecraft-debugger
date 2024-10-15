@@ -3,6 +3,7 @@
 
 import * as Net from 'net';
 import * as vscode from 'vscode';
+import { EventEmitter } from 'stream';
 import { Session } from './Session';
 import { StatsProvider2 } from './StatsProvider2';
 import { HomeViewProvider } from './panels/HomeViewProvider';
@@ -11,19 +12,19 @@ import { HomeViewProvider } from './panels/HomeViewProvider';
 //
 export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private server?: Net.Server;
-    private _homeViewProvider: any;
+    private _homeViewProvider: HomeViewProvider;
     private _statsProvider: StatsProvider2;
-    private _eventEmitter: any;
+    private _eventEmitter: EventEmitter;
 
-    constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider2, eventEmitter: any) {
+    constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
         this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
     }
 
     createDebugAdapterDescriptor(
-        session: vscode.DebugSession,
-        executable: vscode.DebugAdapterExecutable | undefined
+        _session: vscode.DebugSession,
+        _executable: vscode.DebugAdapterExecutable | undefined
     ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         if (!this.server) {
             // start listening on a random port

@@ -13,7 +13,7 @@ import { EventEmitter } from 'stream';
 //
 export function activate(context: vscode.ExtensionContext) {
     const statsProvider = new StatsProvider2();
-    const eventEmitter = new EventEmitter();
+    const eventEmitter: EventEmitter = new EventEmitter();
 
     // home view
     const homeViewProvider = new HomeViewProvider(context.extensionUri, eventEmitter);

@@ -1,36 +1,29 @@
 
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import React, { useState, useEffect, useRef } from 'react';
+import CommandShortcutsSection, { CommandButton } from './controls/CommandShortcutsSection'
+import DiagnosticSection from './controls/DiagnosticsSection';
+import ProfilerSection, { CaptureItem } from './controls/ProfilerSection';
+import StatusSection from './controls/StatusSection';
 import './App.css';
 
 const vscode = acquireVsCodeApi();
-
-interface CommandButton {
-    id: string;
-    command: string;
-}
 
 interface SaveState {
     commandButtons: CommandButton[];
     capturesBasePath: string;
 }
 
-interface CaptureItem {
-    fileName: string;
-}
+const onShowDiagnosticsPanel = () => {
+    vscode.postMessage({ type: 'show-diagnostics' });
+};
 
-function App() {
+const onRunCommand = (command: string) => {
+    vscode.postMessage({ type: 'run-minecraft-command', command: command });
+};
 
-    //-------------------------------------------------------------------------
-    // Diagnostics
-    //-------------------------------------------------------------------------
-
-    // show the diagnostics panel
-    const onShowDiagnosticsPanel = () => {
-        vscode.postMessage({ type: 'show-diagnostics' });
-    };
+const App = () => {
 
     //-------------------------------------------------------------------------
     // Minecraft Commands
@@ -66,11 +59,6 @@ function App() {
                 commandButton.id === id ? { ...commandButton, command: event.target.value } : commandButton
             );
         });
-    };
-
-    // run a minecraft command
-    const onRunCommand = (command: string) => {
-        vscode.postMessage({ type: 'run-minecraft-command', command: command });
     };
 
     //-------------------------------------------------------------------------
@@ -191,12 +179,8 @@ function App() {
     useEffect(() => {
         const state = (vscode.getState() as SaveState) || { commandButtons: [], capturesPath: '' };
         if (state) {
-            if (state.commandButtons) {
-                setCommandButtons(state.commandButtons);
-            }
-            if (state.capturesBasePath) {
-                setCapturesBasePath(state.capturesBasePath);
-            }
+            setCommandButtons(state.commandButtons);
+            setCapturesBasePath(state.capturesBasePath);
         }
     }, []);
 
@@ -214,99 +198,36 @@ function App() {
 
     return (
         <main>
-            <div className="status-container">
-                <div
-                    className={`status-circle ${debuggerConnected ? 'active' : 'inactive'}`}
-                ></div>
-                {debuggerConnected ? 'Minecraft Connected' : 'Minecraft Disconnected'}
-            </div>
-            <div className="section">
-                <h3 className="title">Diagnostics</h3>
-                <VSCodeButton className="standard-button" onClick={onShowDiagnosticsPanel}>
-                    Show Diagnostics
-                </VSCodeButton>
-            </div>
-            <div className="section">
-                <h3 className="title">Minecraft Command Shortcuts</h3>
-                <VSCodeButton className="standard-button" onClick={onAddCommand}>
-                    Add Command Shortcut
-                </VSCodeButton>
-                {commandButtons.map(commandButton => (
-                    <div key={commandButton.id} className="command-container">
-                        <VSCodeTextField
-                            type="text"
-                            value={commandButton.command}
-                            onChange={event =>
-                                onEditCommand(commandButton.id, event as React.ChangeEvent<HTMLInputElement>)
-                            }
-                            className="command-input"
-                        />
-                        <VSCodeButton
-                            className="command-run-button"
-                            onClick={() => onRunCommand(commandButton.command)}
-                            disabled={!debuggerConnected || !supportsCommands}
-                        >
-                            Run
-                        </VSCodeButton>
-                        <VSCodeButton className="command-delete-button" onClick={() => onDeleteCommand(commandButton.id)}>
-                            Delete
-                        </VSCodeButton>
-                    </div>
-                ))}
-            </div>
-            <div className="section">
-                <h3 className="title">Script Profiler</h3>
-                <h4 className="sub-title">Captures Path</h4>
-                <div className="capture-path-container">
-                    <VSCodeTextField
-                        type="text"
-                        value={capturesBasePath}
-                        onChange={event =>
-                            onCaptureBasePathEdited(event as React.ChangeEvent<HTMLInputElement>)
-                        }
-                        className="capture-path-input"
-                    />
-                    <VSCodeButton className="browse-button" onClick={onCaptureBasePathBrowseButtonPressed}>
-                        Browse
-                    </VSCodeButton>
-                </div>
-                <div className="profiler-button-container">
-                    <VSCodeButton
-                        className="profiler-button"
-                        onClick={isProfilerCapturing ? onStopProfiler : onStartProfiler}
-                        disabled={!debuggerConnected || !supportsProfiler || capturesBasePath === ''}
-                    >
-                        {isProfilerCapturing ? "Stop Profiler" : "Start Profiler"}
-                    </VSCodeButton>
-                    <div className={`profiler-spinner ${isProfilerCapturing ? "profiler-spinner-spinning" : ""}`}></div>
-                </div>
-                <h4 className={`sub-title ${captureItems.length === 0 ? 'hidden' : ''}`}>Captures</h4>
-                <div
-                    className={`capture-scrolling-list-box ${captureItems.length === 0 ? 'hidden' : ''}`}
-                    ref={scrollingListRef}
-                >
-                    {captureItems.map(captureItem => (
-                        <div
-                            key={captureItem.fileName}
-                            className={`capture-item ${selectedCaptureItem?.fileName === captureItem.fileName ? 'capture-item-selected' : ''}`}
-                            onClick={() => onSelectCaptureItem(captureItem)}
-                        >
-                            <span>
-                                {captureItem.fileName}
-                            </span>
-                            <button
-                                className="capture-item-delete-button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    onDeleteCaptureItem(captureItem)
-                                }}
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            <StatusSection
+                debuggerConnected={debuggerConnected}
+            />
+            <DiagnosticSection 
+                onShowDiagnosticsPanel={onShowDiagnosticsPanel} 
+            />
+            <CommandShortcutsSection
+                commandButtons={commandButtons}
+                onAddCommand={onAddCommand}
+                onEditCommand={onEditCommand}
+                onRunCommand={onRunCommand}
+                onDeleteCommand={onDeleteCommand}
+                debuggerConnected={debuggerConnected}
+                supportsCommands={supportsCommands}
+            />
+            <ProfilerSection
+                capturesBasePath={capturesBasePath}
+                onCaptureBasePathBrowseButtonPressed={onCaptureBasePathBrowseButtonPressed}
+                onCaptureBasePathEdited={onCaptureBasePathEdited}
+                scrollingListRef={scrollingListRef}
+                captureItems={captureItems}
+                selectedCaptureItem={selectedCaptureItem}
+                onSelectCaptureItem={onSelectCaptureItem}
+                onDeleteCaptureItem={onDeleteCaptureItem}
+                onStartProfiler={onStartProfiler}
+                onStopProfiler={onStopProfiler}
+                isProfilerCapturing={isProfilerCapturing}
+                supportsProfiler={supportsProfiler}
+                debuggerConnected={debuggerConnected}
+            />
         </main>
     );
 }

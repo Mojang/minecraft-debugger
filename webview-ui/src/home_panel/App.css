@@ -175,7 +175,6 @@
     border-bottom: 1px solid var(--vscode-editor-foreground);
     background-color: var(--vscode-list-activeSelectionBackground);
     color: var(--vscode-list-activeSelectionForeground);
-    font-weight: bold;
 }
 
 .capture-item-selected:hover {

@@ -26,7 +26,6 @@ import {
 } from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { EventEmitter } from 'events';
-import { EventBinder } from './utilities/EventBinder';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
@@ -144,8 +143,7 @@ export class Session extends DebugSession {
     // external communication
     private _homeViewProvider: HomeViewProvider;
     private _statsProvider: StatsProvider2;
-    private _eventEmitter: any;
-    private _eventBinder: EventBinder;
+    private _eventEmitter: EventEmitter;
 
     public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
         super();
@@ -153,19 +151,23 @@ export class Session extends DebugSession {
         this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
-        this._eventBinder = new EventBinder(eventEmitter);
+
+        eventEmitter.removeAllListeners('new-profiler-capture');
 
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
 
-        this._eventBinder.bind('run-minecraft-command', this.onRunMinecraftCommand.bind(this));
-        this._eventBinder.bind('start-profiler', this.onStartProfiler.bind(this));
-        this._eventBinder.bind('stop-profiler', this.onStopProfiler.bind(this));
-        this._eventBinder.bind('request-debugger-status', this.onRequestDebuggerStatus.bind(this));
+        this._eventEmitter.on('run-minecraft-command', this.onRunMinecraftCommand.bind(this));
+        this._eventEmitter.on('start-profiler', this.onStartProfiler.bind(this));
+        this._eventEmitter.on('stop-profiler', this.onStopProfiler.bind(this));
+        this._eventEmitter.on('request-debugger-status', this.onRequestDebuggerStatus.bind(this));
     }
 
     public dispose(): void {
-        this._eventBinder.unbindAll();
+        this._eventEmitter.removeAllListeners('run-minecraft-command');
+        this._eventEmitter.removeAllListeners('start-profiler');
+        this._eventEmitter.removeAllListeners('stop-profiler');
+        this._eventEmitter.removeAllListeners('request-debugger-status');
     }
 
     // ------------------------------------------------------------------------

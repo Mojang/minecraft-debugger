@@ -3,10 +3,7 @@
 
 import React from 'react';
 import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
-
-export interface CaptureItem {
-    fileName: string;
-}
+import { CaptureItem } from '../handlers/ProfilerHandlers';
 
 interface ProfilerSectionProps {
     capturesBasePath: string;

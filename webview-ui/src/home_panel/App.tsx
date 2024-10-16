@@ -1,19 +1,22 @@
 
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
-import CommandShortcutsSection, { CommandButton } from './controls/CommandShortcutsSection'
+import { useEffect, useRef, useState } from 'react';
+import CommandSection from './controls/CommandSection'
+import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
 import DiagnosticSection from './controls/DiagnosticsSection';
-import ProfilerSection, { CaptureItem } from './controls/ProfilerSection';
+import ProfilerSection from './controls/ProfilerSection';
+import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/ProfilerHandlers';
 import StatusSection from './controls/StatusSection';
+import { WebviewApi } from 'vscode-webview';
 import './App.css';
-
-const vscode = acquireVsCodeApi();
 
 interface SaveState {
     commandButtons: CommandButton[];
     capturesBasePath: string;
 }
+
+const vscode: WebviewApi<unknown> = acquireVsCodeApi();
 
 const onShowDiagnosticsPanel = () => {
     vscode.postMessage({ type: 'show-diagnostics' });
@@ -29,118 +32,56 @@ const onCaptureBasePathBrowseButtonPressed = () => {
 
 const App = () => {
 
-    //-------------------------------------------------------------------------
-    // Minecraft Commands
-    //-------------------------------------------------------------------------
-
-    // command list
-    const [commandButtons, setCommandButtons] = useState<CommandButton[]>([]);
-
-    // add to command list
-    const onAddCommand = () => {
-        setCommandButtons(prevButtons => {
-            const newButton: CommandButton = {
-                id: `${Date.now()}-${Math.random()}`,
-                command: '',
-            };
-            const newButtons = [...prevButtons, newButton];
-            return newButtons;
-        });
-    };
-
-    // remove from command list
-    const onDeleteCommand = (id: string) => {
-        setCommandButtons(prevButtons => {
-            const newButtons = prevButtons.filter(button => button.id !== id);
-            return newButtons;
-        });
-    };
-
-    // update text of a command
-    const onEditCommand = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
-        setCommandButtons(prevButtons => {
-            return prevButtons.map(commandButton =>
-                commandButton.id === id ? { ...commandButton, command: event.target.value } : commandButton
-            );
-        });
-    };
-
-    //-------------------------------------------------------------------------
-    // Profiler
-    //-------------------------------------------------------------------------
-
-    const scrollingListRef = useRef<HTMLDivElement>(null);
-    const [capturesBasePath, setCapturesBasePath] = useState<string>('');
-    const [isProfilerCapturing, setProfilerCapturing] = useState(false);
-    const [captureItems, setCaptureItems] = useState<CaptureItem[]>([]);
-    const [selectedCaptureItem, setSelectedCaptureItem] = useState<CaptureItem | undefined>(undefined);
-
-    // watch for changes to the capture path
-    useEffect(() => {
-        setCaptureItems([]);
-        vscode.postMessage({ type: 'refresh-captures', capturesBasePath: capturesBasePath });
-    }, [capturesBasePath]);
-
-    // update the scrolling list when captures are refreshed
-    useEffect(() => {
-        if (scrollingListRef.current) {
-            scrollingListRef.current.scrollTop = 0;
-        }
-    }, [captureItems]);
-
-    // handle change in save path, manual or from file picker dialog
-    const onCaptureBasePathEdited = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setCapturesBasePath(event.target.value);
-    }
-
-    // when a capture file is selected from the list
-    const onSelectCaptureItem = (captureItem: CaptureItem) => {
-        setSelectedCaptureItem(captureItem);
-        vscode.postMessage({
-            type: 'open-capture-file',
-            capturesBasePath: capturesBasePath,
-            fileName: captureItem.fileName
-        });
-    };
-
-    // delete a capture file
-    const onDeleteCaptureItem = (toDelete: CaptureItem) => {
-        setCaptureItems(prevItems => prevItems.filter(item => item.fileName !== toDelete.fileName));
-        if (selectedCaptureItem?.fileName === toDelete.fileName) {
-            setSelectedCaptureItem(undefined);
-        }
-        vscode.postMessage({
-            type: 'delete-capture-file',
-            capturesBasePath: capturesBasePath,
-            fileName: toDelete.fileName
-        });
-    };
-
-    // send start profiler event to MC
-    const onStartProfiler = useCallback(() => {
-        setProfilerCapturing(true);
-        vscode.postMessage({ type: 'start-profiler' });
-    }, []);
-
-    // send stop profiler event to MC
-    const onStopProfiler = useCallback(() => {
-        setProfilerCapturing(false);
-        vscode.postMessage({ type: 'stop-profiler', capturesBasePath: capturesBasePath });
-    }, [capturesBasePath]);
-
-    //-------------------------------------------------------------------------
-    // State and Event Handlers
-    //-------------------------------------------------------------------------
-
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
 
+    const {
+        commandButtons,
+        setCommandButtons,
+        onAddCommand,
+        onDeleteCommand,
+        onEditCommand
+     }: CommandHandlers = getCommandHandlers();
+
+     const {
+        scrollingListRef,
+        capturesBasePath,
+        setCapturesBasePath,
+        isProfilerCapturing,
+        setProfilerCapturing,
+        captureItems,
+        setCaptureItems,
+        selectedCaptureItem,
+        setSelectedCaptureItem,
+        onCaptureBasePathEdited,
+        onSelectCaptureItem,
+        onDeleteCaptureItem,
+        onStartProfiler,
+        onStopProfiler
+     }: ProfilerHandlers = getProfilerHandlers(vscode);
+
+    // load state
     useEffect(() => {
-        // request debugger status on load
+        const state = (vscode.getState() as SaveState) || { commandButtons: [], capturesPath: '' };
+        if (state) {
+            setCommandButtons(state.commandButtons);
+            setCapturesBasePath(state.capturesBasePath);
+        }
+    }, []);
+
+    // save state
+    useEffect(() => {
+        vscode.setState({
+            commandButtons: commandButtons,
+            capturesBasePath: capturesBasePath
+        });
+    }, [commandButtons, capturesBasePath]);
+
+    // events from vscode
+    useEffect(() => {
         vscode.postMessage({ type: 'request-debugger-status' });
 
-        // external event listener
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'captures-base-path-set') {
@@ -170,47 +111,23 @@ const App = () => {
         };
     }, []);
 
-    //-------------------------------------------------------------------------
-    // Save/Load state
-    //-------------------------------------------------------------------------
-
-    // load state at panel init
-    useEffect(() => {
-        const state = (vscode.getState() as SaveState) || { commandButtons: [], capturesPath: '' };
-        if (state) {
-            setCommandButtons(state.commandButtons);
-            setCapturesBasePath(state.capturesBasePath);
-        }
-    }, []);
-
-    // save state on change
-    useEffect(() => {
-        vscode.setState({
-            commandButtons: commandButtons,
-            capturesBasePath: capturesBasePath
-        });
-    }, [commandButtons, capturesBasePath]);
-
-    //-------------------------------------------------------------------------
     // Render
-    //-------------------------------------------------------------------------
-
     return (
         <main>
             <StatusSection
                 debuggerConnected={debuggerConnected}
             />
-            <DiagnosticSection 
-                onShowDiagnosticsPanel={onShowDiagnosticsPanel} 
+            <DiagnosticSection
+                onShowDiagnosticsPanel={onShowDiagnosticsPanel}
             />
-            <CommandShortcutsSection
+            <CommandSection
+                debuggerConnected={debuggerConnected}
+                supportsCommands={supportsCommands}
                 commandButtons={commandButtons}
                 onAddCommand={onAddCommand}
                 onEditCommand={onEditCommand}
                 onRunCommand={onRunCommand}
                 onDeleteCommand={onDeleteCommand}
-                debuggerConnected={debuggerConnected}
-                supportsCommands={supportsCommands}
             />
             <ProfilerSection
                 capturesBasePath={capturesBasePath}

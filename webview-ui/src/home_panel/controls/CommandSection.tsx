@@ -3,30 +3,26 @@
 
 import React from 'react';
 import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
+import { CommandButton } from '../handlers/CommandHandlers';
 
-export interface CommandButton {
-    id: string;
-    command: string;
-}
-
-interface CommandShortcutsSectionProps {
+interface CommandSectionProps {
+    debuggerConnected: boolean;
+    supportsCommands: boolean;
     commandButtons: CommandButton[];
     onAddCommand: () => void;
     onEditCommand: (id: string, event: React.ChangeEvent<HTMLInputElement>) => void;
     onRunCommand: (command: string) => void;
     onDeleteCommand: (id: string) => void;
-    debuggerConnected: boolean;
-    supportsCommands: boolean;
 }
 
-const CommandShortcutsSection: React.FC<CommandShortcutsSectionProps> = ({
+const CommandSection: React.FC<CommandSectionProps> = ({
+    debuggerConnected,
+    supportsCommands,
     commandButtons,
     onAddCommand,
     onEditCommand,
     onRunCommand,
     onDeleteCommand,
-    debuggerConnected,
-    supportsCommands,
 }) => {
     return (
         <div className="section">
@@ -60,4 +56,4 @@ const CommandShortcutsSection: React.FC<CommandShortcutsSectionProps> = ({
     );
 }
 
-export default CommandShortcutsSection;
+export default CommandSection;

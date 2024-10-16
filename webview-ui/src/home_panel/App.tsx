@@ -65,8 +65,12 @@ const App = () => {
     useEffect(() => {
         const state = (vscode.getState() as SaveState) || { commandButtons: [], capturesPath: '' };
         if (state) {
-            setCommandButtons(state.commandButtons);
-            setCapturesBasePath(state.capturesBasePath);
+            if (state.commandButtons) {
+                setCommandButtons(state.commandButtons);
+            }
+            if (state.capturesBasePath) {
+                setCapturesBasePath(state.capturesBasePath);
+            }
         }
     }, []);
 

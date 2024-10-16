@@ -1,107 +1,153 @@
-import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
-import React, { useState, useEffect } from 'react';
+
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
+import { useEffect, useRef, useState } from 'react';
+import CommandSection from './controls/CommandSection'
+import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
+import DiagnosticSection from './controls/DiagnosticsSection';
+import ProfilerSection from './controls/ProfilerSection';
+import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/ProfilerHandlers';
+import StatusSection from './controls/StatusSection';
+import { WebviewApi } from 'vscode-webview';
 import './App.css';
 
-const vscode = acquireVsCodeApi();
-
-interface CommandButton {
-    id: string;
-    command: string;
-}
-
-interface CommandState {
+interface SaveState {
     commandButtons: CommandButton[];
+    capturesBasePath: string;
 }
 
-function App() {
-    const [commandButtons, setCommandButtons] = useState<CommandButton[]>([]);
+const vscode: WebviewApi<unknown> = acquireVsCodeApi();
 
-    // load commands
+const onShowDiagnosticsPanel = () => {
+    vscode.postMessage({ type: 'show-diagnostics' });
+};
+
+const onRunCommand = (command: string) => {
+    vscode.postMessage({ type: 'run-minecraft-command', command: command });
+};
+
+const onCaptureBasePathBrowseButtonPressed = () => {
+    vscode.postMessage({ type: 'browse-captures-base-path' });
+};
+
+const App = () => {
+
+    const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
+    const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
+    const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
+
+    const {
+        commandButtons,
+        setCommandButtons,
+        onAddCommand,
+        onDeleteCommand,
+        onEditCommand
+     }: CommandHandlers = getCommandHandlers();
+
+     const {
+        scrollingListRef,
+        capturesBasePath,
+        setCapturesBasePath,
+        isProfilerCapturing,
+        setProfilerCapturing,
+        captureItems,
+        setCaptureItems,
+        selectedCaptureItem,
+        setSelectedCaptureItem,
+        onCaptureBasePathEdited,
+        onSelectCaptureItem,
+        onDeleteCaptureItem,
+        onStartProfiler,
+        onStopProfiler
+     }: ProfilerHandlers = getProfilerHandlers(vscode);
+
+    // load state
     useEffect(() => {
-        const state = (vscode.getState() as CommandState) || { commandButtons: [] };
-        if (state && state.commandButtons) {
-            setCommandButtons(state.commandButtons);
+        const state = (vscode.getState() as SaveState) || { commandButtons: [], capturesPath: '' };
+        if (state) {
+            if (state.commandButtons) {
+                setCommandButtons(state.commandButtons);
+            }
+            if (state.capturesBasePath) {
+                setCapturesBasePath(state.capturesBasePath);
+            }
         }
     }, []);
 
-    // save commands
+    // save state
     useEffect(() => {
-        vscode.setState({ commandButtons });
-    }, [commandButtons]);
-
-    //
-    // button callbacks
-    //
-
-    const onShowDiagnosticsPanel = () => {
-        vscode.postMessage({ type: 'show-diagnostics' });
-    };
-
-    const onAddCommand = () => {
-        setCommandButtons(prevButtons => {
-            const newButton: CommandButton = {
-                id: `${Date.now()}-${Math.random()}`,
-                command: '',
-            };
-            const newButtons = [...prevButtons, newButton];
-            return newButtons;
+        vscode.setState({
+            commandButtons: commandButtons,
+            capturesBasePath: capturesBasePath
         });
-    };
+    }, [commandButtons, capturesBasePath]);
 
-    const onDeleteCommand = (id: string) => {
-        setCommandButtons(prevButtons => {
-            const newButtons = prevButtons.filter(button => button.id !== id);
-            return newButtons;
-        });
-    };
+    // events from vscode
+    useEffect(() => {
+        vscode.postMessage({ type: 'request-debugger-status' });
 
-    const onCommandChanged = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
-        setCommandButtons(prevButtons => {
-            return prevButtons.map(commandButton =>
-                commandButton.id === id ? { ...commandButton, command: event.target.value } : commandButton
-            );
-        });
-    };
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'captures-base-path-set') {
+                setCapturesBasePath(message.capturesBasePath);
+            } else if (message.type === 'capture-files-refreshed') {
+                const sortedCaptureItems = message.allCaptureFileNames
+                    .map((fileName: string) => ({ fileName }))
+                    .sort((a: CaptureItem, b: CaptureItem) => b.fileName.localeCompare(a.fileName));
+                setCaptureItems(sortedCaptureItems);
+                if (message.newCaptureFileName) {
+                    setSelectedCaptureItem({ fileName: message.newCaptureFileName });
+                }
+            } else if (message.type === 'debugger-status') {
+                if (!message.isConnected) {
+                    setProfilerCapturing(false);
+                }
+                setDebuggerConnected(message.isConnected);
+                setSupportsCommands(message.supportsCommands);
+                setSupportsProfiler(message.supportsProfiler);
+            }
+        };
 
-    const onRunCommand = (command: string) => {
-        vscode.postMessage({ type: 'run-minecraft-command', command: command });
-    };
+        window.addEventListener('message', handleMessage);
 
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
+    // Render
     return (
         <main>
-            <div className="section-style">
-                <h3 className="title-style">Diagnostics</h3>
-                <VSCodeButton className="standard-button-style" onClick={onShowDiagnosticsPanel}>
-                    Show Diagnostics
-                </VSCodeButton>
-            </div>
-            <div className="section-style">
-                <h3 className="title-style">Minecraft Command Shortcuts</h3>
-                <VSCodeButton className="standard-button-style" onClick={onAddCommand}>
-                    Add Command Shortcut
-                </VSCodeButton>
-                {commandButtons.map(commandButton => (
-                    <div key={commandButton.id} className="command-container-style">
-                        <VSCodeTextField
-                            type="text"
-                            value={commandButton.command}
-                            onChange={event =>
-                                onCommandChanged(commandButton.id, event as React.ChangeEvent<HTMLInputElement>)
-                            }
-                            className="command-input-style"
-                        />
-                        <VSCodeButton
-                            className="command-button-style"
-                            onClick={() => onRunCommand(commandButton.command)}
-                        >
-                            Run
-                        </VSCodeButton>
-                        <VSCodeButton className="delete-button-style" onClick={() => onDeleteCommand(commandButton.id)}>
-                            Delete
-                        </VSCodeButton>
-                    </div>
-                ))}
-            </div>
+            <StatusSection
+                debuggerConnected={debuggerConnected}
+            />
+            <DiagnosticSection
+                onShowDiagnosticsPanel={onShowDiagnosticsPanel}
+            />
+            <CommandSection
+                debuggerConnected={debuggerConnected}
+                supportsCommands={supportsCommands}
+                commandButtons={commandButtons}
+                onAddCommand={onAddCommand}
+                onEditCommand={onEditCommand}
+                onRunCommand={onRunCommand}
+                onDeleteCommand={onDeleteCommand}
+            />
+            <ProfilerSection
+                capturesBasePath={capturesBasePath}
+                onCaptureBasePathBrowseButtonPressed={onCaptureBasePathBrowseButtonPressed}
+                onCaptureBasePathEdited={onCaptureBasePathEdited}
+                scrollingListRef={scrollingListRef}
+                captureItems={captureItems}
+                selectedCaptureItem={selectedCaptureItem}
+                onSelectCaptureItem={onSelectCaptureItem}
+                onDeleteCaptureItem={onDeleteCaptureItem}
+                onStartProfiler={onStartProfiler}
+                onStopProfiler={onStopProfiler}
+                isProfilerCapturing={isProfilerCapturing}
+                supportsProfiler={supportsProfiler}
+                debuggerConnected={debuggerConnected}
+            />
         </main>
     );
 }

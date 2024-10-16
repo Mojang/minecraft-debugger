@@ -1,14 +1,25 @@
-.title-style {
+
+/*
+ * General Section
+ */
+
+.hidden {
+    display: none;
+}
+
+.title {
     margin: 8px 0,
 }
 
-.standard-button-style {
+.sub-title {
     width: 90%;
-    margin-bottom: 10px;
+    text-align: left;
+    padding: 1px;
+    margin: 1px;
 }
 
-.section-style {
-    border: 1px solid #ccc;
+.section {
+    border: 1px solid var(--vscode-editorGroup-border);
     padding: 4px;
     border-radius: 5px;
     display: flex;
@@ -17,25 +28,168 @@
     margin-bottom: 20px;
 }
 
-.command-button-style {
+.standard-button {
+    width: 90%;
+    margin-bottom: 10px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.standard-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+/*
+ * Status Section
+ */
+
+ .status-container {
+    padding: 10px;
+    color: var(--vscode-foreground);
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.status-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.status-circle.active {
+    background-color: var(--vscode-editorInfo-foreground);
+}
+
+.status-circle.inactive {
+    background-color: var(--vscode-editorError-foreground);
+}
+
+/*
+ * Command Section
+ */
+
+.command-run-button {
     width: 90px;
     margin-right: 10px;
 }
 
-.delete-button-style .command-input-style {
-    width: 60px;
+.command-delete-button {
+    width: 90px;
 }
 
-.command-input-style {
+.command-input {
     flex: 1;
     margin-right: 10px;
 }
 
-/* wrap the command input and buttons */
-.command-container-style {
+.command-container {
     align-items: center;
     display: flex;
     width: 90%;
     height: 30px;
     margin-bottom: 10px;
+}
+
+/*
+ * Profiler Section
+ */
+
+.profiler-button-container {
+    display: flex;
+    align-items: center;
+    width: 90%;
+    margin-bottom: 10px;
+}
+
+.profiler-button {
+    flex-grow: 1;
+    margin-right: 0px;
+}
+
+.profiler-spinner {
+    width: 16px;
+    height: 16px;
+    border: 4px solid var(--vscode-button-foreground);
+    border-radius: 50%;
+    margin-left: 8px;
+}
+
+.profiler-spinner-spinning {
+    border-top: 4px solid var(--vscode-button-background);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.capture-browse-button {
+    width: 90px;
+}
+
+.capture-path-container {
+    align-items: center;
+    display: flex;
+    width: 90%;
+    height: 30px;
+    margin-bottom: 10px;
+}
+
+.capture-path-input {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.capture-scrolling-list-box {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--vscode-editorGroup-border);
+    padding: 0px;
+    width: 90%;
+    text-align: left;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.capture-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid var(--vscode-editor-foreground);
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+}
+
+.capture-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    cursor: pointer;
+}
+
+.capture-item-selected {
+    padding: 8px;
+    border-bottom: 1px solid var(--vscode-editor-foreground);
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.capture-item-selected:hover {
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.capture-item-delete-button {
+    background: none;
+    border: 1px solid var(--vscode-editor-foreground);
+    border-radius: 4px;
+    padding: 4px 6px;
+    color: var(--vscode-editor-foreground);
+    cursor: pointer;
+}
+
+.capture-item-delete-button:hover {
+    color: var(--vscode-errorForeground);
 }

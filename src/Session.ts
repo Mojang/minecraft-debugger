@@ -1,3 +1,4 @@
+
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { createConnection, Server, Socket } from 'net';
@@ -19,6 +20,7 @@ import {
     InputBoxOptions,
     QuickPickItem,
     QuickPickOptions,
+    Uri,
     workspace,
     window,
 } from 'vscode';
@@ -28,6 +30,7 @@ import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './MessageStreamParser';
 import { SourceMaps } from './SourceMaps';
 import { StatMessageModel, StatsProvider2 } from './StatsProvider2';
+import { HomeViewProvider } from './panels/HomeViewProvider';
 import * as path from 'path';
 import * as fs from 'fs';
 import { isUUID } from './Utils';
@@ -52,6 +55,12 @@ interface ProtocolCapabilities {
     version: number;
     plugins: PluginDetails[];
     require_passcode?: boolean;
+}
+
+interface ProfilerCapture {
+    type: string;
+    capture_base_path: string;
+    capture_data: string;
 }
 
 // Interface for specific launch arguments.
@@ -88,23 +97,33 @@ class TargetPluginItem implements QuickPickItem {
 // 2 - add targetModuleUuid to protocol event
 // 3 - add array of plugins and target module ids to incoming protocol event
 // 4 - mc can require a passcode to connect
+// 5 - debugger can take mc script profiler captures
 enum ProtocolVersion {
+    _Unknown = 0,
     Initial = 1,
     SupportTargetModuleUuid = 2,
     SupportTargetSelection = 3,
     SupportPasscode = 4,
+    SupportProfilerCaptures = 5,
+}
+
+// capabilites based on protocol version
+export interface MinecraftCapabilities {
+    supportsCommands: boolean;
+    supportsProfiler: boolean;
 }
 
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession {
-    private static DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportPasscode;
+    private static DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportProfilerCaptures;
 
-    private static CONNECTION_RETRY_ATTEMPTS = 5;
-    private static CONNECTION_RETRY_WAIT_MS = 2000;
+    private static CONNECTION_RETRY_ATTEMPTS = 3;
+    private static CONNECTION_RETRY_WAIT_MS = 500;
 
     private _debugeeServer?: Server; // when listening for incoming connections
     private _connectionSocket?: Socket;
+    private _connected: boolean = false;
     private _terminated: boolean = false;
     private _threads = new Set<number>();
     private _requests = new Map<number, PendingResponse>();
@@ -118,26 +137,101 @@ export class Session extends DebugSession {
     private _moduleMapping?: ModuleMapping;
     private _sourceMapBias?: string;
     private _targetModuleUuid?: string;
+    private _clientProtocolVersion: number = ProtocolVersion._Unknown; // determined after connection
+    private _minecraftCapabilities: MinecraftCapabilities = { supportsCommands: false, supportsProfiler: false };
     private _passcode?: string;
-    private _statsProvider: StatsProvider2;
-    private _eventEmitter: any;
 
-    public constructor(statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
+    // external communication
+    private _homeViewProvider: HomeViewProvider;
+    private _statsProvider: StatsProvider2;
+    private _eventEmitter: EventEmitter;
+
+    public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
         super();
 
+        this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
 
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
 
-        // listen for events from the HomeViewProvider
-        this._eventEmitter.on('run-minecraft-command', (command: string) => {
+        this._eventEmitter.on('run-minecraft-command', this.onRunMinecraftCommand.bind(this));
+        this._eventEmitter.on('start-profiler', this.onStartProfiler.bind(this));
+        this._eventEmitter.on('stop-profiler', this.onStopProfiler.bind(this));
+        this._eventEmitter.on('request-debugger-status', this.onRequestDebuggerStatus.bind(this));
+    }
+
+    public dispose(): void {
+        this._eventEmitter.removeAllListeners('run-minecraft-command');
+        this._eventEmitter.removeAllListeners('start-profiler');
+        this._eventEmitter.removeAllListeners('stop-profiler');
+        this._eventEmitter.removeAllListeners('request-debugger-status');
+    }
+
+    // ------------------------------------------------------------------------
+    // Event handlers from HomeViewProvider
+    // ------------------------------------------------------------------------
+
+    private onRunMinecraftCommand(command: string): void {
+        if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures) {
             this.sendDebuggeeMessage({
                 type: 'minecraftCommand',
                 command: command,
-                dimension_type: 'overworld', // todo: get this from the user
+                dimension_type: 'overworld',
             });
+        } else {
+            this.sendDebuggeeMessage({
+                type: 'minecraftCommand',
+                command: {
+                    command: command,
+                    dimension_type: 'overworld',
+                }
+            });
+        }
+    }
+
+    private onStartProfiler(): void {
+        this.sendDebuggeeMessage({
+            type: 'startProfiler',
+            profiler: {
+                target_module_uuid: this._targetModuleUuid,
+            }
+        });
+    }
+
+    private onStopProfiler(capturesBasePath: string): void {
+        this.sendDebuggeeMessage({
+            type: 'stopProfiler',
+            profiler: {
+                captures_path: capturesBasePath,
+                target_module_uuid: this._targetModuleUuid,
+            }
+        });
+    }
+
+    private onRequestDebuggerStatus(): void {
+        this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
+    }
+
+    // MC has sent the profiler capture results to the debugger
+    private handleProfilerCapture(profilerCapture: ProfilerCapture): void {
+        const formattedDate = new Date().toISOString().replace(/:/g, '-');
+        const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
+        const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
+        const data = Buffer.from(profilerCapture.capture_data, 'base64');
+        fs.writeFile(captureFullPath, data, err => {
+            if (err) {
+                this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
+                return;
+            }
+            commands.executeCommand('vscode.open', Uri.file(captureFullPath))
+                .then(undefined, error => {
+                    this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
+                });
+
+            // notify home view of new capture
+            this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, newCaptureFileName);
         });
     }
 
@@ -534,8 +628,14 @@ export class Session extends DebugSession {
         //
     }
 
-    private onConnectionComplete(protocolVersion?: number, targetModuleUuid?: string, passcode?: string) {
+    private onConnectionComplete(protocolVersion: number, targetModuleUuid?: string, passcode?: string) {
         this._targetModuleUuid = targetModuleUuid;
+        this._clientProtocolVersion = protocolVersion;
+        this._connected = true;
+        this._minecraftCapabilities = this.getMinecraftCapabilities();
+
+        // notify home view of session connection
+        this._homeViewProvider.setDebuggerStatus(true, this._minecraftCapabilities);
 
         // respond with protocol version and chosen debugee target
         this.sendDebuggeeMessage({
@@ -602,11 +702,16 @@ export class Session extends DebugSession {
         this.closeServer();
         this.closeSession();
 
+        this._connected = false;
+        this._clientProtocolVersion = ProtocolVersion._Unknown;
+
         if (!this._terminated) {
             this._terminated = true;
-            this.sendEvent(new TerminatedEvent());
 
+            this.sendEvent(new TerminatedEvent());
             this.showNotification(`Session terminated, ${reason}.`, logLevel);
+            this._homeViewProvider.setDebuggerStatus(false, this._minecraftCapabilities);
+            this.dispose();
         }
     }
 
@@ -696,6 +801,8 @@ export class Session extends DebugSession {
             this.handleProtocolEvent(eventMessage as ProtocolCapabilities);
         } else if (eventMessage.type === 'StatEvent2') {
             this._statsProvider.setStats(eventMessage as StatMessageModel);
+        } else if (eventMessage.type === 'ProfilerCapture') {
+            this.handleProfilerCapture(eventMessage as ProfilerCapture);
         }
     }
 
@@ -925,6 +1032,13 @@ export class Session extends DebugSession {
                 this._sourceMaps.reset();
             });
         }
+    }
+
+    private getMinecraftCapabilities(): MinecraftCapabilities {
+        return {
+            supportsCommands: this._clientProtocolVersion >= ProtocolVersion.SupportPasscode,
+            supportsProfiler: this._clientProtocolVersion >= ProtocolVersion.SupportProfilerCaptures,
+        };
     }
 
     // ------------------------------------------------------------------------

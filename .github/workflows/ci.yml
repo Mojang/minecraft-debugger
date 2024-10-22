@@ -19,6 +19,7 @@ jobs:
           node-version: 20
       - run: npm run ci:all
       - run: npm run build:all
+      - run: npm run test
 
       - run: npm run release:dry-run
         env:

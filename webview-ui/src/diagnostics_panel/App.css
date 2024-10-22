@@ -28,7 +28,7 @@ main {
 }
 
 .minecraft-statistic-stacked-line-chart-figure tspan {
-  fill: black;
+  fill: var(--vscode-editor-background);
 }
 
 .minecraft-statistic-stacked-line-chart-swatches {
@@ -84,7 +84,7 @@ main {
 }
 
 .minecraft-statistic-stacked-bar-chart tspan {
-  fill: black;
+  fill: var(--vscode-editor-background);
 }
 
 .line-chart-figure {
@@ -93,4 +93,8 @@ main {
 
 .difference-chart-figure {
   max-width: initial;
+}
+
+.difference-chart-figure tspan{
+  fill: var(--vscode-editor-background);
 }

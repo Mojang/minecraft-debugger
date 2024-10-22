@@ -1,0 +1,8 @@
+{
+  "name": "test-source-maps",
+  "version": "1.0.0",
+  "description": "Generate source maps for testing SourceMap class",
+  "scripts": {
+    "generate": "tsc -p tsconfig-external-source-maps.json && tsc -p tsconfig-inline-source-maps.json"
+  }
+}

@@ -94,18 +94,18 @@ class SourceMapCache {
 
                 let mapJson;
                 if (this._inlineSourceMap) {
-                    const inlineSourceMapRegex = /\/\/# sourceMappingURL=data:application\/json;.*;base64,(.*)$/gm;
-                    const match = inlineSourceMapRegex.exec(mapFile.toString());
-                    const sourceRoot = path.join(
-                        this._localRoot ?? '',
-                        path.dirname(mapFileName.split('\\scripts\\')[1])
-                    );
+                    const inlineSourceMapRegex = /\/\/# sourceMappingURL=data:application\/json;.*base64,(.*)$/gm;
+                    const mapString = mapFile.toString(); 
+                    const match = inlineSourceMapRegex.exec(mapString);
                     if (match && match.length > 1) {
                         const base64EncodedMap = match[1];
                         const decodedMap = Buffer.from(base64EncodedMap, 'base64').toString('utf8');
                         mapJson = JSON.parse(decodedMap);
                         mapJson.file = path.basename(mapFileName);
-                        mapJson.sourceRoot = sourceRoot;
+                        const parts = mapFileName.split('\\scripts\\');
+                        if (parts.length > 1) {
+                            mapJson.sourceRoot = path.join(this._localRoot ?? '', path.dirname(parts[1]));
+                        }
                     } else {
                         throw new InlineSourceMapError(`Failed to load inline source maps for file: ${mapFileName}`);
                     }

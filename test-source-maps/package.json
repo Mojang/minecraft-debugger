@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Generate source maps for testing SourceMap class",
   "scripts": {
-    "build": "tsc -p tsconfig-external-source-maps.json && tsc -p tsconfig-inline-source-maps.json"
+    "generate": "tsc -p tsconfig-external-source-maps.json && tsc -p tsconfig-inline-source-maps.json"
   }
 }

@@ -37,7 +37,7 @@ describe('SourceMaps', () => {
     });
 
     //
-    // Source maps with separate source map files
+    // External source maps
     //
     it('should use main.ts source map (main.js.map) to generate translated line numbers to script main.js and back', async () => {
         const localRoot = path.resolve('./test-source-maps/src');
@@ -50,7 +50,7 @@ describe('SourceMaps', () => {
     });
 
     //
-    // Use inline source maps
+    // Inline source maps
     //
     it('should use inline source map to generate translated line numbers to script main.js and back', async () => {
         const localRoot = path.resolve('./test-source-maps/src');

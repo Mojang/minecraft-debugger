@@ -1,20 +1,17 @@
 {
-	"include": [
-		"src/**/*.ts"
-	],
-	"exclude": [
-		"src/**/*.test.ts",
-		"dist", "out", "node_modules", "webview-ui",
-	],
-	"compilerOptions": {
-		"module": "commonjs",
-		"target": "es6",
-		"outDir": "out",
-		"rootDir": "src",
-		"sourceMap": true,
-		"strict": true,
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true,
-		"lib": [ "es2022" ]
-	}
+    "include": ["src/**/*.ts", "vitest.d.ts"],
+    "exclude": ["dist", "out", "node_modules", "webview-ui"],
+    "compilerOptions": {
+        "module": "ES2022",
+        "target": "es6",
+        "outDir": "out",
+        "rootDir": "src",
+        "sourceMap": true,
+        "strict": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "lib": ["es2022"],
+        "moduleResolution": "Bundler",
+        "esModuleInterop": true
+    }
 }

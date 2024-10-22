@@ -12,3 +12,15 @@ Some examples of this are:
 - `chore: Added CONTRIBUTING.md`
 
 To see the current list of supported types, see [CI.yml](./.github/workflows/ci.yml#L13)'s 'Lint PR Title' task.
+
+# Tests
+
+Create tests using vitest.
+Follow the convention `sourcefilename.test.ts` when adding new files.
+
+To run tests use the command:
+```
+npm run test
+```
+
+Optionally install [vitest extension](https://marketplace.visualstudio.com/items?itemName=vitest.explorer).

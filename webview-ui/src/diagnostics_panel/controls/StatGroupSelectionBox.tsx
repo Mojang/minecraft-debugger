@@ -53,12 +53,11 @@ export function StatGroupSelectionBox({ labelName, statParentId, onChange }: Sel
                                 return x.id === msg.data.id;
                             }) === -1
                         ) {
-                            const newState = [...(prevState ?? []), { id: msg.data.id, name: msg.data.name }];
-                            // auto select the first group we get
-                            if (!selectedGroupId && newState.length === 1) {
+                            // auto select the first group we get if none is selected
+                            if (!selectedGroupId) {
                                 setSelectedGroupId(msg.data.id);
-                                onChange(msg.data.id);
                             }
+                            const newState = [...(prevState ?? []), { id: msg.data.id, name: msg.data.name }];
                             return newState;
                         }
                         return prevState;

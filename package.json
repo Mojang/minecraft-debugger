@@ -59,7 +59,7 @@
             },
             {
                 "command": "minecraft-debugger.minecraftReload",
-                "title": "Minecraft Diagnostics: Reload MC "
+                "title": "Minecraft Reload"
             }
         ],
         "keybindings":[

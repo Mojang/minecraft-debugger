@@ -14,12 +14,10 @@ interface StatGroupEntry {
     name: string;
 }
 
-type SelectedGroupId = string | undefined;
-
 export function StatGroupSelectionBox({ labelName, statParentId, onChange }: SelectionBoxProps) {
     // the groups directly under the 'statParentId'
     const [groups, setGroup] = useState<StatGroupEntry[]>([]);
-    const [selectedGroupId, setSelectedGroupId] = useState<SelectedGroupId>(undefined);
+    const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
 
     const _onChange = useCallback(
         (e: Event | React.FormEvent<HTMLElement>): void => {
@@ -46,17 +44,13 @@ export function StatGroupSelectionBox({ labelName, statParentId, onChange }: Sel
                     }
                     // Add it to the list
                     setGroup(prevState => {
-                        // See if the group is not in the list
-                        if (
-                            prevState === undefined ||
-                            prevState?.findIndex(x => {
-                                return x.id === msg.data.id;
-                            }) === -1
-                        ) {
-                            // auto select the first group we get if none is selected
+                        const isNewGroup = !prevState || prevState.findIndex(x => x.id === msg.data.id) === -1;
+                        if (isNewGroup) {
+                            // auto select the first group we get if nothing selected
                             if (!selectedGroupId) {
                                 setSelectedGroupId(msg.data.id);
                             }
+                            // add new group to end of list
                             const newState = [...(prevState ?? []), { id: msg.data.id, name: msg.data.name }];
                             return newState;
                         }

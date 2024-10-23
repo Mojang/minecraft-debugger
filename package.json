@@ -65,7 +65,8 @@
         "keybindings":[
             {
                 "command": "minecraft-debugger.minecraftReload",
-                "key": "ctrl+shift+r"
+                "key": "ctrl+shift+r",
+                "when": "editorLangId == typescript || editorLangId == javascript"
             }
         ],
         "breakpoints": [

@@ -56,6 +56,16 @@
             {
                 "command": "minecraft-debugger.showMinecraftDiagnostics",
                 "title": "Minecraft Diagnostics: Show"
+            },
+            {
+                "command": "minecraft-debugger.minecraftReload",
+                "title": "Minecraft Diagnostics: Reload MC "
+            }
+        ],
+        "keybindings":[
+            {
+                "command": "minecraft-debugger.minecraftReload",
+                "key": "ctrl+shift+r"
             }
         ],
         "breakpoints": [

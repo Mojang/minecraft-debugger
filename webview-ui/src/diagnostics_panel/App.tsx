@@ -40,8 +40,8 @@ function constructSubscribedSignalFilter() {
 
 function App() {
     // State
-    const [selectedPlugin, setSelectedPlugin] = useState<string>('no_plugin_selected');
-    const [selectedClient, setSelectedClient] = useState<string>('no_client_selected');
+    const [selectedPlugin, setSelectedPlugin] = useState<string>('');
+    const [selectedClient, setSelectedClient] = useState<string>('');
     const [currentTab, setCurrentTab] = useState<string>();
 
     // Load initial state from vscode
@@ -117,7 +117,6 @@ function App() {
                 <VSCodePanelView id="view-4" style={{ flexDirection: 'column' }}>
                     <StatGroupSelectionBox
                         labelName="Client"
-                        defaultDropdownId="no_client_selected"
                         statParentId="client_frame_timings"
                         onChange={handleClientSelection}
                     />
@@ -185,7 +184,6 @@ function App() {
                 <VSCodePanelView id="view-7">
                     <StatGroupSelectionBox
                         labelName="Script Plugin"
-                        defaultDropdownId="no_plugin_selected"
                         statParentId="handle_counts"
                         onChange={handlePluginSelection}
                     />
@@ -223,7 +221,6 @@ function App() {
                 <VSCodePanelView id="view-8">
                     <StatGroupSelectionBox
                         labelName="Script Plugin"
-                        defaultDropdownId="no_plugin_selected"
                         statParentId="fine_grained_subscribers"
                         onChange={handlePluginSelection}
                     />

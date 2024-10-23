@@ -66,7 +66,7 @@
             {
                 "command": "minecraft-debugger.minecraftReload",
                 "key": "ctrl+shift+r",
-                "when": "editorLangId == typescript || editorLangId == javascript && inDebugMode"
+                "when": "inDebugMode && editorLangId == typescript || inDebugMode && editorLangId == javascript"
             }
         ],
         "breakpoints": [

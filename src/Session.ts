@@ -129,6 +129,7 @@ export class Session extends DebugSession {
     private _sourceMaps: SourceMaps = new SourceMaps('');
     private _sourceMapFileWatcher?: FileSystemWatcher;
     private _autoReloadFileWatcher?: FileSystemWatcher;
+    private _reloadDelayId?: NodeJS.Timeout;
     private _activeThreadId: number = 0; // the one being debugged
     private _localRoot: string = '';
     private _sourceMapRoot?: string;
@@ -177,21 +178,24 @@ export class Session extends DebugSession {
     // Event handlers from HomeViewProvider
     // ------------------------------------------------------------------------
 
-    private onStartAutoReload(): void {
-        this.onRunMinecraftCommand('say §aAuto Reloading Is Now Turned On!');
-        console.log('RANINBG');
+    private onStartAutoReload(globPattern: string, delay: number): void {
+        this.onRunMinecraftCommand('say §aAuto Reloading Is Now Enabled!');
         if (this._autoReloadFileWatcher) {
             this._autoReloadFileWatcher.dispose();
             this._autoReloadFileWatcher = undefined;
         }
 
         const doReload = (): void => {
-            console.log('SENDING');
-            this.onRunMinecraftCommand('say §aPerforming Auto-Reload');
-            this.onRunMinecraftCommand('reload');
+            if (this._reloadDelayId) {
+                clearTimeout(this._reloadDelayId);
+            }
+            this._reloadDelayId = setTimeout(() => {
+                this.onRunMinecraftCommand('say §aPerforming Auto-Reload');
+                this.onRunMinecraftCommand('reload');
+            }, delay);
         };
 
-        this._autoReloadFileWatcher = workspace.createFileSystemWatcher('**/*', false, false, false);
+        this._autoReloadFileWatcher = workspace.createFileSystemWatcher(globPattern, false, false, false);
 
         this._autoReloadFileWatcher.onDidChange(doReload);
         this._autoReloadFileWatcher.onDidCreate(doReload);
@@ -202,6 +206,7 @@ export class Session extends DebugSession {
             this._autoReloadFileWatcher.dispose();
             this._autoReloadFileWatcher = undefined;
         }
+        this.onRunMinecraftCommand('say §cAuto Reloading Is Now Disabled!');
     }
 
     private onRunMinecraftCommand(command: string): void {
@@ -243,6 +248,7 @@ export class Session extends DebugSession {
 
     private onRequestDebuggerStatus(): void {
         this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
+        this._homeViewProvider.setAutoReloadStatus(Boolean(this._autoReloadFileWatcher));
     }
 
     // MC has sent the profiler capture results to the debugger

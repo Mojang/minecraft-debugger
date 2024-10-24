@@ -29,6 +29,13 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    public setAutoReloadStatus(isActive: boolean): void {
+        this._view?.webview.postMessage({
+            type: 'auto-Reload-file-watcher-status',
+            isActive: isActive,
+        });
+    }
+
     private _requestDebuggerStatus() {
         this._eventEmitter.emit('request-debugger-status');
     }
@@ -60,7 +67,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'start-auto-reload': {
-                    this._eventEmitter.emit('start-auto-reload');
+                    this._eventEmitter.emit('start-auto-reload', message.globPattern, message.delay);
                     break;
                 }
                 case 'stop-auto-reload': {

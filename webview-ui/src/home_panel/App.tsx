@@ -1,25 +1,36 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useEffect, useRef, useState } from 'react';
-import CommandSection from './controls/CommandSection'
+import { useEffect, useState } from 'react';
+import CommandSection from './controls/CommandSection';
 import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
 import DiagnosticSection from './controls/DiagnosticsSection';
 import ProfilerSection from './controls/ProfilerSection';
 import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/ProfilerHandlers';
 import StatusSection from './controls/StatusSection';
 import { WebviewApi } from 'vscode-webview';
+import AutoReloadSelection from './controls/AutoReloadSelection';
+import { AutoReloadHandlers, getAutoReloadHandlers } from './handlers/AutoReloadHandlers';
 import './App.css';
 
 interface SaveState {
     commandButtons: CommandButton[];
     capturesBasePath: string;
+    autoReloadGlobPattern: string;
+    autoReloadDelay: number;
 }
 
 const vscode: WebviewApi<unknown> = acquireVsCodeApi();
 
 const onShowDiagnosticsPanel = () => {
     vscode.postMessage({ type: 'show-diagnostics' });
+};
+
+const onStartAutoReload = (globPattern: string, delay: number) => {
+    vscode.postMessage({ type: 'start-auto-reload', globPattern: globPattern, delay: delay });
+};
+
+const onStopAutoReload = () => {
+    vscode.postMessage({ type: 'stop-auto-reload' });
 };
 
 const onRunCommand = (command: string) => {
@@ -31,20 +42,23 @@ const onCaptureBasePathBrowseButtonPressed = () => {
 };
 
 const App = () => {
-
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
 
     const {
-        commandButtons,
-        setCommandButtons,
-        onAddCommand,
-        onDeleteCommand,
-        onEditCommand
-     }: CommandHandlers = getCommandHandlers();
+        autoReloadGlobPattern,
+        autoReloadDelay,
+        isAutoReloadActive,
+        onAutoReloadGlobPatternEdited,
+        onAutoReloadDelayEdited,
+        setAutoReloadActive,
+    }: AutoReloadHandlers = getAutoReloadHandlers();
 
-     const {
+    const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
+        getCommandHandlers();
+
+    const {
         scrollingListRef,
         capturesBasePath,
         setCapturesBasePath,
@@ -58,18 +72,29 @@ const App = () => {
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,
-        onStopProfiler
-     }: ProfilerHandlers = getProfilerHandlers(vscode);
+        onStopProfiler,
+    }: ProfilerHandlers = getProfilerHandlers(vscode);
 
     // load state
     useEffect(() => {
-        const state = (vscode.getState() as SaveState) || { commandButtons: [], capturesPath: '' };
+        const state = (vscode.getState() as SaveState) || {
+            commandButtons: [],
+            capturesPath: '',
+            autoReloadGlobPattern: '*/**',
+            autoReloadDelay: 250,
+        };
         if (state) {
             if (state.commandButtons) {
                 setCommandButtons(state.commandButtons);
             }
             if (state.capturesBasePath) {
                 setCapturesBasePath(state.capturesBasePath);
+            }
+            if (state.autoReloadGlobPattern) {
+                onAutoReloadGlobPatternEdited(state.autoReloadGlobPattern);
+            }
+            if (state.autoReloadDelay) {
+                onAutoReloadDelayEdited(state.autoReloadDelay);
             }
         }
     }, []);
@@ -78,9 +103,11 @@ const App = () => {
     useEffect(() => {
         vscode.setState({
             commandButtons: commandButtons,
-            capturesBasePath: capturesBasePath
+            capturesBasePath: capturesBasePath,
+            autoReloadGlobPattern: autoReloadGlobPattern,
+            autoReloadDelay: autoReloadDelay,
         });
-    }, [commandButtons, capturesBasePath]);
+    }, [commandButtons, capturesBasePath, autoReloadGlobPattern, autoReloadDelay]);
 
     // events from vscode
     useEffect(() => {
@@ -88,23 +115,33 @@ const App = () => {
 
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
-            if (message.type === 'captures-base-path-set') {
-                setCapturesBasePath(message.capturesBasePath);
-            } else if (message.type === 'capture-files-refreshed') {
-                const sortedCaptureItems = message.allCaptureFileNames
-                    .map((fileName: string) => ({ fileName }))
-                    .sort((a: CaptureItem, b: CaptureItem) => b.fileName.localeCompare(a.fileName));
-                setCaptureItems(sortedCaptureItems);
-                if (message.newCaptureFileName) {
-                    setSelectedCaptureItem({ fileName: message.newCaptureFileName });
-                }
-            } else if (message.type === 'debugger-status') {
-                if (!message.isConnected) {
-                    setProfilerCapturing(false);
-                }
-                setDebuggerConnected(message.isConnected);
-                setSupportsCommands(message.supportsCommands);
-                setSupportsProfiler(message.supportsProfiler);
+            switch (message.type) {
+                case 'captures-base-path-set':
+                    setCapturesBasePath(message.capturesBasePath);
+                    break;
+
+                case 'capture-files-refreshed':
+                    const sortedCaptureItems = message.allCaptureFileNames
+                        .map((fileName: string) => ({ fileName }))
+                        .sort((a: CaptureItem, b: CaptureItem) => b.fileName.localeCompare(a.fileName));
+                    setCaptureItems(sortedCaptureItems);
+                    if (message.newCaptureFileName) {
+                        setSelectedCaptureItem({ fileName: message.newCaptureFileName });
+                    }
+                    break;
+
+                case 'debugger-status':
+                    if (!message.isConnected) {
+                        setProfilerCapturing(false);
+                    }
+                    setDebuggerConnected(message.isConnected);
+                    setSupportsCommands(message.supportsCommands);
+                    setSupportsProfiler(message.supportsProfiler);
+                    break;
+
+                case 'auto-Reload-file-watcher-status':
+                    setAutoReloadActive(message.isActive);
+                    break;
             }
         };
 
@@ -118,12 +155,8 @@ const App = () => {
     // Render
     return (
         <main>
-            <StatusSection
-                debuggerConnected={debuggerConnected}
-            />
-            <DiagnosticSection
-                onShowDiagnosticsPanel={onShowDiagnosticsPanel}
-            />
+            <StatusSection debuggerConnected={debuggerConnected} />
+            <DiagnosticSection onShowDiagnosticsPanel={onShowDiagnosticsPanel} />
             <CommandSection
                 debuggerConnected={debuggerConnected}
                 supportsCommands={supportsCommands}
@@ -148,8 +181,20 @@ const App = () => {
                 supportsProfiler={supportsProfiler}
                 debuggerConnected={debuggerConnected}
             />
+
+            <AutoReloadSelection
+                setAutoReloadActive={setAutoReloadActive}
+                onStartAutoReload={onStartAutoReload}
+                onStopAutoReload={onStopAutoReload}
+                onAutoReloadDelayEdited={onAutoReloadDelayEdited}
+                onAutoReloadGlobPatternEdited={onAutoReloadGlobPatternEdited}
+                globPattern={autoReloadGlobPattern}
+                delay={autoReloadDelay}
+                isAutoReloadActive={isAutoReloadActive}
+                isSupported={supportsCommands}
+            />
         </main>
     );
-}
+};
 
 export default App;

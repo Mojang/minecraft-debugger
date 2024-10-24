@@ -1,4 +1,3 @@
-
 /*
  * General Section
  */
@@ -8,7 +7,7 @@
 }
 
 .title {
-    margin: 8px 0,
+    margin: 8px 0;
 }
 
 .sub-title {
@@ -43,7 +42,7 @@
  * Status Section
  */
 
- .status-container {
+.status-container {
     padding: 10px;
     color: var(--vscode-foreground);
     display: flex;
@@ -123,8 +122,12 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .capture-browse-button {
@@ -192,4 +195,14 @@
 
 .capture-item-delete-button:hover {
     color: var(--vscode-errorForeground);
+}
+
+/*
+ * Auto Reloader
+ */
+
+.auto-relod-button-container {
+    display: flex;
+    margin-left: 10px;
+    margin-bottom: 10px;
 }

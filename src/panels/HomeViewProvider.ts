@@ -62,7 +62,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                 }
                 case 'run-minecraft-command': {
                     if (!message.command || message.command.trim() === '') {
-                        vscode.window.showErrorMessage('Minecraft Command Shotcut can not be empty.');
+                        vscode.window.showErrorMessage('Minecraft Command Shortcut can not be empty.');
                         return;
                     }
                     this._eventEmitter.emit('run-minecraft-command', message.command);

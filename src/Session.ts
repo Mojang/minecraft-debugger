@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { createConnection, Server, Socket } from 'net';
@@ -128,7 +127,8 @@ export class Session extends DebugSession {
     private _threads = new Set<number>();
     private _requests = new Map<number, PendingResponse>();
     private _sourceMaps: SourceMaps = new SourceMaps('');
-    private _fileWatcher?: FileSystemWatcher;
+    private _sourceMapFileWatcher?: FileSystemWatcher;
+    private _autoReloadFileWatcher?: FileSystemWatcher;
     private _activeThreadId: number = 0; // the one being debugged
     private _localRoot: string = '';
     private _sourceMapRoot?: string;
@@ -156,6 +156,8 @@ export class Session extends DebugSession {
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
 
+        this._eventEmitter.on('start-auto-reload', this.onStartAutoReload.bind(this));
+        this._eventEmitter.on('stop-auto-reload', this.onStopAutoReload.bind(this));
         this._eventEmitter.on('run-minecraft-command', this.onRunMinecraftCommand.bind(this));
         this._eventEmitter.on('start-profiler', this.onStartProfiler.bind(this));
         this._eventEmitter.on('stop-profiler', this.onStopProfiler.bind(this));
@@ -163,6 +165,8 @@ export class Session extends DebugSession {
     }
 
     public dispose(): void {
+        this._eventEmitter.removeAllListeners('start-auto-reload');
+        this._eventEmitter.removeAllListeners('stop-auto-reload');
         this._eventEmitter.removeAllListeners('run-minecraft-command');
         this._eventEmitter.removeAllListeners('start-profiler');
         this._eventEmitter.removeAllListeners('stop-profiler');
@@ -172,6 +176,33 @@ export class Session extends DebugSession {
     // ------------------------------------------------------------------------
     // Event handlers from HomeViewProvider
     // ------------------------------------------------------------------------
+
+    private onStartAutoReload(): void {
+        this.onRunMinecraftCommand('say §aAuto Reloading Is Now Turned On!');
+        console.log('RANINBG');
+        if (this._autoReloadFileWatcher) {
+            this._autoReloadFileWatcher.dispose();
+            this._autoReloadFileWatcher = undefined;
+        }
+
+        const doReload = (): void => {
+            console.log('SENDING');
+            this.onRunMinecraftCommand('say §aPerforming Auto-Reload');
+            this.onRunMinecraftCommand('reload');
+        };
+
+        this._autoReloadFileWatcher = workspace.createFileSystemWatcher('**/*', false, false, false);
+
+        this._autoReloadFileWatcher.onDidChange(doReload);
+        this._autoReloadFileWatcher.onDidCreate(doReload);
+        this._autoReloadFileWatcher.onDidDelete(doReload);
+    }
+    private onStopAutoReload(): void {
+        if (this._autoReloadFileWatcher) {
+            this._autoReloadFileWatcher.dispose();
+            this._autoReloadFileWatcher = undefined;
+        }
+    }
 
     private onRunMinecraftCommand(command: string): void {
         if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures) {
@@ -186,7 +217,7 @@ export class Session extends DebugSession {
                 command: {
                     command: command,
                     dimension_type: 'overworld',
-                }
+                },
             });
         }
     }
@@ -196,7 +227,7 @@ export class Session extends DebugSession {
             type: 'startProfiler',
             profiler: {
                 target_module_uuid: this._targetModuleUuid,
-            }
+            },
         });
     }
 
@@ -206,7 +237,7 @@ export class Session extends DebugSession {
             profiler: {
                 captures_path: capturesBasePath,
                 target_module_uuid: this._targetModuleUuid,
-            }
+            },
         });
     }
 
@@ -225,10 +256,9 @@ export class Session extends DebugSession {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
                 return;
             }
-            commands.executeCommand('vscode.open', Uri.file(captureFullPath))
-                .then(undefined, error => {
-                    this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
-                });
+            commands.executeCommand('vscode.open', Uri.file(captureFullPath)).then(undefined, error => {
+                this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
+            });
 
             // notify home view of new capture
             this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, newCaptureFileName);
@@ -690,9 +720,9 @@ export class Session extends DebugSession {
         }
         this._connectionSocket = undefined;
 
-        if (this._fileWatcher) {
-            this._fileWatcher.dispose();
-            this._fileWatcher = undefined;
+        if (this._sourceMapFileWatcher) {
+            this._sourceMapFileWatcher.dispose();
+            this._sourceMapFileWatcher = undefined;
         }
     }
 
@@ -1016,19 +1046,19 @@ export class Session extends DebugSession {
     }
 
     private createSourceMapFileWatcher(sourceMapRoot?: string) {
-        if (this._fileWatcher) {
-            this._fileWatcher.dispose();
-            this._fileWatcher = undefined;
+        if (this._sourceMapFileWatcher) {
+            this._sourceMapFileWatcher.dispose();
+            this._sourceMapFileWatcher = undefined;
         }
         if (sourceMapRoot) {
-            this._fileWatcher = workspace.createFileSystemWatcher('**/*.{map}', false, false, false);
-            this._fileWatcher.onDidChange(uri => {
+            this._sourceMapFileWatcher = workspace.createFileSystemWatcher('**/*.{map}', false, false, false);
+            this._sourceMapFileWatcher.onDidChange(uri => {
                 this._sourceMaps.reset();
             });
-            this._fileWatcher.onDidCreate(uri => {
+            this._sourceMapFileWatcher.onDidCreate(uri => {
                 this._sourceMaps.reset();
             });
-            this._fileWatcher.onDidDelete(uri => {
+            this._sourceMapFileWatcher.onDidDelete(uri => {
                 this._sourceMaps.reset();
             });
         }

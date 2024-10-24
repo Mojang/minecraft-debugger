@@ -1,8 +1,7 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useEffect, useRef, useState } from 'react';
-import CommandSection from './controls/CommandSection'
+import CommandSection from './controls/CommandSection';
 import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
 import DiagnosticSection from './controls/DiagnosticsSection';
 import ProfilerSection from './controls/ProfilerSection';
@@ -10,6 +9,7 @@ import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/P
 import StatusSection from './controls/StatusSection';
 import { WebviewApi } from 'vscode-webview';
 import './App.css';
+import AutoReloaderSelection from './controls/AutoReloaderSelection';
 
 interface SaveState {
     commandButtons: CommandButton[];
@@ -22,6 +22,14 @@ const onShowDiagnosticsPanel = () => {
     vscode.postMessage({ type: 'show-diagnostics' });
 };
 
+const onStartAutoReload = () => {
+    vscode.postMessage({ type: 'start-auto-reload' });
+};
+
+const onStopAutoReload = () => {
+    vscode.postMessage({ type: 'stop-auto-reload' });
+};
+
 const onRunCommand = (command: string) => {
     vscode.postMessage({ type: 'run-minecraft-command', command: command });
 };
@@ -31,20 +39,14 @@ const onCaptureBasePathBrowseButtonPressed = () => {
 };
 
 const App = () => {
-
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
 
-    const {
-        commandButtons,
-        setCommandButtons,
-        onAddCommand,
-        onDeleteCommand,
-        onEditCommand
-     }: CommandHandlers = getCommandHandlers();
+    const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
+        getCommandHandlers();
 
-     const {
+    const {
         scrollingListRef,
         capturesBasePath,
         setCapturesBasePath,
@@ -58,8 +60,8 @@ const App = () => {
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,
-        onStopProfiler
-     }: ProfilerHandlers = getProfilerHandlers(vscode);
+        onStopProfiler,
+    }: ProfilerHandlers = getProfilerHandlers(vscode);
 
     // load state
     useEffect(() => {
@@ -78,7 +80,7 @@ const App = () => {
     useEffect(() => {
         vscode.setState({
             commandButtons: commandButtons,
-            capturesBasePath: capturesBasePath
+            capturesBasePath: capturesBasePath,
         });
     }, [commandButtons, capturesBasePath]);
 
@@ -118,12 +120,8 @@ const App = () => {
     // Render
     return (
         <main>
-            <StatusSection
-                debuggerConnected={debuggerConnected}
-            />
-            <DiagnosticSection
-                onShowDiagnosticsPanel={onShowDiagnosticsPanel}
-            />
+            <StatusSection debuggerConnected={debuggerConnected} />
+            <DiagnosticSection onShowDiagnosticsPanel={onShowDiagnosticsPanel} />
             <CommandSection
                 debuggerConnected={debuggerConnected}
                 supportsCommands={supportsCommands}
@@ -148,8 +146,14 @@ const App = () => {
                 supportsProfiler={supportsProfiler}
                 debuggerConnected={debuggerConnected}
             />
+
+            <AutoReloaderSelection
+                onStartAutoReload={onStartAutoReload}
+                onStopAutoReload={onStopAutoReload}
+                isSupported={supportsCommands}
+            />
         </main>
     );
-}
+};
 
 export default App;

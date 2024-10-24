@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
@@ -26,7 +25,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             type: 'debugger-status',
             isConnected: isConnected,
             supportsCommands: minecraftCapabilities.supportsCommands,
-            supportsProfiler: minecraftCapabilities.supportsProfiler
+            supportsProfiler: minecraftCapabilities.supportsProfiler,
         });
     }
 
@@ -58,6 +57,14 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             switch (message.type) {
                 case 'show-diagnostics': {
                     vscode.commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
+                    break;
+                }
+                case 'start-auto-reload': {
+                    this._eventEmitter.emit('start-auto-reload');
+                    break;
+                }
+                case 'stop-auto-reload': {
+                    this._eventEmitter.emit('stop-auto-reload');
                     break;
                 }
                 case 'run-minecraft-command': {
@@ -100,7 +107,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         const uri = await vscode.window.showOpenDialog({
             canSelectFiles: false,
             canSelectFolders: true,
-            canSelectMany: false
+            canSelectMany: false,
         });
         if (uri && uri[0]) {
             this._view?.webview.postMessage({ type: 'captures-base-path-set', capturesBasePath: uri[0].fsPath });
@@ -127,14 +134,14 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             this._view?.webview.postMessage({
                 type: 'capture-files-refreshed',
                 allCaptureFileNames: allCaptureFileNames,
-                newCaptureFileName: newCaptureFileName
+                newCaptureFileName: newCaptureFileName,
             });
         });
     }
 
     private _deleteProfilerCapture(capturesBasePath: string, fileName: string) {
         const fullPath = path.join(capturesBasePath, fileName);
-        fs.unlink(fullPath, (err) => {
+        fs.unlink(fullPath, err => {
             if (err) {
                 console.error('Error deleting capture file:', err);
                 return;

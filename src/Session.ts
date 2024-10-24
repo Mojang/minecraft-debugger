@@ -201,6 +201,7 @@ export class Session extends DebugSession {
         this._autoReloadFileWatcher.onDidCreate(doReload);
         this._autoReloadFileWatcher.onDidDelete(doReload);
     }
+
     private onStopAutoReload(): void {
         if (this._autoReloadFileWatcher) {
             this._autoReloadFileWatcher.dispose();
@@ -729,6 +730,12 @@ export class Session extends DebugSession {
         if (this._sourceMapFileWatcher) {
             this._sourceMapFileWatcher.dispose();
             this._sourceMapFileWatcher = undefined;
+        }
+
+        if (this._autoReloadFileWatcher) {
+            this._autoReloadFileWatcher.dispose();
+            this._autoReloadFileWatcher = undefined;
+            this._homeViewProvider.setAutoReloadStatus(false);
         }
     }
 

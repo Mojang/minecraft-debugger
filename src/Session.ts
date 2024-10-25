@@ -266,8 +266,8 @@ export class Session extends DebugSession {
             }
             commands.executeCommand('vscode.open', Uri.file(captureFullPath))
                 .then(undefined, error => {
-                this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
-            });
+                    this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
+                });
 
             // notify home view of new capture
             this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, newCaptureFileName);

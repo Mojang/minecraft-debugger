@@ -56,6 +56,17 @@
             {
                 "command": "minecraft-debugger.showMinecraftDiagnostics",
                 "title": "Minecraft Diagnostics: Show"
+            },
+            {
+                "command": "minecraft-debugger.minecraftReload",
+                "title": "Minecraft Reload"
+            }
+        ],
+        "keybindings":[
+            {
+                "command": "minecraft-debugger.minecraftReload",
+                "key": "ctrl+shift+r",
+                "when": "inDebugMode && editorLangId == typescript || inDebugMode && editorLangId == javascript"
             }
         ],
         "breakpoints": [

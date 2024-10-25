@@ -49,8 +49,35 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
+    const minecraftReloadCommand = vscode.commands.registerCommand('minecraft-debugger.minecraftReload', () => {
+        if (!vscode.debug.activeDebugSession) {
+            vscode.window.showErrorMessage('Error running command reload: No active Minecraft Debugger session.');
+        }
+        eventEmitter.emit('run-minecraft-command', 'reload');
+    });
+
+    // Create a command to allow keyboard shortcuts to run Minecraft commands
+    const runMinecraftCommand = vscode.commands.registerCommand(
+        'minecraft-debugger.runMinecraftCommand',
+        (...args: any[]) => {
+            if (args.length === 0) {
+                vscode.window.showErrorMessage('No command provided.');
+                return;
+            }
+            const command = args[0]; // Use only the first argument
+            if (typeof command !== 'string') {
+                vscode.window.showErrorMessage('Command must be a string.');
+                return;
+            }
+            if (!vscode.debug.activeDebugSession) {
+                vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+            }
+            eventEmitter.emit('run-minecraft-command', command);
+        }
+    );
+
     // Add command to the extension context
-    context.subscriptions.push(showDiagnosticsCommand);
+    context.subscriptions.push(showDiagnosticsCommand, minecraftReloadCommand, runMinecraftCommand);
 }
 
 // called when extension is deactivated

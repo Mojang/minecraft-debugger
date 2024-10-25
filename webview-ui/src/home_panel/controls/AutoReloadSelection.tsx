@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { VSCodeButton, VSCodeCheckbox, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
+import React, { useEffect, useRef, useCallback, memo, } from 'react';
+import { VSCodeCheckbox, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import { Checkbox, TextField } from '@vscode/webview-ui-toolkit';
 
 interface AutoReloadProps {
@@ -18,7 +18,7 @@ interface AutoReloadProps {
     isSupported: boolean;
 }
 
-const AutoReloadSelection: React.FC<AutoReloadProps> = ({
+const AutoReloadSelection = memo<AutoReloadProps>(({
     onStartAutoReload,
     onStopAutoReload,
     setAutoReloadGlobPattern,
@@ -31,16 +31,28 @@ const AutoReloadSelection: React.FC<AutoReloadProps> = ({
 }) => {
     const checkboxRef = useRef(null);
 
-    const handleDelayChange = (value: string): void => {
-        if (/^\d*$/.test(value)) {
-            const delayNumber = parseInt(value);
-            setAutoReloadDelay(delayNumber);
+    const handleCheckboxClick = useCallback<(event: React.MouseEvent<HTMLElement, MouseEvent>) => void>(event => {
+        if (!event.target) return
+        const isChecked = (event.target as Checkbox).checked;
+        setAutoReloadActive(isChecked);
+        isChecked ? onStartAutoReload(globPattern, delay) : onStopAutoReload();
+    }, [setAutoReloadActive, onStartAutoReload, onStopAutoReload, globPattern, delay]);
+
+    const handleGlobPatternChange = useCallback<(event: Event | React.FormEvent<HTMLElement>) => void>(event => {
+        if (!event.target) return
+        setAutoReloadGlobPattern((event.target as TextField).value);
+    }, [setAutoReloadGlobPattern]);
+
+    const handleDelayChange = useCallback<(delay: string) => void>(delay => {
+        if (/^\d*$/.test(delay)) {
+            setAutoReloadDelay(parseInt(delay));
         }
-    };
+    }, [setAutoReloadDelay]);
 
     useEffect(() => {
-        if (!checkboxRef || !checkboxRef.current) return;
-        (checkboxRef.current as Checkbox).checked = isAutoReloadActive;
+        if (checkboxRef.current) {
+            (checkboxRef.current as Checkbox).checked = isAutoReloadActive;
+        }
     }, [isAutoReloadActive]);
 
     return (
@@ -49,15 +61,7 @@ const AutoReloadSelection: React.FC<AutoReloadProps> = ({
             <VSCodeCheckbox
                 ref={checkboxRef}
                 disabled={!isSupported}
-                onClick={event => {
-                    const isChecked = (event.target as Checkbox).checked;
-                    setAutoReloadActive(isChecked);
-                    if (isChecked) {
-                        onStartAutoReload(globPattern, delay);
-                    } else {
-                        onStopAutoReload();
-                    }
-                }}
+                onClick={handleCheckboxClick}
             />
             <br />
             <div className="auto-relod-button-container">
@@ -66,7 +70,7 @@ const AutoReloadSelection: React.FC<AutoReloadProps> = ({
                     <VSCodeTextField
                         type="text"
                         value={globPattern}
-                        onChange={event => setAutoReloadGlobPattern((event.target! as TextField).value)}
+                        onChange={handleGlobPatternChange}
                         disabled={isAutoReloadActive}
                         className="capture-path-input"
                     />
@@ -84,6 +88,6 @@ const AutoReloadSelection: React.FC<AutoReloadProps> = ({
             </div>
         </div>
     );
-};
+});
 
 export default AutoReloadSelection;

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Plot from '@observablehq/plot';
 import { ascending } from 'd3-array';
-import { StatisticOptions, StatisticResolver, TrackedStat } from '../StatisticResolver';
+import { StatisticOptions, StatisticResolver, TrackedStat, YAxisStyle } from '../StatisticResolver';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { removeAllStyleElements } from '../../util/CSPUtilities';
 
@@ -11,6 +11,7 @@ type MinecraftStatisticStackedBarChartProps = {
     title: string;
     yLabel: string;
     xLabel?: string;
+    yAxisStyle?: YAxisStyle;
     statisticDataProvider: StatisticProvider;
     statisticResolver: StatisticResolver;
 };
@@ -19,6 +20,7 @@ export default function MinecraftStatisticStackedBarChart({
     title,
     yLabel,
     xLabel = 'Time',
+    yAxisStyle,
     statisticDataProvider,
     statisticResolver,
 }: MinecraftStatisticStackedBarChartProps) {
@@ -72,7 +74,7 @@ export default function MinecraftStatisticStackedBarChart({
                 },
                 ticks: 10,
             },
-            y: { grid: true, label: yLabel },
+            y: { grid: true, label: yLabel, type: yAxisStyle },
             marks: [
                 Plot.barY(chartData, {
                     x: 'time',

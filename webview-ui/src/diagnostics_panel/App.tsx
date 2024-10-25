@@ -4,7 +4,7 @@ import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from '@vscode/webview-u
 import './App.css';
 import { StatGroupSelectionBox } from './controls/StatGroupSelectionBox';
 import { useCallback, useEffect, useState } from 'react';
-import { StatisticType, YAxisType, createStatResolver } from './StatisticResolver';
+import { StatisticType, YAxisStyle, YAxisType, createStatResolver } from './StatisticResolver';
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
 import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
@@ -79,10 +79,7 @@ function App() {
 
     return (
         <main>
-            <VSCodePanels 
-                activeid={currentTab}
-                onChange={event => handlePanelChange(event as VSCodePanelsChangeEvent)}
-            >
+            <VSCodePanels activeid={currentTab} onChange={event => handlePanelChange(event as VSCodePanelsChangeEvent)}>
                 <VSCodePanelTab id="tab-1">World</VSCodePanelTab>
                 <VSCodePanelTab id="tab-2">Memory</VSCodePanelTab>
                 <VSCodePanelTab id="tab-3">Server Timing</VSCodePanelTab>

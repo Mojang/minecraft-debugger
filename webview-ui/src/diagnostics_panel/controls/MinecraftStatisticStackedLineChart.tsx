@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
-import { StatisticResolver, TrackedStat } from '../StatisticResolver';
+import { StatisticResolver, TrackedStat, YAxisStyle } from '../StatisticResolver';
 import { removeAllStyleElements } from '../../util/CSPUtilities';
 
 type MinecraftStatisticStackedLineChartProps = {
@@ -16,6 +16,7 @@ type MinecraftStatisticStackedLineChartProps = {
     targetValue?: number; // Target value for a line on the Y axis
     statisticDataProvider: StatisticProvider;
     statisticResolver: StatisticResolver;
+    yAxisStyle?: YAxisStyle;
 };
 
 export default function MinecraftStatisticStackedLineChart({
@@ -26,6 +27,7 @@ export default function MinecraftStatisticStackedLineChart({
     statisticDataProvider,
     statisticResolver,
     catageoryLabels,
+    yAxisStyle,
 }: MinecraftStatisticStackedLineChartProps) {
     // states
     const [data, setData] = useState<TrackedStat[]>([]);
@@ -96,7 +98,7 @@ export default function MinecraftStatisticStackedLineChart({
                     return Math.floor(tickDifference / 20) + 's';
                 },
             },
-            y: { grid: true, label: yLabel, type: 'sqrt' },
+            y: { grid: true, label: yLabel, type: yAxisStyle },
             marks: [
                 Plot.areaY(data, {
                     x: 'time',

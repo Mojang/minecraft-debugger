@@ -8,6 +8,18 @@ export enum YAxisType {
     Centered = 'Centered',
 }
 
+// Style of the Y axis
+// See D3 Scales 'ScaleType' type for more values
+export enum YAxisStyle {
+    Linear = 'linear',
+    SquareRoot = 'sqrt',
+    Pow = 'pow',
+    Logarithmic = 'log',
+    SymLog = 'symlog',
+    Time = 'time',
+    UTC = 'utc',
+}
+
 export type TrackedStat = {
     value: number;
     time: number;

@@ -1,8 +1,7 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useCallback, useState } from 'react';
-import { StatisticOptions, YAxisType } from '../StatisticResolver';
+import { StatisticOptions, YAxisStyle as AxisStyle, YAxisType } from '../StatisticResolver';
 import LineChartYAxisSelectionBox from './LineChart/LineChartYAxisSelectionBox';
 import { LineChart } from './LineChart/LineChart';
 import { StatisticProvider } from '../StatisticProvider';
@@ -13,6 +12,7 @@ type MinecraftStatisticLineChartProps = {
     xLabel?: string;
     statisticOptions: StatisticOptions;
     statisticDataProvider: StatisticProvider;
+    yAxisStyle?: AxisStyle;
 };
 
 export default function MinecraftStatisticLineChart({
@@ -20,6 +20,7 @@ export default function MinecraftStatisticLineChart({
     statisticOptions,
     yLabel,
     xLabel = 'Time',
+    yAxisStyle,
     statisticDataProvider,
 }: MinecraftStatisticLineChartProps) {
     const [_statisticOptions, _setStatisticOptions] = useState<StatisticOptions>(statisticOptions);
@@ -38,6 +39,7 @@ export default function MinecraftStatisticLineChart({
                 xLabel={xLabel}
                 statisticOptions={_statisticOptions}
                 statisticDataProvider={statisticDataProvider}
+                yAxisStyle={yAxisStyle}
             />
             <br />
             <LineChartYAxisSelectionBox onChange={yAxisResolverChanged} defaultValue={statisticOptions.yAxisType} />

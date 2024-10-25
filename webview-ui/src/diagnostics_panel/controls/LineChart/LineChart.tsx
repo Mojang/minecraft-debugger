@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import * as d3 from 'd3';
-import { StatisticOptions, TrackedStat, YAxisType, createStatResolver } from '../../StatisticResolver';
+import { StatisticOptions, TrackedStat, YAxisStyle, YAxisType, createStatResolver } from '../../StatisticResolver';
 import { createYAxisDomainResolver } from './LineChartYAxisResolvers';
 import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
@@ -14,12 +14,20 @@ type LineChartProps = {
     xLabel: string;
     statisticOptions: StatisticOptions;
     statisticDataProvider: StatisticProvider;
+    yAxisStyle?: YAxisStyle;
 };
 
 type PlotResult = ((SVGSVGElement | HTMLElement) & Plot.Plot) | undefined;
 
 //chart component
-export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDataProvider }: LineChartProps) {
+export function LineChart({
+    title,
+    yLabel,
+    xLabel,
+    statisticOptions,
+    statisticDataProvider,
+    yAxisStyle,
+}: LineChartProps) {
     // state
     const [data, setData] = useState<TrackedStat[]>([]);
 
@@ -83,7 +91,7 @@ export function LineChart({ title, yLabel, xLabel, statisticOptions, statisticDa
                 },
                 y: {
                     grid: true,
-                    type: 'linear',
+                    type: yAxisStyle,
                     domain: yDomain,
                     label: yLabel,
                 },

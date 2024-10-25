@@ -1,3 +1,4 @@
+
 /*
  * General Section
  */
@@ -7,7 +8,7 @@
 }
 
 .title {
-    margin: 8px 0;
+    margin: 8px 0,
 }
 
 .sub-title {
@@ -122,12 +123,8 @@
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .capture-browse-button {

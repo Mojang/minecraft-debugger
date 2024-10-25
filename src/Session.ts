@@ -1,3 +1,4 @@
+
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { createConnection, Server, Socket } from 'net';
@@ -223,7 +224,7 @@ export class Session extends DebugSession {
                 command: {
                     command: command,
                     dimension_type: 'overworld',
-                },
+                }
             });
         }
     }
@@ -233,7 +234,7 @@ export class Session extends DebugSession {
             type: 'startProfiler',
             profiler: {
                 target_module_uuid: this._targetModuleUuid,
-            },
+            }
         });
     }
 
@@ -243,7 +244,7 @@ export class Session extends DebugSession {
             profiler: {
                 captures_path: capturesBasePath,
                 target_module_uuid: this._targetModuleUuid,
-            },
+            }
         });
     }
 
@@ -263,7 +264,8 @@ export class Session extends DebugSession {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
                 return;
             }
-            commands.executeCommand('vscode.open', Uri.file(captureFullPath)).then(undefined, error => {
+            commands.executeCommand('vscode.open', Uri.file(captureFullPath))
+                .then(undefined, error => {
                 this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
             });
 

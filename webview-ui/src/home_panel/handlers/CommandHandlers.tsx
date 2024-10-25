@@ -1,3 +1,4 @@
+
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useCallback, useState } from 'react';
@@ -16,6 +17,7 @@ export interface CommandHandlers {
 }
 
 export const getCommandHandlers = (): CommandHandlers => {
+
     const [commandButtons, setCommandButtons] = useState<CommandButton[]>([]);
 
     const onAddCommand = useCallback(() => {
@@ -38,7 +40,9 @@ export const getCommandHandlers = (): CommandHandlers => {
 
     const onEditCommand = useCallback((id: string, event: React.ChangeEvent<HTMLInputElement>) => {
         setCommandButtons(prevButtons => {
-            return prevButtons.map(button => (button.id === id ? { ...button, command: event.target.value } : button));
+            return prevButtons.map(button =>
+                button.id === id ? { ...button, command: event.target.value } : button
+            );
         });
     }, []);
 
@@ -47,6 +51,6 @@ export const getCommandHandlers = (): CommandHandlers => {
         setCommandButtons,
         onAddCommand,
         onDeleteCommand,
-        onEditCommand,
-    };
+        onEditCommand
+    }
 };

@@ -6,8 +6,8 @@ interface AutoReloadProps {
     onStopAutoReload: () => void;
     onStartAutoReload: (globPattern: string, delay: number) => void;
 
-    onAutoReloadGlobPatternEdited: (pattern: string) => void;
-    onAutoReloadDelayEdited: (delay: number) => void;
+    setAutoReloadGlobPattern: (pattern: string) => void;
+    setAutoReloadDelay: (delay: number) => void;
 
     setAutoReloadActive: (isActive: boolean) => void;
 
@@ -21,8 +21,8 @@ interface AutoReloadProps {
 const AutoReloadSelection: React.FC<AutoReloadProps> = ({
     onStartAutoReload,
     onStopAutoReload,
-    onAutoReloadGlobPatternEdited,
-    onAutoReloadDelayEdited,
+    setAutoReloadGlobPattern,
+    setAutoReloadDelay,
     setAutoReloadActive,
     globPattern,
     delay,
@@ -34,7 +34,7 @@ const AutoReloadSelection: React.FC<AutoReloadProps> = ({
     const handleDelayChange = (value: string): void => {
         if (/^\d*$/.test(value)) {
             const delayNumber = parseInt(value);
-            onAutoReloadDelayEdited(delayNumber);
+            setAutoReloadDelay(delayNumber);
         }
     };
 
@@ -66,7 +66,7 @@ const AutoReloadSelection: React.FC<AutoReloadProps> = ({
                     <VSCodeTextField
                         type="text"
                         value={globPattern}
-                        onChange={event => onAutoReloadGlobPatternEdited((event.target! as TextField).value)}
+                        onChange={event => setAutoReloadGlobPattern((event.target! as TextField).value)}
                         disabled={isAutoReloadActive}
                         className="capture-path-input"
                     />

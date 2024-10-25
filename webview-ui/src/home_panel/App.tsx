@@ -1,3 +1,4 @@
+
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useEffect, useState } from 'react';
@@ -9,7 +10,7 @@ import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/P
 import StatusSection from './controls/StatusSection';
 import { WebviewApi } from 'vscode-webview';
 import AutoReloadSelection from './controls/AutoReloadSelection';
-import { AutoReloadHandlers, getAutoReloadHandlers } from './handlers/AutoReloadHandlers';
+import { AutoReloadHandlers, useAutoReloadHandlers } from './handlers/AutoReloadHandlers';
 import './App.css';
 
 interface SaveState {
@@ -42,6 +43,7 @@ const onCaptureBasePathBrowseButtonPressed = () => {
 };
 
 const App = () => {
+
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
@@ -50,13 +52,18 @@ const App = () => {
         autoReloadGlobPattern,
         autoReloadDelay,
         isAutoReloadActive,
-        onAutoReloadGlobPatternEdited,
-        onAutoReloadDelayEdited,
+        setAutoReloadGlobPattern,
+        setAutoReloadDelay,
         setAutoReloadActive,
-    }: AutoReloadHandlers = getAutoReloadHandlers();
+    }: AutoReloadHandlers = useAutoReloadHandlers();
 
-    const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
-        getCommandHandlers();
+    const {
+        commandButtons,
+        setCommandButtons,
+        onAddCommand,
+        onDeleteCommand,
+        onEditCommand
+    }: CommandHandlers = getCommandHandlers();
 
     const {
         scrollingListRef,
@@ -72,17 +79,19 @@ const App = () => {
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,
-        onStopProfiler,
+        onStopProfiler
     }: ProfilerHandlers = getProfilerHandlers(vscode);
 
     // load state
     useEffect(() => {
+
         const state = (vscode.getState() as SaveState) || {
             commandButtons: [],
             capturesPath: '',
             autoReloadGlobPattern: '*/**',
             autoReloadDelay: 250,
         };
+
         if (state) {
             if (state.commandButtons) {
                 setCommandButtons(state.commandButtons);
@@ -91,10 +100,10 @@ const App = () => {
                 setCapturesBasePath(state.capturesBasePath);
             }
             if (state.autoReloadGlobPattern) {
-                onAutoReloadGlobPatternEdited(state.autoReloadGlobPattern);
+                setAutoReloadGlobPattern(state.autoReloadGlobPattern);
             }
             if (state.autoReloadDelay) {
-                onAutoReloadDelayEdited(state.autoReloadDelay);
+                setAutoReloadDelay(state.autoReloadDelay);
             }
         }
     }, []);
@@ -105,7 +114,7 @@ const App = () => {
             commandButtons: commandButtons,
             capturesBasePath: capturesBasePath,
             autoReloadGlobPattern: autoReloadGlobPattern,
-            autoReloadDelay: autoReloadDelay,
+            autoReloadDelay: autoReloadDelay
         });
     }, [commandButtons, capturesBasePath, autoReloadGlobPattern, autoReloadDelay]);
 
@@ -155,8 +164,12 @@ const App = () => {
     // Render
     return (
         <main>
-            <StatusSection debuggerConnected={debuggerConnected} />
-            <DiagnosticSection onShowDiagnosticsPanel={onShowDiagnosticsPanel} />
+            <StatusSection
+                debuggerConnected={debuggerConnected}
+            />
+            <DiagnosticSection
+                onShowDiagnosticsPanel={onShowDiagnosticsPanel}
+            />
             <CommandSection
                 debuggerConnected={debuggerConnected}
                 supportsCommands={supportsCommands}
@@ -186,8 +199,8 @@ const App = () => {
                 setAutoReloadActive={setAutoReloadActive}
                 onStartAutoReload={onStartAutoReload}
                 onStopAutoReload={onStopAutoReload}
-                onAutoReloadDelayEdited={onAutoReloadDelayEdited}
-                onAutoReloadGlobPatternEdited={onAutoReloadGlobPatternEdited}
+                setAutoReloadDelay={setAutoReloadDelay}
+                setAutoReloadGlobPattern={setAutoReloadGlobPattern}
                 globPattern={autoReloadGlobPattern}
                 delay={autoReloadDelay}
                 isAutoReloadActive={isAutoReloadActive}

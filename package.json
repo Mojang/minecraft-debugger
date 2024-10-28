@@ -190,7 +190,7 @@
                 "minecraft-debugger.reloadOnSourceChanges.globPattern": {
                     "type": "string",
                     "default": "",
-                    "description": "Override the default locations and monitor all workspace files with the specified glob pattern."
+                    "description": "Override the default locations and monitor any workspace files that match the glob pattern."
                 },
                 "minecraft-debugger.showDiagnosticViewOnConnect": {
                     "type": "boolean",

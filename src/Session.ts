@@ -1028,15 +1028,18 @@ export class Session extends DebugSession {
             return;
         }
 
-        const reloadOnSourceChangesDelay = config.get<number>('reloadOnSourceChanges.delay') || 0;
+        const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') || 0, 0);
         const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
         
         // Either monitor the build output (TS->JS) by looking at .map and .js files in sourceMapRoot,
         // or monitor .js files directly if not using TS or source maps by looking at localRoot,
         // or monitor a specific glob pattern for all files within the workspace.
-        let globPattern = undefined;
+        let globPattern: RelativePattern | undefined = undefined;
         if (reloadOnSourceChangesGlobPattern) {
-            globPattern = new RelativePattern(workspace.workspaceFolders?.[0].uri.fsPath || '', reloadOnSourceChangesGlobPattern);
+            const workspaceFolders = workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                globPattern = new RelativePattern(workspaceFolders[0].uri.fsPath || '', reloadOnSourceChangesGlobPattern);
+            }
         }
         else if (sourceMapRoot) {
             globPattern = new RelativePattern(sourceMapRoot, '**/*.{map,js}');

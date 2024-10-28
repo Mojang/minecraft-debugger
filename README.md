@@ -179,7 +179,7 @@ The Activity Bar icon ![image](/icons/creeper_icon.png) will open the Minecraft 
 Add shortcuts for your favorite Minecraft commands.
 
 ##### Script Profiler
-After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create profile captures of your actively running add-on.
+After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create performance captures of your actively running add-on.
 
 #### Diagnostics Window
 When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnost performance issues.

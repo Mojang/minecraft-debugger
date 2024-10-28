@@ -172,6 +172,15 @@ Now, hit "Start Debugging" inside of Visual Studio Code.
 
 As with when you debug against Minecraft clients, you can set breakpoints in your code by clicking on the left-hand side of the editor, on specific lines of code.
 
+#### Minecraft Debugger Home Panel
+The Activity Bar icon ![image](/icons/creeper_icon.png) will open the Minecraft Debugger home panel. Here you will find shortcuts for common actions, like opening Settings and showing the Diagnostics panel.
+
+##### Minecraft Command Shortcuts
+Add shortcuts for your favorite Minecraft commands.
+
+##### Script Profiler
+After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create profile captures of your actively running add-on.
+
 #### Diagnostics Window
 When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnost performance issues.
 

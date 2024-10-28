@@ -4,19 +4,23 @@
 import React from 'react';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
-interface DiagnosticsSectionProps {
+interface GeneralSectionProps {
     onShowDiagnosticsPanel: () => void;
+    onShowSettings(): void;
 }
 
-const DiagnosticsSection: React.FC<DiagnosticsSectionProps> = ({ onShowDiagnosticsPanel }) => {
+const GeneralSection: React.FC<GeneralSectionProps> = ({ onShowDiagnosticsPanel, onShowSettings }) => {
     return (
         <div className="section">
-            <h3 className="title">Diagnostics</h3>
+            <h3 className="title">Actions</h3>
             <VSCodeButton className="standard-button" onClick={onShowDiagnosticsPanel}>
                 Show Diagnostics
+            </VSCodeButton>
+            <VSCodeButton className="standard-button" onClick={onShowSettings}>
+                Show Settings
             </VSCodeButton>
         </div>
     );
 };
 
-export default DiagnosticsSection;
+export default GeneralSection;

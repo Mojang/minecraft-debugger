@@ -1,10 +1,10 @@
 
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import CommandSection from './controls/CommandSection'
 import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
-import DiagnosticSection from './controls/DiagnosticsSection';
+import GeneralSection from './controls/GeneralSection';
 import ProfilerSection from './controls/ProfilerSection';
 import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/ProfilerHandlers';
 import StatusSection from './controls/StatusSection';
@@ -20,6 +20,10 @@ const vscode: WebviewApi<unknown> = acquireVsCodeApi();
 
 const onShowDiagnosticsPanel = () => {
     vscode.postMessage({ type: 'show-diagnostics' });
+};
+
+const onShowSettings = () => {
+    vscode.postMessage({ type: 'show-settings' });
 };
 
 const onRunCommand = (command: string) => {
@@ -121,8 +125,9 @@ const App = () => {
             <StatusSection
                 debuggerConnected={debuggerConnected}
             />
-            <DiagnosticSection
+            <GeneralSection
                 onShowDiagnosticsPanel={onShowDiagnosticsPanel}
+                onShowSettings={onShowSettings}
             />
             <CommandSection
                 debuggerConnected={debuggerConnected}

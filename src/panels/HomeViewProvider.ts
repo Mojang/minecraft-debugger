@@ -60,6 +60,10 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     vscode.commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
                     break;
                 }
+                case 'show-settings': {
+                    vscode.commands.executeCommand('workbench.action.openSettings', '@ext:mojang-studios.minecraft-debugger');
+                    break;
+                }
                 case 'run-minecraft-command': {
                     if (!message.command || message.command.trim() === '') {
                         vscode.window.showErrorMessage('Minecraft Command Shortcut can not be empty.');

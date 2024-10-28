@@ -177,6 +177,21 @@
         ],
         "configuration": {
             "properties": {
+                "minecraft-debugger.reloadOnSourceChanges.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Reload Minecraft on source changes. Watch localRoot or sourceMapRoot."
+                },
+                "minecraft-debugger.reloadOnSourceChanges.delay": {
+                    "type": "number",
+                    "default": 500,
+                    "description": "Delay in milliseconds before reloading Minecraft."
+                },
+                "minecraft-debugger.reloadOnSourceChanges.globPattern": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Override the default locations and monitor all workspace files with the specified glob pattern."
+                },
                 "minecraft-debugger.showDiagnosticViewOnConnect": {
                     "type": "boolean",
                     "default": false,

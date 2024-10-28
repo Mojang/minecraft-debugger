@@ -1022,14 +1022,14 @@ export class Session extends DebugSession {
             this._sourceFileWatcher = undefined;
         }
 
-        const minReloadDelay = 500;
         const config = workspace.getConfiguration('minecraft-debugger');
         const reloadOnSourceChangesEnabled = config.get<boolean>('reloadOnSourceChanges.enabled');
-        const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') || minReloadDelay, minReloadDelay);
-        const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
         if (!reloadOnSourceChangesEnabled) {
             return;
         }
+
+        const reloadOnSourceChangesDelay = config.get<number>('reloadOnSourceChanges.delay') || 0;
+        const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
         
         // Either monitor the build output (TS->JS) by looking at .map and .js files in sourceMapRoot,
         // or monitor .js files directly if not using TS or source maps by looking at localRoot,

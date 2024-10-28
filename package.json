@@ -184,8 +184,8 @@
                 },
                 "minecraft-debugger.reloadOnSourceChanges.delay": {
                     "type": "number",
-                    "default": 500,
-                    "description": "Delay in milliseconds before reloading Minecraft."
+                    "default": 100,
+                    "description": "Delay in milliseconds between detecting source changes and reloading Minecraft."
                 },
                 "minecraft-debugger.reloadOnSourceChanges.globPattern": {
                     "type": "string",

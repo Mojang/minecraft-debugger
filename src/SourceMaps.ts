@@ -221,7 +221,7 @@ export class SourceMaps {
                 : SourceMapConsumer.LEAST_UPPER_BOUND;
     }
 
-    public reset() {
+    public clearCache() {
         this._sourceMapCache.reset();
     }
 

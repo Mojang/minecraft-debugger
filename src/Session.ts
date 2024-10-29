@@ -20,6 +20,7 @@ import {
     InputBoxOptions,
     QuickPickItem,
     QuickPickOptions,
+    RelativePattern,
     Uri,
     workspace,
     window,
@@ -128,7 +129,7 @@ export class Session extends DebugSession {
     private _threads = new Set<number>();
     private _requests = new Map<number, PendingResponse>();
     private _sourceMaps: SourceMaps = new SourceMaps('');
-    private _fileWatcher?: FileSystemWatcher;
+    private _sourceFileWatcher?: FileSystemWatcher;
     private _activeThreadId: number = 0; // the one being debugged
     private _localRoot: string = '';
     private _sourceMapRoot?: string;
@@ -167,6 +168,11 @@ export class Session extends DebugSession {
         this._eventEmitter.removeAllListeners('start-profiler');
         this._eventEmitter.removeAllListeners('stop-profiler');
         this._eventEmitter.removeAllListeners('request-debugger-status');
+
+        if (this._sourceFileWatcher) {
+            this._sourceFileWatcher.dispose();
+            this._sourceFileWatcher = undefined;
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -661,7 +667,7 @@ export class Session extends DebugSession {
         );
 
         // watch for source map changes
-        this.createSourceMapFileWatcher(this._sourceMapRoot);
+        this.createSourceMapFileWatcher(this._localRoot, this._sourceMapRoot);
 
         // Now that a connection is established, and capabilities have been delivered, send this event to
         // tell VSCode to ask Minecraft/debugee for config data (breakpoints etc).
@@ -689,11 +695,6 @@ export class Session extends DebugSession {
             this._connectionSocket.destroy();
         }
         this._connectionSocket = undefined;
-
-        if (this._fileWatcher) {
-            this._fileWatcher.dispose();
-            this._fileWatcher = undefined;
-        }
     }
 
     // close and terminate session (could be from debugee request)
@@ -1015,22 +1016,62 @@ export class Session extends DebugSession {
         }
     }
 
-    private createSourceMapFileWatcher(sourceMapRoot?: string) {
-        if (this._fileWatcher) {
-            this._fileWatcher.dispose();
-            this._fileWatcher = undefined;
+    private createSourceMapFileWatcher(localRoot: string, sourceMapRoot?: string) {
+        if (this._sourceFileWatcher) {
+            this._sourceFileWatcher.dispose();
+            this._sourceFileWatcher = undefined;
         }
-        if (sourceMapRoot) {
-            this._fileWatcher = workspace.createFileSystemWatcher('**/*.{map}', false, false, false);
-            this._fileWatcher.onDidChange(uri => {
-                this._sourceMaps.reset();
-            });
-            this._fileWatcher.onDidCreate(uri => {
-                this._sourceMaps.reset();
-            });
-            this._fileWatcher.onDidDelete(uri => {
-                this._sourceMaps.reset();
-            });
+
+        const config = workspace.getConfiguration('minecraft-debugger');
+        const reloadOnSourceChangesEnabled = config.get<boolean>('reloadOnSourceChanges.enabled');
+        if (!reloadOnSourceChangesEnabled) {
+            return;
+        }
+
+        const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') ?? 0, 0);
+        const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
+        
+        // Either monitor the build output (TS->JS) by looking at .map and .js files in sourceMapRoot,
+        // or monitor .js files directly if not using TS or source maps by looking at localRoot,
+        // or monitor a specific glob pattern for all files within the workspace.
+        let globPattern: RelativePattern | undefined = undefined;
+        if (reloadOnSourceChangesGlobPattern) {
+            const workspaceFolders = workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                globPattern = new RelativePattern(workspaceFolders[0].uri.fsPath ?? '', reloadOnSourceChangesGlobPattern);
+            }
+        }
+        else if (sourceMapRoot) {
+            globPattern = new RelativePattern(sourceMapRoot, '**/*.{map,js}');
+        }
+        else if (localRoot) {
+            globPattern = new RelativePattern(localRoot, '**/*.js');
+        }
+
+        if (globPattern) {
+            this._sourceFileWatcher = workspace.createFileSystemWatcher(globPattern, false, false, false);
+        }
+
+        const doReload = (): void => {
+            this._sourceMaps.clearCache();
+            this.onRunMinecraftCommand('say §aPerforming Auto-Reload');
+            this.onRunMinecraftCommand('reload');
+        };
+
+        const debounce = (func: () => void, wait: number): (() => void) => {
+            let timeout: NodeJS.Timeout;
+            return () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(func, wait);
+            };
+        };
+
+        const debouncedReload = debounce(doReload, reloadOnSourceChangesDelay);
+
+        if (this._sourceFileWatcher) {
+            this._sourceFileWatcher.onDidChange(debouncedReload);
+            this._sourceFileWatcher.onDidCreate(debouncedReload);
+            this._sourceFileWatcher.onDidDelete(debouncedReload);
         }
     }
 

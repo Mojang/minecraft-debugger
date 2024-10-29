@@ -1028,7 +1028,7 @@ export class Session extends DebugSession {
             return;
         }
 
-        const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') || 0, 0);
+        const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') ?? 0, 0);
         const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
         
         // Either monitor the build output (TS->JS) by looking at .map and .js files in sourceMapRoot,

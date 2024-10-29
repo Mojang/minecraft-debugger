@@ -1038,7 +1038,7 @@ export class Session extends DebugSession {
         if (reloadOnSourceChangesGlobPattern) {
             const workspaceFolders = workspace.workspaceFolders;
             if (workspaceFolders && workspaceFolders.length > 0) {
-                globPattern = new RelativePattern(workspaceFolders[0].uri.fsPath || '', reloadOnSourceChangesGlobPattern);
+                globPattern = new RelativePattern(workspaceFolders[0].uri.fsPath ?? '', reloadOnSourceChangesGlobPattern);
             }
         }
         else if (sourceMapRoot) {

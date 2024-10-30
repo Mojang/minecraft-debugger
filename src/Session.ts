@@ -1024,27 +1024,26 @@ export class Session extends DebugSession {
 
         const config = workspace.getConfiguration('minecraft-debugger');
         const reloadOnSourceChangesEnabled = config.get<boolean>('reloadOnSourceChanges.enabled');
-        if (!reloadOnSourceChangesEnabled) {
-            return;
-        }
-
         const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') ?? 0, 0);
         const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
-        
-        // Either monitor the build output (TS->JS) by looking at .map and .js files in sourceMapRoot,
-        // or monitor .js files directly if not using TS or source maps by looking at localRoot,
-        // or monitor a specific glob pattern for all files within the workspace.
+                
+        // watch all files within the workspace matching custom glob pattern.
+        // only active if Minecraft /reload is enabled
         let globPattern: RelativePattern | undefined = undefined;
-        if (reloadOnSourceChangesGlobPattern) {
+        if (reloadOnSourceChangesGlobPattern && reloadOnSourceChangesEnabled) {
             const workspaceFolders = workspace.workspaceFolders;
             if (workspaceFolders && workspaceFolders.length > 0) {
                 globPattern = new RelativePattern(workspaceFolders[0].uri.fsPath ?? '', reloadOnSourceChangesGlobPattern);
             }
         }
+        // watch source map files and reload cache if changed.
+        // always needed if source maps are used.
         else if (sourceMapRoot) {
             globPattern = new RelativePattern(sourceMapRoot, '**/*.{map,js}');
         }
-        else if (localRoot) {
+        // watch localRoot for .js file changes.
+        // only needed if Minecraft /reload is enabled
+        else if (localRoot && reloadOnSourceChangesEnabled) {
             globPattern = new RelativePattern(localRoot, '**/*.js');
         }
 
@@ -1052,26 +1051,24 @@ export class Session extends DebugSession {
             this._sourceFileWatcher = workspace.createFileSystemWatcher(globPattern, false, false, false);
         }
 
-        const doReload = (): void => {
-            this._sourceMaps.clearCache();
-            this.onRunMinecraftCommand('say §aPerforming Auto-Reload');
-            this.onRunMinecraftCommand('reload');
+        let timeout: NodeJS.Timeout;
+        const onSourceChanged = (): void => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                // always clear source maps
+                this._sourceMaps.clearCache();
+                // and optionally reload Minecraft
+                if (reloadOnSourceChangesEnabled) {
+                    this.onRunMinecraftCommand('say §aPerforming Auto-Reload');
+                    this.onRunMinecraftCommand('reload');
+                }
+            }, reloadOnSourceChangesDelay);
         };
-
-        const debounce = (func: () => void, wait: number): (() => void) => {
-            let timeout: NodeJS.Timeout;
-            return () => {
-                clearTimeout(timeout);
-                timeout = setTimeout(func, wait);
-            };
-        };
-
-        const debouncedReload = debounce(doReload, reloadOnSourceChangesDelay);
-
+    
         if (this._sourceFileWatcher) {
-            this._sourceFileWatcher.onDidChange(debouncedReload);
-            this._sourceFileWatcher.onDidCreate(debouncedReload);
-            this._sourceFileWatcher.onDidDelete(debouncedReload);
+            this._sourceFileWatcher.onDidChange(onSourceChanged);
+            this._sourceFileWatcher.onDidCreate(onSourceChanged);
+            this._sourceFileWatcher.onDidDelete(onSourceChanged);
         }
     }
 

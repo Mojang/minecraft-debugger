@@ -233,7 +233,7 @@
         "@vscode/webview-ui-toolkit": "^1.4.0",
         "esbuild": "^0.24.0",
         "esbuild-plugin-copy": "^2.1.1",
-        "eslint": "^7.19.0",
+        "eslint": "^9.13.0",
         "semantic-release": "^24.1.1",
         "semantic-release-vsce": "github:JakeShirley/semantic-release-vsce",
         "source-map": "^0.7.4",

@@ -224,7 +224,7 @@
         "@semantic-release/git": "^10.0.1",
         "@types/node": "^22.8.6",
         "@types/react": "^18.3.12",
-        "@types/vscode": "^1.93.0",
+        "@types/vscode": "^1.95.0",
         "@typescript-eslint/eslint-plugin": "^4.14.1",
         "@typescript-eslint/parser": "^4.14.1",
         "@vscode/debugadapter": "^1.67.0",

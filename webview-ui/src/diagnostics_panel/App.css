@@ -98,3 +98,50 @@ main {
 .difference-chart-figure tspan{
   fill: var(--vscode-editor-background);
 }
+
+/*
+ * Replay Controls Section
+ */
+
+.replay-controls-section {
+  display: flex;
+  flex-direction: row;
+  border: 1px solid var(--vscode-editorGroup-border);
+  border-radius: 5px;
+  padding: 5px;
+  margin-top: 5px;
+  margin-left: 0px;
+  align-items: stretch;
+}
+
+/* for the play/pause/stop buttons */
+.replay-play-sub-section {
+  height: 30px;
+  display: flex;
+  flex-direction: row;
+  margin-left: 0px;
+}
+
+/* for the speed control */
+.replay-speed-sub-section {
+  height: 30px;
+  display: flex;
+  flex-direction: row;
+  margin-left: 20px;
+  align-items: center;
+}
+
+.replay-sim-speed-input {
+  height: 80%;
+  width: 50px;
+  margin-left: 5px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.replay-button {
+  height: 100%;
+  margin-left: 5px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}

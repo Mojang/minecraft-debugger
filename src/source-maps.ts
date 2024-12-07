@@ -95,7 +95,7 @@ class SourceMapCache {
                 let mapJson;
                 if (this._inlineSourceMap) {
                     const inlineSourceMapRegex = /\/\/# sourceMappingURL=data:application\/json;.*base64,(.*)$/gm;
-                    const mapString = mapFile.toString(); 
+                    const mapString = mapFile.toString();
                     const match = inlineSourceMapRegex.exec(mapString);
                     if (match && match.length > 1) {
                         const base64EncodedMap = match[1];

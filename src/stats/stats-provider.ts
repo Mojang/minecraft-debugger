@@ -19,13 +19,51 @@ export interface StatDataModel {
 
 export interface StatMessageModel {
     tick: number;
+    type: string;
     stats: StatDataModel[];
 }
 
-export type StatsListener = (stat: StatData) => void;
+export interface StatsListener {
+    onStatUpdated: (stat: StatData) => void;
+    onSpeedUpdated: (speed: number) => void;
+    onPauseUpdated: (paused: boolean) => void;
+}
 
-export class StatsProvider2 {
-    private _statListeners: StatsListener[] = [];
+export class StatsProvider {
+    private _name: string;
+    private _uniqueId: string;
+    protected _statListeners: StatsListener[];
+
+    constructor(name: string, id: string) {
+        this._name = name;
+        this._uniqueId = id;
+        this._statListeners = [];
+    }
+
+    public getName(): string {
+        return this._name;
+    }
+
+    public getUniqueId(): string {
+        return this._uniqueId;
+    }
+
+    public setStats(stats: StatMessageModel) {
+        for (const stat of stats.stats) {
+            this._fireStatUpdated(stat, stats.tick);
+        }
+    }
+
+    public start() {}
+    public stop() {}
+    public pause() {}
+    public resume() {}
+    public faster() {}
+    public slower() {}
+    public setSpeed(speed: string) {}
+    public manualControl(): boolean {
+        return false;
+    }
 
     public addStatListener(listener: StatsListener) {
         this._statListeners.push(listener);
@@ -49,7 +87,7 @@ export class StatsProvider2 {
                 values: stat.values ?? [],
                 tick: tick,
             };
-            listener(statData);
+            listener.onStatUpdated(statData);
 
             if (stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
@@ -57,11 +95,5 @@ export class StatsProvider2 {
                 });
             }
         });
-    }
-
-    public setStats(stats: StatMessageModel) {
-        for (const stat of stats.stats) {
-            this._fireStatUpdated(stat, stats.tick);
-        }
     }
 }

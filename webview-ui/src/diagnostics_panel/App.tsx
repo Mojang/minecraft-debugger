@@ -1,7 +1,6 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from '@vscode/webview-ui-toolkit/react';
-import './App.css';
 import { StatGroupSelectionBox } from './controls/StatGroupSelectionBox';
 import { useCallback, useEffect, useState } from 'react';
 import { StatisticType, YAxisStyle, YAxisType, createStatResolver } from './StatisticResolver';
@@ -9,14 +8,18 @@ import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart'
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
 import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
 import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
-
+import ReplayControls from './controls/ReplayControls';
 import * as statPrefabs from './StatisticPrefabs';
+import { Icons } from './Icons';
+import './App.css';
+
+declare global {
+    interface Window {
+        initialParams: any;
+    }
+}
 
 const vscode = acquireVsCodeApi();
-
-interface TabState {
-    tabId: string;
-}
 
 interface VSCodePanelsChangeEvent extends Event {
     target: EventTarget & { activeid: string };
@@ -25,48 +28,48 @@ interface VSCodePanelsChangeEvent extends Event {
 // Filter out events with a value of zero that haven't been previously subscribed to
 function constructSubscribedSignalFilter() {
     const nonFilteredValues: string[] = [];
-
     const func = (event: StatisticUpdatedMessage) => {
         if (event.values.length === 1 && event.values[0] === 0 && !nonFilteredValues.includes(event.id)) {
             return false;
         }
-
         nonFilteredValues.push(event.id);
         return true;
     };
-
     return func;
 }
 
+const onRestart = () => {
+    vscode.postMessage({ type: 'restart' });
+};
+
+const onSlower = () => {
+    vscode.postMessage({ type: 'slower' });
+};
+
+const onFaster = () => {
+    vscode.postMessage({ type: 'faster' });
+};
+
+const onPause = () => {
+    vscode.postMessage({ type: 'pause' });
+};
+
+const onResume = () => {
+    vscode.postMessage({ type: 'resume' });
+};
+
 function App() {
-    // State
     const [selectedPlugin, setSelectedPlugin] = useState<string>('');
     const [selectedClient, setSelectedClient] = useState<string>('');
     const [currentTab, setCurrentTab] = useState<string>();
-
-    // Load initial state from vscode
-    useEffect(() => {
-        const tabState = vscode.getState() as TabState;
-        if (tabState && tabState.tabId) {
-            setCurrentTab(tabState.tabId);
-        }
-    }, []);
-
-    // Save current tab state whenever it changes
-    useEffect(() => {
-        if (currentTab) {
-            const tabState: TabState = { tabId: currentTab };
-            vscode.setState(tabState);
-        }
-    }, [currentTab]);
+    const [paused, setPaused] = useState<boolean>(true);
+    const [speed, setSpeed] = useState<string>('');
 
     const handlePluginSelection = useCallback((pluginSelectionId: string) => {
-        console.log(`Selected Plugin: ${pluginSelectionId}`);
         setSelectedPlugin(() => pluginSelectionId);
     }, []);
 
     const handleClientSelection = useCallback((clientSelectionId: string) => {
-        console.log(`Selected Client: ${clientSelectionId}`);
         setSelectedClient(() => clientSelectionId);
     }, []);
 
@@ -77,8 +80,35 @@ function App() {
         }
     }, []);
 
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'speed-updated') {
+                setSpeed(`${message.speed}hz`);
+            } else if (message.type === 'pause-updated') {
+                setPaused(message.paused);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
     return (
         <main>
+            {window.initialParams.showReplayControls && (
+                <ReplayControls
+                    speed={speed}
+                    paused={paused}
+                    onRestart={onRestart}
+                    onPause={onPause}
+                    onResume={onResume}
+                    onSlower={onSlower}
+                    onFaster={onFaster}
+                    svgIcons={Icons}
+                />
+            )}
             <VSCodePanels activeid={currentTab} onChange={event => handlePanelChange(event as VSCodePanelsChangeEvent)}>
                 <VSCodePanelTab id="tab-1">World</VSCodePanelTab>
                 <VSCodePanelTab id="tab-2">Memory</VSCodePanelTab>

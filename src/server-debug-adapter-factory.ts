@@ -1,22 +1,21 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as Net from 'net';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'stream';
 import { Session } from './Session';
-import { StatsProvider2 } from './StatsProvider2';
-import { HomeViewProvider } from './panels/HomeViewProvider';
+import { StatsProvider } from './stats/stats-provider';
+import { HomeViewProvider } from './panels/home-view-provider';
 
 // Factory for creating a Debug Adapter that runs as a server inside the extension and communicates via a socket.
 //
 export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private server?: Net.Server;
     private _homeViewProvider: HomeViewProvider;
-    private _statsProvider: StatsProvider2;
+    private _statsProvider: StatsProvider;
     private _eventEmitter: EventEmitter;
 
-    constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
+    constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider, eventEmitter: EventEmitter) {
         this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;

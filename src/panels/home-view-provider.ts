@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
@@ -26,7 +25,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             type: 'debugger-status',
             isConnected: isConnected,
             supportsCommands: minecraftCapabilities.supportsCommands,
-            supportsProfiler: minecraftCapabilities.supportsProfiler
+            supportsProfiler: minecraftCapabilities.supportsProfiler,
         });
     }
 
@@ -57,11 +56,18 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this._view.webview.onDidReceiveMessage(async message => {
             switch (message.type) {
                 case 'show-diagnostics': {
-                    vscode.commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
+                    vscode.commands.executeCommand('minecraft-debugger.liveDiagnostics');
+                    break;
+                }
+                case 'open-diagnostics-replay': {
+                    vscode.commands.executeCommand('minecraft-debugger.replayDiagnostics');
                     break;
                 }
                 case 'show-settings': {
-                    vscode.commands.executeCommand('workbench.action.openSettings', '@ext:mojang-studios.minecraft-debugger');
+                    vscode.commands.executeCommand(
+                        'workbench.action.openSettings',
+                        '@ext:mojang-studios.minecraft-debugger'
+                    );
                     break;
                 }
                 case 'run-minecraft-command': {
@@ -108,7 +114,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         const uri = await vscode.window.showOpenDialog({
             canSelectFiles: false,
             canSelectFolders: true,
-            canSelectMany: false
+            canSelectMany: false,
         });
         if (uri && uri[0]) {
             this._view?.webview.postMessage({ type: 'captures-base-path-set', capturesBasePath: uri[0].fsPath });
@@ -135,14 +141,14 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             this._view?.webview.postMessage({
                 type: 'capture-files-refreshed',
                 allCaptureFileNames: allCaptureFileNames,
-                newCaptureFileName: newCaptureFileName
+                newCaptureFileName: newCaptureFileName,
             });
         });
     }
 
     private _deleteProfilerCapture(capturesBasePath: string, fileName: string) {
         const fullPath = path.join(capturesBasePath, fileName);
-        fs.unlink(fullPath, (err) => {
+        fs.unlink(fullPath, err => {
             if (err) {
                 console.error('Error deleting capture file:', err);
                 return;

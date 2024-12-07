@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { SourceMaps } from './SourceMaps';
+import { SourceMaps } from './source-maps';
 import path from 'path';
 
 describe('SourceMaps', () => {
+    const linesToVerify = [17, 28, 35, 52, 67, 81, 86, 94, 103, 109, 115, 119];
 
-    const linesToVerify = [
-        17, 28, 35, 52, 67, 81, 86, 94, 103, 109, 115, 119
-    ];
-
-    const verifyLines = async (sourceMaps: SourceMaps, originalLocalAbsolutePath: string, generatedRemoteLocalPath: string) => {
+    const verifyLines = async (
+        sourceMaps: SourceMaps,
+        originalLocalAbsolutePath: string,
+        generatedRemoteLocalPath: string
+    ) => {
         for (const sourceLine of linesToVerify) {
             const generatedPosition = await sourceMaps.getGeneratedPositionFor({
                 source: originalLocalAbsolutePath,

@@ -1,8 +1,7 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useEffect, useState } from 'react';
-import CommandSection from './controls/CommandSection'
+import CommandSection from './controls/CommandSection';
 import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
 import GeneralSection from './controls/GeneralSection';
 import ProfilerSection from './controls/ProfilerSection';
@@ -22,6 +21,10 @@ const onShowDiagnosticsPanel = () => {
     vscode.postMessage({ type: 'show-diagnostics' });
 };
 
+const onOpenDiagnosticsReplay = () => {
+    vscode.postMessage({ type: 'open-diagnostics-replay' });
+};
+
 const onShowSettings = () => {
     vscode.postMessage({ type: 'show-settings' });
 };
@@ -35,20 +38,14 @@ const onCaptureBasePathBrowseButtonPressed = () => {
 };
 
 const App = () => {
-
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
 
-    const {
-        commandButtons,
-        setCommandButtons,
-        onAddCommand,
-        onDeleteCommand,
-        onEditCommand
-     }: CommandHandlers = getCommandHandlers();
+    const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
+        getCommandHandlers();
 
-     const {
+    const {
         scrollingListRef,
         capturesBasePath,
         setCapturesBasePath,
@@ -62,8 +59,8 @@ const App = () => {
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,
-        onStopProfiler
-     }: ProfilerHandlers = getProfilerHandlers(vscode);
+        onStopProfiler,
+    }: ProfilerHandlers = getProfilerHandlers(vscode);
 
     // load state
     useEffect(() => {
@@ -82,7 +79,7 @@ const App = () => {
     useEffect(() => {
         vscode.setState({
             commandButtons: commandButtons,
-            capturesBasePath: capturesBasePath
+            capturesBasePath: capturesBasePath,
         });
     }, [commandButtons, capturesBasePath]);
 
@@ -122,11 +119,10 @@ const App = () => {
     // Render
     return (
         <main>
-            <StatusSection
-                debuggerConnected={debuggerConnected}
-            />
+            <StatusSection debuggerConnected={debuggerConnected} />
             <GeneralSection
                 onShowDiagnosticsPanel={onShowDiagnosticsPanel}
+                onOpenDiagnosticsReplay={onOpenDiagnosticsReplay}
                 onShowSettings={onShowSettings}
             />
             <CommandSection
@@ -155,6 +151,6 @@ const App = () => {
             />
         </main>
     );
-}
+};
 
 export default App;

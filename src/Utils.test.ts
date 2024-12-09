@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as os from 'os';
@@ -28,7 +27,7 @@ describe('Utils', () => {
             expect(normalizePathForRemote('C:\\path\\to\\file')).toBe('C:/path/to/file');
             expect(normalizePathForRemote('C:/path/to/file')).toBe('C:/path/to/file');
         });
-      });
+    });
 
     describe('isUUID', () => {
         it('should return true for valid UUIDs', () => {
@@ -40,5 +39,5 @@ describe('Utils', () => {
             expect(isUUID('123e4567-e89b-12d3-a456-42661417400')).toBe(false); // One character short
             expect(isUUID('123e4567-e89b-12d3-a456-4266141740000')).toBe(false); // One character too long
         });
-      });
+    });
 });

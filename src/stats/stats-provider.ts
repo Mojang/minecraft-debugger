@@ -19,13 +19,53 @@ export interface StatDataModel {
 
 export interface StatMessageModel {
     tick: number;
+    type: string;
     stats: StatDataModel[];
 }
 
-export type StatsListener = (stat: StatData) => void;
+export interface StatsListener {
+    onStatUpdated: (stat: StatData) => void;
+    onSpeedUpdated: (speed: number) => void;
+    onPauseUpdated: (paused: boolean) => void;
+}
 
-export class StatsProvider2 {
-    private _statListeners: StatsListener[] = [];
+export class StatsProvider {
+    protected _statListeners: StatsListener[];
+
+    constructor(public readonly name: string, public readonly uniqueId: string) {
+        this._statListeners = [];
+    }
+
+    public setStats(stats: StatMessageModel) {
+        for (const stat of stats.stats) {
+            this._fireStatUpdated(stat, stats.tick);
+        }
+    }
+
+    public start() {
+        throw new Error('Method not implemented.');
+    }
+    public stop() {
+        throw new Error('Method not implemented.');
+    }
+    public pause() {
+        throw new Error('Method not implemented.');
+    }
+    public resume() {
+        throw new Error('Method not implemented.');
+    }
+    public faster() {
+        throw new Error('Method not implemented.');
+    }
+    public slower() {
+        throw new Error('Method not implemented.');
+    }
+    public setSpeed(speed: string) {
+        throw new Error('Method not implemented.');
+    }
+    public manualControl(): boolean {
+        return false;
+    }
 
     public addStatListener(listener: StatsListener) {
         this._statListeners.push(listener);
@@ -49,7 +89,7 @@ export class StatsProvider2 {
                 values: stat.values ?? [],
                 tick: tick,
             };
-            listener(statData);
+            listener.onStatUpdated(statData);
 
             if (stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
@@ -57,11 +97,5 @@ export class StatsProvider2 {
                 });
             }
         });
-    }
-
-    public setStats(stats: StatMessageModel) {
-        for (const stat of stats.stats) {
-            this._fireStatUpdated(stat, stats.tick);
-        }
     }
 }

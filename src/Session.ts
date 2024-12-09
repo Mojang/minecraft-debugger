@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { createConnection, Server, Socket } from 'net';
@@ -28,10 +27,10 @@ import {
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { EventEmitter } from 'events';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
-import { MessageStreamParser } from './MessageStreamParser';
-import { SourceMaps } from './SourceMaps';
-import { StatMessageModel, StatsProvider2 } from './StatsProvider2';
-import { HomeViewProvider } from './panels/HomeViewProvider';
+import { MessageStreamParser } from './message-stream-parser';
+import { SourceMaps } from './source-maps';
+import { StatMessageModel, StatsProvider } from './stats/stats-provider';
+import { HomeViewProvider } from './panels/home-view-provider';
 import * as path from 'path';
 import * as fs from 'fs';
 import { isUUID } from './Utils';
@@ -144,10 +143,10 @@ export class Session extends DebugSession {
 
     // external communication
     private _homeViewProvider: HomeViewProvider;
-    private _statsProvider: StatsProvider2;
+    private _statsProvider: StatsProvider;
     private _eventEmitter: EventEmitter;
 
-    public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider2, eventEmitter: EventEmitter) {
+    public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider, eventEmitter: EventEmitter) {
         super();
 
         this._homeViewProvider = homeViewProvider;
@@ -192,7 +191,7 @@ export class Session extends DebugSession {
                 command: {
                     command: command,
                     dimension_type: 'overworld',
-                }
+                },
             });
         }
     }
@@ -202,7 +201,7 @@ export class Session extends DebugSession {
             type: 'startProfiler',
             profiler: {
                 target_module_uuid: this._targetModuleUuid,
-            }
+            },
         });
     }
 
@@ -212,7 +211,7 @@ export class Session extends DebugSession {
             profiler: {
                 captures_path: capturesBasePath,
                 target_module_uuid: this._targetModuleUuid,
-            }
+            },
         });
     }
 
@@ -231,10 +230,9 @@ export class Session extends DebugSession {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
                 return;
             }
-            commands.executeCommand('vscode.open', Uri.file(captureFullPath))
-                .then(undefined, error => {
-                    this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
-                });
+            commands.executeCommand('vscode.open', Uri.file(captureFullPath)).then(undefined, error => {
+                this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
+            });
 
             // notify home view of new capture
             this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, newCaptureFileName);
@@ -1026,14 +1024,17 @@ export class Session extends DebugSession {
         const reloadOnSourceChangesEnabled = config.get<boolean>('reloadOnSourceChanges.enabled');
         const reloadOnSourceChangesDelay = Math.max(config.get<number>('reloadOnSourceChanges.delay') ?? 0, 0);
         const reloadOnSourceChangesGlobPattern = config.get<string>('reloadOnSourceChanges.globPattern');
-                
+
         // watch all files within the workspace matching custom glob pattern.
         // only active if Minecraft /reload is enabled
         let globPattern: RelativePattern | undefined = undefined;
         if (reloadOnSourceChangesGlobPattern && reloadOnSourceChangesEnabled) {
             const workspaceFolders = workspace.workspaceFolders;
             if (workspaceFolders && workspaceFolders.length > 0) {
-                globPattern = new RelativePattern(workspaceFolders[0].uri.fsPath ?? '', reloadOnSourceChangesGlobPattern);
+                globPattern = new RelativePattern(
+                    workspaceFolders[0].uri.fsPath ?? '',
+                    reloadOnSourceChangesGlobPattern
+                );
             }
         }
         // watch source map files and reload cache if changed.
@@ -1064,7 +1065,7 @@ export class Session extends DebugSession {
                 }
             }, reloadOnSourceChangesDelay);
         };
-    
+
         if (this._sourceFileWatcher) {
             this._sourceFileWatcher.onDidChange(onSourceChanged);
             this._sourceFileWatcher.onDidCreate(onSourceChanged);

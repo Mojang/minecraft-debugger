@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import React from 'react';
@@ -54,6 +53,6 @@ const CommandSection: React.FC<CommandSectionProps> = ({
             ))}
         </div>
     );
-}
+};
 
-export default CommandSection;
+export default React.memo(CommandSection);

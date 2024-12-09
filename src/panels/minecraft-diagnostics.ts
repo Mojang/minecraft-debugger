@@ -55,6 +55,7 @@ export class MinecraftDiagnosticsPanel {
                     this._statsTracker.setSpeed(message.speed);
                     break;
                 default:
+                    console.error('Unknown message type:', message.type);
                     break;
             }
         });
@@ -96,16 +97,16 @@ export class MinecraftDiagnosticsPanel {
     }
 
     public static render(extensionUri: Uri, statsTracker: StatsProvider) {
-        const statsTrackerId = statsTracker.getUniqueId();
+        const statsTrackerId = statsTracker.uniqueId;
         const existingPanel = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.find(
-            panel => panel._statsTracker.getUniqueId() === statsTrackerId
+            panel => panel._statsTracker.uniqueId === statsTrackerId
         );
         if (existingPanel) {
             existingPanel._panel.reveal(ViewColumn.One);
         } else {
             const panel = window.createWebviewPanel(
                 statsTrackerId,
-                `Minecraft Diagnostics - [${statsTracker.getName()}]`,
+                `Minecraft Diagnostics - [${statsTracker.name}]`,
                 ViewColumn.Active,
                 {
                     retainContextWhenHidden: true,

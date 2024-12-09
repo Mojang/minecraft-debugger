@@ -30,4 +30,4 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({
     );
 };
 
-export default GeneralSection;
+export default React.memo(GeneralSection);

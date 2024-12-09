@@ -30,22 +30,10 @@ export interface StatsListener {
 }
 
 export class StatsProvider {
-    private _name: string;
-    private _uniqueId: string;
     protected _statListeners: StatsListener[];
 
-    constructor(name: string, id: string) {
-        this._name = name;
-        this._uniqueId = id;
+    constructor(public readonly name: string, public readonly uniqueId: string) {
         this._statListeners = [];
-    }
-
-    public getName(): string {
-        return this._name;
-    }
-
-    public getUniqueId(): string {
-        return this._uniqueId;
     }
 
     public setStats(stats: StatMessageModel) {
@@ -54,13 +42,27 @@ export class StatsProvider {
         }
     }
 
-    public start() {}
-    public stop() {}
-    public pause() {}
-    public resume() {}
-    public faster() {}
-    public slower() {}
-    public setSpeed(speed: string) {}
+    public start() {
+        throw new Error('Method not implemented.');
+    }
+    public stop() {
+        throw new Error('Method not implemented.');
+    }
+    public pause() {
+        throw new Error('Method not implemented.');
+    }
+    public resume() {
+        throw new Error('Method not implemented.');
+    }
+    public faster() {
+        throw new Error('Method not implemented.');
+    }
+    public slower() {
+        throw new Error('Method not implemented.');
+    }
+    public setSpeed(speed: string) {
+        throw new Error('Method not implemented.');
+    }
     public manualControl(): boolean {
         return false;
     }

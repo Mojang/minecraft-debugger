@@ -1,4 +1,3 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import React from 'react';
@@ -34,7 +33,7 @@ const ProfilerSection: React.FC<ProfilerSectionProps> = ({
     onStopProfiler,
     isProfilerCapturing,
     supportsProfiler,
-    debuggerConnected
+    debuggerConnected,
 }) => {
     return (
         <div className="section">
@@ -44,9 +43,7 @@ const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                 <VSCodeTextField
                     type="text"
                     value={capturesBasePath}
-                    onChange={event =>
-                        onCaptureBasePathEdited(event as React.ChangeEvent<HTMLInputElement>)
-                    }
+                    onChange={event => onCaptureBasePathEdited(event as React.ChangeEvent<HTMLInputElement>)}
                     className="capture-path-input"
                 />
                 <VSCodeButton className="browse-button" onClick={onCaptureBasePathBrowseButtonPressed}>
@@ -59,9 +56,9 @@ const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                     onClick={isProfilerCapturing ? onStopProfiler : onStartProfiler}
                     disabled={!debuggerConnected || !supportsProfiler || capturesBasePath === ''}
                 >
-                    {isProfilerCapturing ? "Stop Profiler" : "Start Profiler"}
+                    {isProfilerCapturing ? 'Stop Profiler' : 'Start Profiler'}
                 </VSCodeButton>
-                <div className={`profiler-spinner ${isProfilerCapturing ? "profiler-spinner-spinning" : ""}`}></div>
+                <div className={`profiler-spinner ${isProfilerCapturing ? 'profiler-spinner-spinning' : ''}`}></div>
             </div>
             <h4 className={`sub-title ${captureItems.length === 0 ? 'hidden' : ''}`}>Captures</h4>
             <div
@@ -71,17 +68,17 @@ const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                 {captureItems.map(captureItem => (
                     <div
                         key={captureItem.fileName}
-                        className={`capture-item ${selectedCaptureItem?.fileName === captureItem.fileName ? 'capture-item-selected' : ''}`}
+                        className={`capture-item ${
+                            selectedCaptureItem?.fileName === captureItem.fileName ? 'capture-item-selected' : ''
+                        }`}
                         onClick={() => onSelectCaptureItem(captureItem)}
                     >
-                        <span>
-                            {captureItem.fileName}
-                        </span>
+                        <span>{captureItem.fileName}</span>
                         <button
                             className="capture-item-delete-button"
-                            onClick={(event) => {
+                            onClick={event => {
                                 event.stopPropagation();
-                                onDeleteCaptureItem(captureItem)
+                                onDeleteCaptureItem(captureItem);
                             }}
                         >
                             Delete
@@ -93,4 +90,4 @@ const ProfilerSection: React.FC<ProfilerSectionProps> = ({
     );
 };
 
-export default ProfilerSection;
+export default React.memo(ProfilerSection);

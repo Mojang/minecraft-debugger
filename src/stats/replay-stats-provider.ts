@@ -30,7 +30,7 @@ export class ReplayStatsProvider extends StatsProvider {
         this._replayFilePath = replayFilePath;
         this._replayStreamReader = null;
         this._simTickFreqency = this.DEFAULT_SPEED;
-        this._simTickPeriod = this.MILLIS_PER_SECOND / this._simTickFreqency; // ms per tick
+        this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._simTickCurrent = 0;
         this._simTimeoutId = null;
         this._pendingStats = [];
@@ -60,7 +60,7 @@ export class ReplayStatsProvider extends StatsProvider {
         }
         this._replayStreamReader?.close();
         this._simTickFreqency = this.DEFAULT_SPEED;
-        this._simTickPeriod = this.MILLIS_PER_SECOND / this._simTickFreqency;
+        this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._simTickCurrent = 0;
         this._simTimeoutId = null;
         this._pendingStats = [];
@@ -89,7 +89,7 @@ export class ReplayStatsProvider extends StatsProvider {
         if (this._simTickFreqency > this.MAX_SPEED) {
             this._simTickFreqency = this.MAX_SPEED;
         }
-        this._simTickPeriod = this.MILLIS_PER_SECOND / this._simTickFreqency;
+        this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._fireSpeedChanged();
     }
 
@@ -98,7 +98,7 @@ export class ReplayStatsProvider extends StatsProvider {
         if (this._simTickFreqency < this.MIN_SPEED) {
             this._simTickFreqency = this.MIN_SPEED;
         }
-        this._simTickPeriod = this.MILLIS_PER_SECOND / this._simTickFreqency;
+        this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._fireSpeedChanged();
     }
 
@@ -109,7 +109,7 @@ export class ReplayStatsProvider extends StatsProvider {
         } else if (this._simTickFreqency > this.MAX_SPEED) {
             this._simTickFreqency = this.MAX_SPEED;
         }
-        this._simTickPeriod = this.MILLIS_PER_SECOND / this._simTickFreqency;
+        this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._fireSpeedChanged();
     }
 
@@ -170,5 +170,9 @@ export class ReplayStatsProvider extends StatsProvider {
             // paused if no timeout id
             listener.onPauseUpdated(this._simTimeoutId == null);
         });
+    }
+
+    private _calcSimPeriod(simFrequency: number): number {
+        return this.MILLIS_PER_SECOND / simFrequency;
     }
 }

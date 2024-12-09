@@ -59,4 +59,4 @@ const ReplayControls: React.FC<ReplayControlsProps> = ({
     );
 };
 
-export default ReplayControls;
+export default React.memo(ReplayControls);

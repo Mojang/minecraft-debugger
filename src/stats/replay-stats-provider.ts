@@ -156,7 +156,7 @@ export class ReplayStatsProvider extends StatsProvider {
     }
 
     private _onCloseStream() {
-        this.stop();
+        this._replayStreamReader = null;
     }
 
     private _fireSpeedChanged() {

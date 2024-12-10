@@ -54,15 +54,19 @@
         },
         "commands": [
             {
-                "command": "minecraft-debugger.showMinecraftDiagnostics",
-                "title": "Minecraft Diagnostics: Show"
+                "command": "minecraft-debugger.liveDiagnostics",
+                "title": "Minecraft Diagnostics: Show Live Stats"
+            },
+            {
+                "command": "minecraft-debugger.replayDiagnostics",
+                "title": "Minecraft Diagnostics: Open Stats Replay"
             },
             {
                 "command": "minecraft-debugger.minecraftReload",
                 "title": "Minecraft Reload"
             }
         ],
-        "keybindings":[
+        "keybindings": [
             {
                 "command": "minecraft-debugger.minecraftReload",
                 "key": "ctrl+shift+r",

@@ -1,53 +1,45 @@
-
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
-import { ConfigProvider } from './ConfigProvider';
-import { ServerDebugAdapterFactory } from './ServerDebugAdapterFactory';
-import { HomeViewProvider } from './panels/HomeViewProvider';
-import { MinecraftDiagnosticsPanel } from './panels/MinecraftDiagnostics';
-import { StatsProvider2 } from './StatsProvider2';
+import { ConfigProvider } from './config-provider';
 import { EventEmitter } from 'stream';
+import { HomeViewProvider } from './panels/home-view-provider';
+import { MinecraftDiagnosticsPanel } from './panels/minecraft-diagnostics';
+import { ServerDebugAdapterFactory } from './server-debug-adapter-factory';
+import { StatsProvider } from './stats/stats-provider';
+import { ReplayStatsProvider } from './stats/replay-stats-provider';
 
 // called when extension is activated
 //
 export function activate(context: vscode.ExtensionContext) {
-    const statsProvider = new StatsProvider2();
+    const liveStatsProvider = new StatsProvider('Live', 'minecraftDiagnosticsLive');
     const eventEmitter: EventEmitter = new EventEmitter();
 
     // home view
     const homeViewProvider = new HomeViewProvider(context.extensionUri, eventEmitter);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(HomeViewProvider.viewType, homeViewProvider));
 
-    // register commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('extension.minecraft-js.getPort', _config => {
-            return vscode.window.showInputBox({
-                placeHolder: 'Please enter the port Minecraft is listening on.',
-                value: '',
-            });
-        })
-    );
-
     // register a configuration provider for the 'minecraft-js' debug type
     const configProvider = new ConfigProvider();
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('minecraft-js', configProvider));
 
     // register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
-    let descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, statsProvider, eventEmitter);
+    let descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, liveStatsProvider, eventEmitter);
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
-
     if ('dispose' in descriptorFactory) {
         context.subscriptions.push(descriptorFactory);
     }
 
-    // Create the show diagnostics command
-    const showDiagnosticsCommand = vscode.commands.registerCommand(
-        'minecraft-debugger.showMinecraftDiagnostics',
-        () => {
-            MinecraftDiagnosticsPanel.render(context.extensionUri, statsProvider);
-        }
-    );
+    //
+    // Command Registrations
+    //
+
+    const getPortCommand = vscode.commands.registerCommand('extension.minecraft-js.getPort', () => {
+        return vscode.window.showInputBox({
+            placeHolder: 'Please enter the port Minecraft is listening on.',
+            value: '',
+        });
+    });
 
     const minecraftReloadCommand = vscode.commands.registerCommand('minecraft-debugger.minecraftReload', () => {
         if (!vscode.debug.activeDebugSession) {
@@ -76,8 +68,38 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
-    // Add command to the extension context
-    context.subscriptions.push(showDiagnosticsCommand, minecraftReloadCommand, runMinecraftCommand);
+    const liveDiagnosticsCommand = vscode.commands.registerCommand('minecraft-debugger.liveDiagnostics', () => {
+        MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider);
+    });
+
+    const replayDiagnosticsCommand = vscode.commands.registerCommand(
+        'minecraft-debugger.replayDiagnostics',
+        async () => {
+            const fileUri = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                openLabel: 'Select diagnostics capture to replay',
+                filters: {
+                    'MC Stats files': ['mcstats'],
+                    'All files': ['*'],
+                },
+            });
+            if (!fileUri || fileUri.length === 0) {
+                vscode.window.showErrorMessage('No file selected.');
+                return;
+            }
+            const replayStats = new ReplayStatsProvider(fileUri[0].fsPath);
+            MinecraftDiagnosticsPanel.render(context.extensionUri, replayStats);
+        }
+    );
+
+    // Add commands to the extension context
+    context.subscriptions.push(
+        getPortCommand,
+        minecraftReloadCommand,
+        runMinecraftCommand,
+        liveDiagnosticsCommand,
+        replayDiagnosticsCommand
+    );
 }
 
 // called when extension is deactivated

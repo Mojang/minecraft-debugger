@@ -24,9 +24,11 @@ export interface StatMessageModel {
 }
 
 export interface StatsListener {
-    onStatUpdated: (stat: StatData) => void;
-    onSpeedUpdated: (speed: number) => void;
-    onPauseUpdated: (paused: boolean) => void;
+    onStatUpdated?: (stat: StatData) => void;
+    onSpeedUpdated?: (speed: number) => void;
+    onPauseUpdated?: (paused: boolean) => void;
+    onStopped?: () => void;
+    onNotification?: (message: string) => void;
 }
 
 export class StatsProvider {
@@ -89,7 +91,7 @@ export class StatsProvider {
                 values: stat.values ?? [],
                 tick: tick,
             };
-            listener.onStatUpdated(statData);
+            listener.onStatUpdated?.(statData);
 
             if (stat.children) {
                 stat.children.forEach((child: StatDataModel) => {

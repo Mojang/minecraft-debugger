@@ -7,8 +7,7 @@ import * as zlib from 'zlib';
 import { StatMessageModel, StatsProvider, StatsListener } from './stats-provider';
 
 interface ReplayStatMessageHeader {
-    encoding: string; // base64 or empty
-    compression: string; // gzip or empty
+    encoding?: string;
 }
 
 export class ReplayStatsProvider extends StatsProvider {
@@ -19,7 +18,7 @@ export class ReplayStatsProvider extends StatsProvider {
     private _simTickCurrent: number;
     private _simTimeoutId: NodeJS.Timeout | null;
     private _replayHeader: ReplayStatMessageHeader | undefined;
-    private _isBase64Encoded: boolean = false;
+    private _base64Gzipped: boolean;
     private _pendingStats: StatMessageModel[];
     private _onComplete: (() => void) | undefined;
 
@@ -28,7 +27,8 @@ export class ReplayStatsProvider extends StatsProvider {
     // pause stream when lines exceed this threshold
     private static readonly PENDING_STATS_BUFFER_MAX = ReplayStatsProvider.PENDING_STATS_BUFFER_MIN * 2;
     // supported encodings
-    private readonly BASE64_GZIP_ENCODING = 'base64-gzip';
+    private readonly ENCODING_BASE64_GZIP = 'base64-gzip';
+    private readonly ENCODING_UTF8 = 'utf8';
 
     // ticks per second (frequency)
     private readonly MILLIS_PER_SECOND = 1000;
@@ -81,7 +81,7 @@ export class ReplayStatsProvider extends StatsProvider {
             this._onComplete = undefined;
         }
         if (this._replayStreamReader) {
-        this._replayStreamReader?.close();
+            this._replayStreamReader?.close();
             this._replayStreamReader = null;
         }
         this._simTickFreqency = this.DEFAULT_SPEED;
@@ -170,35 +170,38 @@ export class ReplayStatsProvider extends StatsProvider {
     }
 
     private _onReadNextStatMessage(rawLine: string) {
-        // first line is the header
+        // first line could be the header
         if (this._replayHeader === undefined) {
             try {
                 const headerJson = JSON.parse(rawLine);
-                this._replayHeader = headerJson as ReplayStatMessageHeader;
-                this._isGzipped = this._replayHeader.compression === 'gzip';
+                if (headerJson.tick === undefined) {
+                    // if no 'tick' then this is the header, check encoding
+                    this._replayHeader = headerJson as ReplayStatMessageHeader;
+                    const encoding = this._replayHeader.encoding ?? this.ENCODING_UTF8;
+                    this._base64Gzipped = encoding === this.ENCODING_BASE64_GZIP;
+                } else {
+                    this._replayHeader = {}; // no header
+                }
+                return;
             } catch (error) {
-                this._closeReplayStreamReader();
+                this._errorCloseStream('Failed to parse replay header.');
                 return;
             }
-            return;
         }
 
-        let processedLine = rawLine;
+        let decodedLine = rawLine;
+        if (this._base64Gzipped) {
             try {
                 const buffer = Buffer.from(rawLine, 'base64');
-                if (this._isGzipped) {
-                    processedLine = zlib.gunzipSync(buffer).toString('utf-8');
-                } else {
-                    processedLine = buffer.toString('utf-8');
-                }
+                decodedLine = zlib.gunzipSync(buffer).toString('utf-8');
             } catch (error) {
-                this._closeReplayStreamReader();
+                this._errorCloseStream('Failed to decode replay data.');
                 return;
             }
         }
 
         try {
-            const jsonLine = JSON.parse(processedLine);
+            const jsonLine = JSON.parse(decodedLine);
             const statMessage = jsonLine as StatMessageModel;
             // seed sim tick with first message
             if (this._simTickCurrent === 0) {
@@ -211,13 +214,15 @@ export class ReplayStatsProvider extends StatsProvider {
                 this._replayStreamReader?.pause();
             }
         } catch (error) {
-            this._closeReplayStreamReader();
+            this._errorCloseStream('Failed to process replay data.');
         }
     }
 
+    private _errorCloseStream(message: string) {
         if (this._replayStreamReader) {
+            this._replayStreamReader.close();
+            this._replayStreamReader = null;
         }
-        this._replayStreamReader = null;
         this._fireNotification(message);
     }
 

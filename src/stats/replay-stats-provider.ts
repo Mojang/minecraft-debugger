@@ -174,15 +174,14 @@ export class ReplayStatsProvider extends StatsProvider {
         if (this._replayHeader === undefined) {
             try {
                 const headerJson = JSON.parse(rawLine);
-                if (headerJson.tick === undefined) {
-                    // if no 'tick' then this is the header, check encoding
+                if (headerJson.tick) {
+                    this._replayHeader = {}; // no header, fall through to process this line as stat data
+                } else {
                     this._replayHeader = headerJson as ReplayStatMessageHeader;
                     const encoding = this._replayHeader.encoding ?? this.ENCODING_UTF8;
                     this._base64Gzipped = encoding === this.ENCODING_BASE64_GZIP;
-                } else {
-                    this._replayHeader = {}; // no header
+                    return;
                 }
-                return;
             } catch (error) {
                 this._errorCloseStream('Failed to parse replay header.');
                 return;

@@ -81,7 +81,7 @@ export class ReplayStatsProvider extends StatsProvider {
             this._onComplete = undefined;
         }
         if (this._replayStreamReader) {
-            this._replayStreamReader?.close();
+            this._replayStreamReader.close();
             this._replayStreamReader = null;
         }
         this._simTickFreqency = this.DEFAULT_SPEED;

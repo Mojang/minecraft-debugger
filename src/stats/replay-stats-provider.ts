@@ -170,13 +170,13 @@ export class ReplayStatsProvider extends StatsProvider {
     }
 
     private _onReadNextStatMessage(rawLine: string) {
-        // first line could be the header
         if (this._replayHeader === undefined) {
             try {
                 const headerJson = JSON.parse(rawLine);
                 if (headerJson.tick) {
                     this._replayHeader = {}; // no header, fall through to process this line as stat data
                 } else {
+                    // first line was header, set encoding and return
                     this._replayHeader = headerJson as ReplayStatMessageHeader;
                     const encoding = this._replayHeader.encoding ?? this.ENCODING_UTF8;
                     this._base64Gzipped = encoding === this.ENCODING_BASE64_GZIP;

@@ -10,6 +10,10 @@ interface ReplayStatMessageHeader {
     encoding?: string;
 }
 
+export class ReplayResults {
+    statLinesProcessed: number = 0;
+}
+
 export class ReplayStatsProvider extends StatsProvider {
     private _replayFilePath: string;
     private _replayStreamReader: readline.Interface | null;
@@ -20,7 +24,8 @@ export class ReplayStatsProvider extends StatsProvider {
     private _replayHeader: ReplayStatMessageHeader | undefined;
     private _base64Gzipped: boolean;
     private _pendingStats: StatMessageModel[];
-    private _onComplete: (() => void) | undefined;
+    private _replayResults: ReplayResults;
+    private _onComplete: ((results: ReplayResults) => void) | undefined;
 
     // resume stream when lines drop below this threshold
     private static readonly PENDING_STATS_BUFFER_MIN = 256;
@@ -46,10 +51,11 @@ export class ReplayStatsProvider extends StatsProvider {
         this._simTimeoutId = null;
         this._base64Gzipped = false;
         this._pendingStats = [];
+        this._replayResults = new ReplayResults();
         this._onComplete = undefined;
     }
 
-    public override start() {
+    public override start(): Promise<ReplayResults> {
         this.stop();
 
         const fileStream = fs.createReadStream(this._replayFilePath);
@@ -66,7 +72,7 @@ export class ReplayStatsProvider extends StatsProvider {
         this._fireSpeedChanged();
         this._firePauseChanged();
 
-        return new Promise<void>(resolve => {
+        return new Promise<ReplayResults>(resolve => {
             this._onComplete = resolve;
         });
     }
@@ -77,7 +83,7 @@ export class ReplayStatsProvider extends StatsProvider {
             clearTimeout(this._simTimeoutId);
         }
         if (this._onComplete) {
-            this._onComplete();
+            this._onComplete(this._replayResults);
             this._onComplete = undefined;
         }
         if (this._replayStreamReader) {
@@ -206,6 +212,7 @@ export class ReplayStatsProvider extends StatsProvider {
             if (this._simTickCurrent === 0) {
                 this._simTickCurrent = statMessage.tick;
             }
+            this._replayResults.statLinesProcessed++;
             // add stats messages to queue
             this._pendingStats.push(statMessage);
             // pause stream reader if we've got enough data for now

@@ -15,7 +15,8 @@ describe('ReplayStatsProvider', () => {
             },
         };
         replay.addStatListener(statsCallback);
-        await replay.start();
+        let results = await replay.start();
+        expect(results.statLinesProcessed).toBe(3);
         expect(statCount).toBeGreaterThan(0); // no idea how many are in there
     });
 
@@ -30,7 +31,8 @@ describe('ReplayStatsProvider', () => {
             },
         };
         replay.addStatListener(statsCallback);
-        await replay.start();
+        let results = await replay.start();
+        expect(results.statLinesProcessed).toBe(3);
         expect(statCount).toBeGreaterThan(0);
     });
 
@@ -45,7 +47,8 @@ describe('ReplayStatsProvider', () => {
             },
         };
         replay.addStatListener(statsCallback);
-        await replay.start();
+        let results = await replay.start();
+        expect(results.statLinesProcessed).toBe(3);
         expect(statCount).toBeGreaterThan(0);
     });
 
@@ -59,7 +62,8 @@ describe('ReplayStatsProvider', () => {
             },
         };
         replay.addStatListener(statsCallback);
-        await replay.start();
+        let results = await replay.start();
+        expect(results.statLinesProcessed).toBe(0);
         expect(notification).toBe('Failed to read replay file.');
     });
 });

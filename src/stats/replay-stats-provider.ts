@@ -11,7 +11,8 @@ interface ReplayStatMessageHeader {
 }
 
 export class ReplayResults {
-    statLinesProcessed: number = 0;
+    statLinesRead: number = 0;
+    statEventsSent: number = 0;
 }
 
 export class ReplayStatsProvider extends StatsProvider {
@@ -158,6 +159,7 @@ export class ReplayStatsProvider extends StatsProvider {
             } else if (nextStatsMessage.tick === this._simTickCurrent) {
                 // process and remove the message, then increment sim tick
                 this.setStats(nextStatsMessage);
+                this._replayResults.statEventsSent++;
                 this._pendingStats.shift();
                 this._simTickCurrent++;
             }
@@ -212,7 +214,7 @@ export class ReplayStatsProvider extends StatsProvider {
             if (this._simTickCurrent === 0) {
                 this._simTickCurrent = statMessage.tick;
             }
-            this._replayResults.statLinesProcessed++;
+            this._replayResults.statLinesRead++;
             // add stats messages to queue
             this._pendingStats.push(statMessage);
             // pause stream reader if we've got enough data for now

@@ -129,7 +129,6 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 
     private _refreshProfilerCaptures(capturesBasePath: string, newCaptureFileName?: string) {
         if (!capturesBasePath) {
-            console.error('Captures path is invalid.');
             return;
         }
         fs.readdir(capturesBasePath, (err, files) => {

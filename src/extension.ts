@@ -77,10 +77,10 @@ export function activate(context: vscode.ExtensionContext) {
         async () => {
             const fileUri = await vscode.window.showOpenDialog({
                 canSelectMany: false,
-                openLabel: 'Select diagnostics capture to replay',
+                openLabel: 'Open',
                 filters: {
-                    'MC Stats files': ['mcstats'],
-                    'All files': ['*'],
+                    'MC Stats Files': ['mcstats'],
+                    'All Files': ['*'],
                 },
             });
             if (!fileUri || fileUri.length === 0) {

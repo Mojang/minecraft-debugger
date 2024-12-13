@@ -3,7 +3,17 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
 import * as path from 'path';
+import * as zlib from 'zlib';
 import { StatMessageModel, StatsProvider, StatsListener } from './stats-provider';
+
+interface ReplayStatMessageHeader {
+    encoding?: string;
+}
+
+export class ReplayResults {
+    statLinesRead: number = 0;
+    statEventsSent: number = 0;
+}
 
 export class ReplayStatsProvider extends StatsProvider {
     private _replayFilePath: string;
@@ -12,12 +22,19 @@ export class ReplayStatsProvider extends StatsProvider {
     private _simTickPeriod: number;
     private _simTickCurrent: number;
     private _simTimeoutId: NodeJS.Timeout | null;
+    private _replayHeader: ReplayStatMessageHeader | undefined;
+    private _base64Gzipped: boolean;
     private _pendingStats: StatMessageModel[];
+    private _replayResults: ReplayResults;
+    private _onComplete: ((results: ReplayResults) => void) | undefined;
 
     // resume stream when lines drop below this threshold
     private static readonly PENDING_STATS_BUFFER_MIN = 256;
     // pause stream when lines exceed this threshold
     private static readonly PENDING_STATS_BUFFER_MAX = ReplayStatsProvider.PENDING_STATS_BUFFER_MIN * 2;
+    // supported encodings
+    private readonly ENCODING_BASE64_GZIP = 'base64-gzip';
+    private readonly ENCODING_UTF8 = 'utf8';
 
     // ticks per second (frequency)
     private readonly MILLIS_PER_SECOND = 1000;
@@ -33,10 +50,13 @@ export class ReplayStatsProvider extends StatsProvider {
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._simTickCurrent = 0;
         this._simTimeoutId = null;
+        this._base64Gzipped = false;
         this._pendingStats = [];
+        this._replayResults = new ReplayResults();
+        this._onComplete = undefined;
     }
 
-    public override start() {
+    public override start(): Promise<ReplayResults> {
         this.stop();
 
         const fileStream = fs.createReadStream(this._replayFilePath);
@@ -44,27 +64,39 @@ export class ReplayStatsProvider extends StatsProvider {
             input: fileStream,
             crlfDelay: Infinity,
         });
-
-        this._replayStreamReader.on('line', line => this._onReadNextStatMessage(line));
-        this._replayStreamReader.on('close', () => this._onCloseStream());
+        this._replayStreamReader.on('line', line => this._onReadNextLineFromReplayStream(line));
+        this._replayStreamReader.on('close', () => this._onCloseReplayStream());
+        this._replayStreamReader.on('error', () => this._errorCloseReplayStream('Failed to read replay file.'));
 
         // begin simulation
         this._simTimeoutId = setTimeout(() => this._updateSim(), this._simTickPeriod);
         this._fireSpeedChanged();
         this._firePauseChanged();
+
+        return new Promise<ReplayResults>(resolve => {
+            this._onComplete = resolve;
+        });
     }
 
     public override stop() {
+        this._fireStopped();
         if (this._simTimeoutId) {
             clearTimeout(this._simTimeoutId);
         }
-        this._replayStreamReader?.close();
+        if (this._onComplete) {
+            this._onComplete(this._replayResults);
+            this._onComplete = undefined;
+        }
+        if (this._replayStreamReader) {
+            this._replayStreamReader.close();
+            this._replayStreamReader = null;
+        }
         this._simTickFreqency = this.DEFAULT_SPEED;
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._simTickCurrent = 0;
         this._simTimeoutId = null;
+        this._base64Gzipped = false;
         this._pendingStats = [];
-        this._firePauseChanged();
     }
 
     public override pause() {
@@ -127,6 +159,7 @@ export class ReplayStatsProvider extends StatsProvider {
             } else if (nextStatsMessage.tick === this._simTickCurrent) {
                 // process and remove the message, then increment sim tick
                 this.setStats(nextStatsMessage);
+                this._replayResults.statEventsSent++;
                 this._pendingStats.shift();
                 this._simTickCurrent++;
             }
@@ -138,37 +171,95 @@ export class ReplayStatsProvider extends StatsProvider {
         // schedule next update as long as we have pending data to process or there's still a stream to read
         if (this._replayStreamReader || this._pendingStats.length > 0) {
             this._simTimeoutId = setTimeout(() => this._updateSim(), this._simTickPeriod);
+        } else {
+            // no more data to process
+            this.stop();
         }
     }
 
-    private _onReadNextStatMessage(line: string) {
-        const statsMessageJson = JSON.parse(line);
-        // seed sim tick with first message
-        if (this._simTickCurrent === 0) {
-            this._simTickCurrent = statsMessageJson.tick;
+    private _onReadNextLineFromReplayStream(rawLine: string) {
+        if (this._replayHeader === undefined) {
+            try {
+                const headerJson = JSON.parse(rawLine);
+                if (headerJson.tick) {
+                    this._replayHeader = {}; // no header, fall through to process this line as stat data
+                } else {
+                    // first line was header, set encoding and return
+                    this._replayHeader = headerJson as ReplayStatMessageHeader;
+                    const encoding = this._replayHeader.encoding ?? this.ENCODING_UTF8;
+                    this._base64Gzipped = encoding === this.ENCODING_BASE64_GZIP;
+                    return;
+                }
+            } catch (error) {
+                this._errorCloseReplayStream('Failed to parse replay header.');
+                return;
+            }
         }
-        // add stats messages to queue
-        this._pendingStats.push(statsMessageJson as StatMessageModel);
-        // pause stream reader if we've got enough data for now
-        if (this._pendingStats.length > ReplayStatsProvider.PENDING_STATS_BUFFER_MAX) {
-            this._replayStreamReader?.pause();
+
+        let decodedLine = rawLine;
+        if (this._base64Gzipped) {
+            try {
+                const buffer = Buffer.from(rawLine, 'base64');
+                decodedLine = zlib.gunzipSync(buffer).toString('utf-8');
+            } catch (error) {
+                this._errorCloseReplayStream('Failed to decode replay data.');
+                return;
+            }
+        }
+
+        try {
+            const jsonLine = JSON.parse(decodedLine);
+            const statMessage = jsonLine as StatMessageModel;
+            // seed sim tick with first message
+            if (this._simTickCurrent === 0) {
+                this._simTickCurrent = statMessage.tick;
+            }
+            this._replayResults.statLinesRead++;
+            // add stats messages to queue
+            this._pendingStats.push(statMessage);
+            // pause stream reader if we've got enough data for now
+            if (this._pendingStats.length > ReplayStatsProvider.PENDING_STATS_BUFFER_MAX) {
+                this._replayStreamReader?.pause();
+            }
+        } catch (error) {
+            this._errorCloseReplayStream('Failed to process replay data.');
         }
     }
 
-    private _onCloseStream() {
+    private _errorCloseReplayStream(message: string) {
+        if (this._replayStreamReader) {
+            this._replayStreamReader.close();
+            this._replayStreamReader = null;
+        }
+        this._fireNotification(message);
+    }
+
+    private _onCloseReplayStream() {
         this._replayStreamReader = null;
     }
 
     private _fireSpeedChanged() {
         this._statListeners.forEach((listener: StatsListener) => {
-            listener.onSpeedUpdated(this._simTickFreqency);
+            listener.onSpeedUpdated?.(this._simTickFreqency);
         });
     }
 
     private _firePauseChanged() {
         this._statListeners.forEach((listener: StatsListener) => {
             // paused if no timeout id
-            listener.onPauseUpdated(this._simTimeoutId == null);
+            listener.onPauseUpdated?.(this._simTimeoutId == null);
+        });
+    }
+
+    private _fireStopped() {
+        this._statListeners.forEach((listener: StatsListener) => {
+            listener.onStopped?.();
+        });
+    }
+
+    private _fireNotification(message: string) {
+        this._statListeners.forEach((listener: StatsListener) => {
+            listener.onNotification?.(message);
         });
     }
 

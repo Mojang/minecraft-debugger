@@ -91,6 +91,9 @@ export class MinecraftDiagnosticsPanel {
                 };
                 this._panel.webview.postMessage(message);
             },
+            onNotification: (message: string) => {
+                window.showInformationMessage(message);
+            },
         };
 
         this._statsTracker.addStatListener(this._statsCallback);

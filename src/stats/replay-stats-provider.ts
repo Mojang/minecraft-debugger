@@ -64,9 +64,9 @@ export class ReplayStatsProvider extends StatsProvider {
             input: fileStream,
             crlfDelay: Infinity,
         });
-        this._replayStreamReader.on('line', line => this._onReadNextStatMessage(line));
-        this._replayStreamReader.on('close', () => this._onCloseStream());
-        this._replayStreamReader.on('error', () => this._errorCloseStream('Failed to read replay file.'));
+        this._replayStreamReader.on('line', line => this._onReadNextLineFromReplayStream(line));
+        this._replayStreamReader.on('close', () => this._onCloseReplayStream());
+        this._replayStreamReader.on('error', () => this._errorCloseReplayStream('Failed to read replay file.'));
 
         // begin simulation
         this._simTimeoutId = setTimeout(() => this._updateSim(), this._simTickPeriod);
@@ -177,7 +177,7 @@ export class ReplayStatsProvider extends StatsProvider {
         }
     }
 
-    private _onReadNextStatMessage(rawLine: string) {
+    private _onReadNextLineFromReplayStream(rawLine: string) {
         if (this._replayHeader === undefined) {
             try {
                 const headerJson = JSON.parse(rawLine);
@@ -191,7 +191,7 @@ export class ReplayStatsProvider extends StatsProvider {
                     return;
                 }
             } catch (error) {
-                this._errorCloseStream('Failed to parse replay header.');
+                this._errorCloseReplayStream('Failed to parse replay header.');
                 return;
             }
         }
@@ -202,7 +202,7 @@ export class ReplayStatsProvider extends StatsProvider {
                 const buffer = Buffer.from(rawLine, 'base64');
                 decodedLine = zlib.gunzipSync(buffer).toString('utf-8');
             } catch (error) {
-                this._errorCloseStream('Failed to decode replay data.');
+                this._errorCloseReplayStream('Failed to decode replay data.');
                 return;
             }
         }
@@ -222,11 +222,11 @@ export class ReplayStatsProvider extends StatsProvider {
                 this._replayStreamReader?.pause();
             }
         } catch (error) {
-            this._errorCloseStream('Failed to process replay data.');
+            this._errorCloseReplayStream('Failed to process replay data.');
         }
     }
 
-    private _errorCloseStream(message: string) {
+    private _errorCloseReplayStream(message: string) {
         if (this._replayStreamReader) {
             this._replayStreamReader.close();
             this._replayStreamReader = null;
@@ -234,7 +234,7 @@ export class ReplayStatsProvider extends StatsProvider {
         this._fireNotification(message);
     }
 
-    private _onCloseStream() {
+    private _onCloseReplayStream() {
         this._replayStreamReader = null;
     }
 

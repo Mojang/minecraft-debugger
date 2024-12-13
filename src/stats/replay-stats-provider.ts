@@ -22,9 +22,9 @@ export class ReplayStatsProvider extends StatsProvider {
     private _simTickPeriod: number;
     private _simTickCurrent: number;
     private _simTimeoutId: NodeJS.Timeout | null;
-    private _replayHeader: ReplayStatMessageHeader | undefined;
     private _base64Gzipped: boolean;
     private _pendingStats: StatMessageModel[];
+    private _replayHeader: ReplayStatMessageHeader | undefined;
     private _replayResults: ReplayResults;
     private _onComplete: ((results: ReplayResults) => void) | undefined;
 
@@ -52,6 +52,7 @@ export class ReplayStatsProvider extends StatsProvider {
         this._simTimeoutId = null;
         this._base64Gzipped = false;
         this._pendingStats = [];
+        this._replayHeader = undefined;
         this._replayResults = new ReplayResults();
         this._onComplete = undefined;
     }
@@ -85,7 +86,6 @@ export class ReplayStatsProvider extends StatsProvider {
         }
         if (this._onComplete) {
             this._onComplete(this._replayResults);
-            this._onComplete = undefined;
         }
         if (this._replayStreamReader) {
             this._replayStreamReader.close();
@@ -97,6 +97,9 @@ export class ReplayStatsProvider extends StatsProvider {
         this._simTimeoutId = null;
         this._base64Gzipped = false;
         this._pendingStats = [];
+        this._replayHeader = undefined;
+        this._replayResults = new ReplayResults();
+        this._onComplete = undefined;
     }
 
     public override pause() {

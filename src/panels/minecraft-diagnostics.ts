@@ -32,12 +32,12 @@ export class MinecraftDiagnosticsPanel {
         this._panel.webview.onDidReceiveMessage(message => {
             switch (message.type) {
                 case 'restart':
+                    this._statsTracker.stop();
                     this._panel.webview.html = this._getWebviewContent(
                         this._panel.webview,
                         extensionUri,
                         statsTracker.manualControl()
                     );
-                    this._statsTracker.stop();
                     break;
                 case 'pause':
                     this._statsTracker.pause();

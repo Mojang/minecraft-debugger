@@ -55,6 +55,27 @@ describe('ReplayStatsProvider', () => {
         expect(statCount).toBeGreaterThan(0);
     });
 
+    it('should restart propertly', async () => {
+        const replayFilePath = path.resolve('./test/diagnostics-replay-compressed.mcstats');
+        const replay = new ReplayStatsProvider(replayFilePath);
+        let statCount = 0;
+        let statsCallback: StatsListener = {
+            onStatUpdated: (stat: StatData) => {
+                statCount++;
+                expect(stat).toBeDefined();
+            },
+        };
+        replay.addStatListener(statsCallback);
+        let results = await replay.start();
+        expect(results.statLinesRead).toBe(3);
+        expect(results.statEventsSent).toBe(3);
+        expect(statCount).toBeGreaterThan(0);
+        replay.stop();
+        let results2 = await replay.start();
+        expect(results2.statLinesRead).toBe(3);
+        expect(results2.statEventsSent).toBe(3);
+    });
+
     it('should fire notification on invalid file read', async () => {
         const replayFilePath = './not-a-real-file.mcstats';
         const replay = new ReplayStatsProvider(replayFilePath);

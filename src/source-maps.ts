@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { BasicSourceMapConsumer, MappedPosition, NullablePosition, SourceMapConsumer } from 'source-map';
-import { normalizePath, normalizePathForRemote } from './Utils';
+import { normalizePath, normalizePathForRemote } from './utils';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -31,9 +31,9 @@ import { MessageStreamParser } from './message-stream-parser';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
 import { HomeViewProvider } from './panels/home-view-provider';
+import { isUUID } from './utils';
 import * as path from 'path';
 import * as fs from 'fs';
-import { isUUID } from './Utils';
 
 interface PendingResponse {
     onSuccess?: Function;

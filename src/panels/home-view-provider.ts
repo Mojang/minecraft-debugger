@@ -6,7 +6,7 @@ import * as path from 'path';
 import { getNonce } from '../utilities/getNonce';
 import { getUri } from '../utilities/getUri';
 import { EventEmitter } from 'stream';
-import { MinecraftCapabilities } from '../Session';
+import { MinecraftCapabilities } from '../session';
 
 export class HomeViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'minecraft-debugger-home-panel';

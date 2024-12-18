@@ -3,7 +3,7 @@
 import * as Net from 'net';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'stream';
-import { Session } from './Session';
+import { Session } from './session';
 import { StatsProvider } from './stats/stats-provider';
 import { HomeViewProvider } from './panels/home-view-provider';
 

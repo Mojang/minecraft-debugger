@@ -2,7 +2,7 @@
 
 import * as os from 'os';
 import { describe, it, expect } from 'vitest';
-import { normalizePath, normalizePathForRemote, isUUID } from './Utils';
+import { normalizePath, normalizePathForRemote, isUUID } from './utils';
 
 describe('Utils', () => {
     describe('normalizePath', () => {

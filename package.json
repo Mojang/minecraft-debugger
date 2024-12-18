@@ -1,7 +1,7 @@
 {
     "name": "minecraft-debugger",
-    "displayName": "Minecraft Bedrock Edition Debugger",
-    "description": "Debug your JavaScript code running in Minecraft Bedrock Edition.",
+    "displayName": "Minecraft Bedrock Debugger",
+    "description": "Debug your JavaScript code running in Minecraft Bedrock.",
     "version": "0.0.0-semantically-released",
     "publisher": "mojang-studios",
     "author": {

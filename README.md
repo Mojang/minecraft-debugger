@@ -1,12 +1,12 @@
 <h1 align="center">
   <br>
-  Minecraft Bedrock Edition JavaScript Debugger
+  Minecraft Bedrock Debugger
   <br>
 </h1>
 
-<h4 align="center">Debug your JavaScript code running in Minecraft Bedrock Edition, from Visual Studio Code.</h4>
+<h4 align="center">Debug your JavaScript code running in Minecraft Bedrock, from Visual Studio Code.</h4>
 
-This Visual Studio Code extension will assist in debugging your JavaScript code when used in Minecraft Bedrock Edition clients and within Bedrock Dedicated Server. See more about the JavaScript capabilities at https://aka.ms/startwithmcscript, and see https://aka.ms/mcscriptdebugging for more on how to get started with script debugging in Minecraft.
+This Visual Studio Code extension will assist in debugging your JavaScript code when used in Minecraft Bedrock clients and within Bedrock Dedicated Server. See more about the JavaScript capabilities at https://aka.ms/startwithmcscript, and see https://aka.ms/mcscriptdebugging for more on how to get started with script debugging in Minecraft.
 
 ### Supported features
 
@@ -26,25 +26,25 @@ This Visual Studio Code extension will assist in debugging your JavaScript code 
 
 Your first step will be to install the Visual Studio Code Extension from the Visual Studio Marketplace.
 
-[Install the Minecraft Bedrock Edition Debugger extension](https://aka.ms/vscodescriptdebugger)
+[Install the Minecraft Bedrock Debugger extension](https://aka.ms/vscodescriptdebugger)
 
-See more information on Minecraft Bedrock Edition, GameTest, and debugging at https://aka.ms/mcscriptdebugging.
+See more information on Minecraft Bedrock, GameTest, and debugging at https://aka.ms/mcscriptdebugging.
 
-### For debugging Minecraft Bedrock Edition client inside Visual Studio Code
+### For debugging Minecraft Bedrock client inside Visual Studio Code
 
-To use debugger capabilities, you'll want to install the Minecraft Bedrock Edition Debugger within Visual Studio Code. To do this, please click on the button below to download the **Minecraft Bedrock Edition Debugger** from Visual Studio Code's marketplace.
+To use debugger capabilities, you'll want to install the Minecraft Bedrock Debugger within Visual Studio Code. To do this, please click on the button below to download the **Minecraft Bedrock Debugger** from Visual Studio Code's marketplace.
 
-#### Ensure that the Minecraft Bedrock Edition client can make "loopback" requests
+#### Ensure that the Minecraft Bedrock client can make "loopback" requests
 
-If you want to connect Minecraft Bedrock Edition client to Visual Studio Code running on the same machine (this is the most common scenario), you will need to exempt the Minecraft client from UWP loopback restrictions. To do this, run the following from a command prompt or the Start | Run app.
+If you want to connect Minecraft Bedrock client to Visual Studio Code running on the same machine (this is the most common scenario), you will need to exempt the Minecraft client from UWP loopback restrictions. To do this, run the following from a command prompt or the Start | Run app.
 
-Minecraft Bedrock Edition:
+Minecraft Bedrock:
 
 ```powershell
 CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-1958404141-86561845-1752920682-3514627264-368642714-62675701-733520436
 ```
 
-Minecraft Bedrock Edition Preview:
+Minecraft Bedrock Preview:
 
 ```powershell
 CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-424268864-5579737-879501358-346833251-474568803-887069379-4040235476
@@ -58,7 +58,7 @@ Open up a Visual Studio Code window pointed at the folder with your add-on scrip
 
 #### Prepare Visual Studio Code for a connection
 
-To debug with Minecraft Bedrock Edition, you'll need to connect from Minecraft and into Visual Studio Code. This set of steps assumes you are debugging on the same Windows machine that you are running Minecraft from, but you can also debug across machines and across clients if you want to. If you are debugging across devices, you may need to open up a port within your firewall on the machine that you are running Visual Studio Code within.
+To debug with Minecraft Bedrock, you'll need to connect from Minecraft and into Visual Studio Code. This set of steps assumes you are debugging on the same Windows machine that you are running Minecraft from, but you can also debug across machines and across clients if you want to. If you are debugging across devices, you may need to open up a port within your firewall on the machine that you are running Visual Studio Code within.
 
 You'll want to configure Visual Studio Code to know how to connect to Minecraft. If you're using a sample project such as the TS starter [minecraft-scripting-samples/ts-starter](https://github.com/microsoft/minecraft-scripting-samples/tree/main/ts-starter), this .vscode/launch.json file is already configured for you. But if you're creating a project from scratch, follow these instructions:
 
@@ -130,7 +130,7 @@ You can set breakpoints in your code by clicking on the left-hand side of the ed
 
 ### Debugging with Minecraft Bedrock Dedicated Server
 
-The procedure for debugging with Bedrock Dedicated Server is a little different. When debugging with Bedrock Dedicated Server, Bedrock Dedicated Server (not Visual Studio Code) will listen for debug connections initiated from Visual Studio Code. You'll want to start by installing the Minecraft Bedrock Edition Debugger for Visual Studio Code as described above.
+The procedure for debugging with Bedrock Dedicated Server is a little different. When debugging with Bedrock Dedicated Server, Bedrock Dedicated Server (not Visual Studio Code) will listen for debug connections initiated from Visual Studio Code. You'll want to start by installing the Minecraft Bedrock Debugger for Visual Studio Code as described above.
 
 #### Configure your Bedrock Dedicated Server
 

@@ -131,6 +131,7 @@ export class Session extends DebugSession {
     private _sourceFileWatcher?: FileSystemWatcher;
     private _activeThreadId: number = 0; // the one being debugged
     private _localRoot: string = '';
+    private _sourceBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[] | undefined> = new Map();
     private _sourceMapRoot?: string;
     private _generatedSourceRoot?: string;
     private _inlineSourceMap: boolean = false;
@@ -246,7 +247,7 @@ export class Session extends DebugSession {
     // VSCode extension has been activated due to the 'onDebug' activation request defined in packages.json
     protected initializeRequest(
         response: DebugProtocol.InitializeResponse,
-        args: DebugProtocol.InitializeRequestArguments
+        _args: DebugProtocol.InitializeRequestArguments
     ): void {
         const capabilities: DebugProtocol.Capabilities = {
             // indicates VSCode should send the configurationDoneRequest
@@ -269,9 +270,9 @@ export class Session extends DebugSession {
 
     // VSCode starts MC exe, then waits for MC to boot and connect back to a listening VSCode
     protected async launchRequest(
-        response: DebugProtocol.LaunchResponse,
-        args: DebugProtocol.LaunchRequestArguments,
-        request?: DebugProtocol.Request
+        _response: DebugProtocol.LaunchResponse,
+        _args: DebugProtocol.LaunchRequestArguments,
+        _request?: DebugProtocol.Request
     ) {
         // not implemented
     }
@@ -280,7 +281,7 @@ export class Session extends DebugSession {
     protected async attachRequest(
         response: DebugProtocol.AttachResponse,
         args: IAttachRequestArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ) {
         this.closeSession();
 
@@ -337,7 +338,7 @@ export class Session extends DebugSession {
     protected async setBreakPointsRequest(
         response: DebugProtocol.SetBreakpointsResponse,
         args: DebugProtocol.SetBreakpointsArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ) {
         response.body = {
             breakpoints: [],
@@ -348,52 +349,76 @@ export class Session extends DebugSession {
             return;
         }
 
-        let originalLocalAbsolutePath = path.normalize(args.source.path);
+        // store source breakpoints per file
+        this._sourceBreakpointsMap.set(args.source.path, args.breakpoints);
 
-        const originalBreakpoints = args.breakpoints || [];
-        const generatedBreakpoints: DebugProtocol.SourceBreakpoint[] = [];
-        let generatedRemoteLocalPath = undefined;
+        // rebuild the generated breakpoints map each time a breakpoint is changed in any file
+        let generatedBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
-        try {
-            // first get generated remote file path, will throw if fails
-            generatedRemoteLocalPath = await this._sourceMaps.getGeneratedRemoteRelativePath(originalLocalAbsolutePath);
+        // get generated breakpoints from all sources
+        for (let [sourcePath, sourceBreakpoints] of this._sourceBreakpointsMap) {
+            let originalLocalAbsolutePath = path.normalize(sourcePath);
 
-            // for all breakpoint positions set on the source file, get generated/mapped positions
-            if (originalBreakpoints.length) {
-                for (let originalBreakpoint of originalBreakpoints) {
-                    const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
-                        source: originalLocalAbsolutePath,
-                        column: originalBreakpoint.column || 0,
-                        line: originalBreakpoint.line,
-                    });
-                    generatedBreakpoints.push({
-                        line: generatedPosition.line || 0,
-                        column: 0,
-                    });
+            const originalBreakpoints = sourceBreakpoints || [];
+            let generatedRemoteLocalPath = undefined;
+
+            try {
+                // first get generated remote file path, will throw if fails
+                generatedRemoteLocalPath = await this._sourceMaps.getGeneratedRemoteRelativePath(
+                    originalLocalAbsolutePath
+                );
+
+                // append to any existing breakpoints for this generated file
+                if (!generatedBreakpointsMap.has(generatedRemoteLocalPath)) {
+                    generatedBreakpointsMap.set(generatedRemoteLocalPath, []);
                 }
+                const generatedBreakpoints = generatedBreakpointsMap.get(generatedRemoteLocalPath)!;
+
+                // for all breakpoint positions set on the source file, get generated/mapped positions
+                if (originalBreakpoints.length) {
+                    for (let originalBreakpoint of originalBreakpoints) {
+                        const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
+                            source: originalLocalAbsolutePath,
+                            column: originalBreakpoint.column || 0,
+                            line: originalBreakpoint.line,
+                        });
+                        generatedBreakpoints.push({
+                            line: generatedPosition.line || 0,
+                            column: 0,
+                        });
+                    }
+                }
+            } catch (e) {
+                this.log((e as Error).message, LogLevel.Error);
+                this.sendErrorResponse(
+                    response,
+                    1002,
+                    `Failed to resolve breakpoint for ${originalLocalAbsolutePath}.`
+                );
+                continue;
             }
-        } catch (e) {
-            this.log((e as Error).message, LogLevel.Error);
-            this.sendErrorResponse(response, 1002, `Failed to resolve breakpoint for ${originalLocalAbsolutePath}.`);
-            return;
         }
 
-        const envelope = {
-            type: 'breakpoints',
-            breakpoints: {
-                path: generatedRemoteLocalPath,
-                breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined,
-            },
-        };
+        // send full set of breakpoints for each generated file, a message per file
+        for (let [generatedRemoteLocalPath, generatedBreakpoints] of generatedBreakpointsMap) {
+            const envelope = {
+                type: 'breakpoints',
+                breakpoints: {
+                    path: generatedRemoteLocalPath,
+                    breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined,
+                },
+            };
+            this.sendDebuggeeMessage(envelope);
+        }
 
-        this.sendDebuggeeMessage(envelope);
+        // notify vscode breakpoints have been set
         this.sendResponse(response);
     }
 
     protected setExceptionBreakPointsRequest(
         response: DebugProtocol.SetExceptionBreakpointsResponse,
         args: DebugProtocol.SetExceptionBreakpointsArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ): void {
         this.sendDebuggeeMessage({
             type: 'stopOnException',
@@ -405,8 +430,8 @@ export class Session extends DebugSession {
 
     protected configurationDoneRequest(
         response: DebugProtocol.ConfigurationDoneResponse,
-        args: DebugProtocol.ConfigurationDoneArguments,
-        request?: DebugProtocol.Request
+        _args: DebugProtocol.ConfigurationDoneArguments,
+        _request?: DebugProtocol.Request
     ): void {
         this.sendDebuggeeMessage({
             type: 'resume',
@@ -416,7 +441,7 @@ export class Session extends DebugSession {
     }
 
     // VSCode wants current threads (substitute JS contexts)
-    protected threadsRequest(response: DebugProtocol.ThreadsResponse, request?: DebugProtocol.Request): void {
+    protected threadsRequest(response: DebugProtocol.ThreadsResponse, _request?: DebugProtocol.Request): void {
         response.body = {
             threads: Array.from(this._threads.keys()).map(
                 thread => new Thread(thread, `thread 0x${thread.toString(16)}`)
@@ -478,7 +503,7 @@ export class Session extends DebugSession {
     protected variablesRequest(
         response: DebugProtocol.VariablesResponse,
         args: DebugProtocol.VariablesArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ) {
         // get variables at this reference (all vars in scope or vars in object/array)
         this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
@@ -513,7 +538,7 @@ export class Session extends DebugSession {
     protected pauseRequest(
         response: DebugProtocol.PauseResponse,
         args: DebugProtocol.PauseArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ) {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
@@ -531,7 +556,7 @@ export class Session extends DebugSession {
     protected stepInRequest(
         response: DebugProtocol.StepInResponse,
         args: DebugProtocol.StepInArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ) {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
@@ -542,7 +567,7 @@ export class Session extends DebugSession {
     protected stepOutRequest(
         response: DebugProtocol.StepOutResponse,
         args: DebugProtocol.StepOutArguments,
-        request?: DebugProtocol.Request
+        _request?: DebugProtocol.Request
     ) {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
@@ -552,8 +577,8 @@ export class Session extends DebugSession {
 
     protected disconnectRequest(
         response: DebugProtocol.DisconnectResponse,
-        args: DebugProtocol.DisconnectArguments,
-        request?: DebugProtocol.Request
+        _args: DebugProtocol.DisconnectArguments,
+        _request?: DebugProtocol.Request
     ): void {
         // closeSession triggers the 'close' event on the socket which will call terminateSession
         this.closeServer();
@@ -719,7 +744,7 @@ export class Session extends DebugSession {
     // ------------------------------------------------------------------------
 
     // async send message of type 'request' with promise and await results.
-    private sendDebugeeRequestAsync(thread: number, response: DebugProtocol.Response, args: any): Promise<any> {
+    private sendDebugeeRequestAsync(_thread: number, response: DebugProtocol.Response, args: any): Promise<any> {
         let promise = new Promise((resolve, reject) => {
             let requestSeq = response.request_seq;
             this._requests.set(requestSeq, {
@@ -733,7 +758,7 @@ export class Session extends DebugSession {
     }
 
     // send message of type 'request' and callback with results.
-    private sendDebugeeRequest(thread: number, response: DebugProtocol.Response, args: any, callback: Function) {
+    private sendDebugeeRequest(_thread: number, response: DebugProtocol.Response, args: any, callback: Function) {
         let requestSeq = response.request_seq;
         this._requests.set(requestSeq, {
             onSuccess: callback,

@@ -359,7 +359,7 @@ export class Session extends DebugSession {
         for (let [sourcePath, sourceBreakpoints] of this._sourceBreakpointsMap) {
             let originalLocalAbsolutePath = path.normalize(sourcePath);
 
-            const originalBreakpoints = sourceBreakpoints || [];
+            const originalBreakpoints = sourceBreakpoints ?? [];
             let generatedRemoteLocalPath = undefined;
 
             try {
@@ -379,11 +379,11 @@ export class Session extends DebugSession {
                     for (let originalBreakpoint of originalBreakpoints) {
                         const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
                             source: originalLocalAbsolutePath,
-                            column: originalBreakpoint.column || 0,
+                            column: originalBreakpoint.column ?? 0,
                             line: originalBreakpoint.line,
                         });
                         generatedBreakpoints.push({
-                            line: generatedPosition.line || 0,
+                            line: generatedPosition.line ?? 0,
                             column: 0,
                         });
                     }

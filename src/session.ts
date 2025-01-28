@@ -411,6 +411,11 @@ export class Session extends DebugSession {
             this.sendDebuggeeMessage(envelope);
         }
 
+        // if all bps are removed from this file, ok to remove map entry after sending empty list to client
+        if (args.breakpoints === undefined || args.breakpoints.length === 0) {
+            this._sourceBreakpointsMap.delete(args.source.path);
+        }
+
         // notify vscode breakpoints have been set
         this.sendResponse(response);
     }

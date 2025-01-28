@@ -131,7 +131,7 @@ export class Session extends DebugSession {
     private _sourceFileWatcher?: FileSystemWatcher;
     private _activeThreadId: number = 0; // the one being debugged
     private _localRoot: string = '';
-    private _sourceBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[] | undefined> = new Map();
+    private _sourceBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
     private _sourceMapRoot?: string;
     private _generatedSourceRoot?: string;
     private _inlineSourceMap: boolean = false;
@@ -350,7 +350,7 @@ export class Session extends DebugSession {
         }
 
         // store source breakpoints per file
-        this._sourceBreakpointsMap.set(args.source.path, args.breakpoints);
+        this._sourceBreakpointsMap.set(args.source.path, args.breakpoints ?? []);
 
         // rebuild the generated breakpoints map each time a breakpoint is changed in any file
         let generatedBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();

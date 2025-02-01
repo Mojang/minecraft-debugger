@@ -229,7 +229,7 @@
         "@types/node": "^22.8.6",
         "@types/react": "^18.3.12",
         "@types/vscode": "^1.93.0",
-        "@typescript-eslint/eslint-plugin": "^4.14.1",
+        "@typescript-eslint/eslint-plugin": "^8.22.0",
         "@typescript-eslint/parser": "^4.14.1",
         "@vscode/debugadapter": "^1.67.0",
         "@vscode/debugprotocol": "1.68.0",

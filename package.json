@@ -235,7 +235,7 @@
         "@vscode/debugprotocol": "1.68.0",
         "@vscode/vsce": "^3.2.1",
         "@vscode/webview-ui-toolkit": "^1.4.0",
-        "esbuild": "^0.24.0",
+        "esbuild": "^0.24.2",
         "esbuild-plugin-copy": "^2.1.1",
         "eslint": "^7.19.0",
         "semantic-release": "^24.1.1",

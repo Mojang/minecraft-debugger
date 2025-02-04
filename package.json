@@ -243,7 +243,7 @@
         "source-map": "^0.7.4",
         "stream-parser": "^0.3.1",
         "ts-loader": "^9.5.1",
-        "typescript": "^5.5.4",
+        "typescript": "^5.7.3",
         "vitest": "^2.1.9"
     }
 }

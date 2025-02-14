@@ -1015,7 +1015,7 @@ export class Session extends DebugSession {
                 );
             }
 
-            // if using inline source maps look for .js files, if not found and using inline source maps, warn user
+            // if using inline source maps look for .js files, if not found warn user
             if (this._inlineSourceMap) {
                 const foundJSAtSourceMapRoot = this.doFilesWithExtExistAt(this._sourceMapRoot, ['.js']);
                 if (foundJSAtSourceMapRoot) {

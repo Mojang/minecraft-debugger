@@ -70,7 +70,6 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
     localRoot?: string;
     generatedSourceRoot?: string;
     sourceMapRoot?: string;
-    inlineSourceMap?: boolean;
     host?: string;
     port?: number;
     inputPort?: string;
@@ -301,7 +300,6 @@ export class Session extends DebugSession {
         this._localRoot = args.localRoot ? path.normalize(args.localRoot) : '';
         this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
         this._generatedSourceRoot = args.generatedSourceRoot ? path.normalize(args.generatedSourceRoot) : undefined;
-        this._inlineSourceMap = args.inlineSourceMap ? args.inlineSourceMap : false;
         this._moduleMapping = args.moduleMapping;
         this._sourceMapBias = args.sourceMapBias;
 
@@ -990,30 +988,82 @@ export class Session extends DebugSession {
 
     // check that source and map properties in launch.json are set correctly
     private checkSourceFilePaths() {
+        this._inlineSourceMap = false;
+
         if (this._sourceMapRoot) {
-            const foundMaps = this._inlineSourceMap ? true : this.doFilesWithExtExistAt(this._sourceMapRoot, ['.map']);
-            if (!foundMaps) {
+            this.showNotification(`Source maps enabled.`, LogLevel.Log, true);
+
+            // look for .ts files, expected when source maps are enabled
+            const foundTS = this.doFilesWithExtExistAt(this._localRoot, ['.ts']);
+            if (foundTS) {
+                this.log(`Found .ts files at localRoot:[${this._localRoot}].`, LogLevel.Log);
+            } else {
                 this.showNotification(
-                    "Failed to find source maps, check that launch.json 'sourceMapRoot' contains .map files.",
-                    LogLevel.Warn
+                    `Failed to find .ts files at localRoot:[${this._localRoot}].`,
+                    LogLevel.Warn,
+                    true
                 );
             }
-            const foundJS = this.doFilesWithExtExistAt(this._sourceMapRoot, ['.js']);
-            if (!foundJS) {
-                const foundGeneratedJS = this.doFilesWithExtExistAt(this._generatedSourceRoot, ['.js']);
-                if (!foundGeneratedJS) {
+
+            // look for .map files, if not found enable inline source maps
+            const foundMaps = this.doFilesWithExtExistAt(this._sourceMapRoot, ['.map']);
+            if (foundMaps) {
+                this.log(`Found .map files at sourceMapRoot:[${this._sourceMapRoot}].`, LogLevel.Log);
+            } else {
+                this._inlineSourceMap = true;
+                this.log(
+                    `Source maps (.map files) not found. Enabling inline source maps from sourceMapRoot:[${this._sourceMapRoot}].`,
+                    LogLevel.Log
+                );
+            }
+
+            // if using inline source maps look for .js files, if not found and using inline source maps, warn user
+            if (this._inlineSourceMap) {
+                const foundJSAtSourceMapRoot = this.doFilesWithExtExistAt(this._sourceMapRoot, ['.js']);
+                if (foundJSAtSourceMapRoot) {
+                    this.log(`Found .js files at sourceMapRoot:[${this._sourceMapRoot}].`, LogLevel.Log);
+                } else {
                     this.showNotification(
-                        "Failed to find generated .js files. Check that launch.json 'sourceMapRoot' or alternately 'generatedSourceRoot' cointain .js files.",
-                        LogLevel.Warn
+                        `Inline source maps not found, failed to find .js files at sourceMapRoot:[${this._sourceMapRoot}].`,
+                        LogLevel.Warn,
+                        true
+                    );
+                }
+            }
+
+            // look for .js in generatedSourceRoot if set
+            if (this._generatedSourceRoot) {
+                const foundJSAtGeneratedSourceRoot = this.doFilesWithExtExistAt(this._generatedSourceRoot, ['.js']);
+                if (foundJSAtGeneratedSourceRoot) {
+                    this.log(`Found .js files at generatedSourceRoot:[${this._generatedSourceRoot}].`, LogLevel.Log);
+                } else {
+                    this.showNotification(
+                        `Failed to find .js files at generatedSourceRoot:[${this._generatedSourceRoot}].`,
+                        LogLevel.Warn,
+                        true
                     );
                 }
             }
         } else {
+            this.log(`Source maps disabled.`, LogLevel.Log);
+
             const foundJS = this.doFilesWithExtExistAt(this._localRoot, ['.js']);
-            if (!foundJS) {
+            if (foundJS) {
+                this.log(`Found .js files at localRoot:[${this._localRoot}].`, LogLevel.Log);
+            } else {
                 this.showNotification(
                     "Failed to find .js files. Check that launch.json 'localRoot' cointains .js files.",
-                    LogLevel.Warn
+                    LogLevel.Warn,
+                    true
+                );
+            }
+
+            const foundTS = this.doFilesWithExtExistAt(this._localRoot, ['.ts']);
+            if (foundTS) {
+                this.showNotification(
+                    "Found .ts files at 'localRoot' but 'sourceMapRoot' is not defined.",
+                    LogLevel.Warn,
+                    true
                 );
             }
         }
@@ -1021,6 +1071,9 @@ export class Session extends DebugSession {
 
     private doFilesWithExtExistAt(filePath?: string, extensions?: string[]) {
         if (!filePath || !extensions) {
+            return false;
+        }
+        if (!fs.existsSync(filePath)) {
             return false;
         }
         try {
@@ -1116,13 +1169,16 @@ export class Session extends DebugSession {
         this.sendEvent(new LogOutputEvent(message + '\n', logLevel));
     }
 
-    private showNotification(message: string, logLevel: LogLevel) {
+    private showNotification(message: string, logLevel: LogLevel, toLog: boolean = false) {
         if (logLevel === LogLevel.Log) {
             window.showInformationMessage(message);
         } else if (logLevel === LogLevel.Warn) {
             window.showWarningMessage(message);
         } else if (logLevel === LogLevel.Error) {
             window.showErrorMessage(message);
+        }
+        if (toLog) {
+            this.log(message, logLevel);
         }
     }
 }

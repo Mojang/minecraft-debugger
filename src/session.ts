@@ -990,6 +990,16 @@ export class Session extends DebugSession {
     private checkSourceFilePaths() {
         this._inlineSourceMap = false;
 
+        if (this._localRoot) {
+            this.log(`localRoot:[${this._localRoot}].`, LogLevel.Log);
+        }
+        if (this._sourceMapRoot) {
+            this.log(`sourceMapRoot:[${this._sourceMapRoot}].`, LogLevel.Log);
+        }
+        if (this._generatedSourceRoot) {
+            this.log(`generatedSourceRoot:[${this._generatedSourceRoot}].`, LogLevel.Log);
+        }
+
         if (this._sourceMapRoot) {
             this.showNotification(`Source maps enabled.`, LogLevel.Log, true);
 

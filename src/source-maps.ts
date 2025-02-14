@@ -174,7 +174,7 @@ class SourceMapCache {
 // Source map manager, responsible for loading source maps and translating
 // from original to generated positions and back again.
 export class SourceMaps {
-    private _localRoot: string;
+    private _localRoot: string; // used as fallback when source maps don't resolve/load
     private _sourceMapRoot?: string;
     private _sourceMapCache: SourceMapCache;
     private _sourceMapBias: number = SourceMapConsumer.LEAST_UPPER_BOUND;

@@ -14,7 +14,7 @@ interface MapInfo {
     preferAbsolute: boolean; // if true, use absolute paths as that is what the source map contained
 }
 
-class InlineSourceMapError extends Error {}
+class SourceMapError extends Error {}
 
 class MapLookup {
     private _sourceToMapInfo = new Map<string, MapInfo>();
@@ -38,22 +38,15 @@ class SourceMapCache {
     private static readonly _jsFileExt: string = '.js';
     private _sourceMapRoot?: string;
     public _generatedSourceRoot?: string;
-    private _localRoot?: string;
     private _mapsLoaded: boolean = false;
     public _originalSourcePathToMapLookup = new MapLookup();
     public _generatedSourcePathToMapLookup = new MapLookup();
     private _inlineSourceMap: boolean = false;
 
-    public constructor(
-        sourceMapRoot?: string,
-        generatedSourceRoot?: string,
-        inlineSourceMap: boolean = false,
-        localRoot?: string
-    ) {
+    public constructor(sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap: boolean = false) {
         this._sourceMapRoot = sourceMapRoot ? path.normalize(sourceMapRoot) : undefined;
         this._generatedSourceRoot = generatedSourceRoot ? path.normalize(generatedSourceRoot) : undefined;
         this._inlineSourceMap = inlineSourceMap;
-        this._localRoot = localRoot ? path.normalize(localRoot) : undefined;
     }
 
     public reset() {
@@ -83,11 +76,19 @@ class SourceMapCache {
         }
 
         try {
-            const mapFileNames = this._findAllMapFilesInFolder(
-                this._sourceMapRoot,
-                undefined,
-                this._inlineSourceMap ? SourceMapCache._jsFileExt : SourceMapCache._mapFileExt
-            );
+            if (!fs.existsSync(this._sourceMapRoot)) {
+                throw new SourceMapError(
+                    `Failed to load source maps, invalid path sourceMapRoot:[${this._sourceMapRoot}]`
+                );
+            }
+
+            // find all .map files in the sourceMapRoot, or .js files if using inline source maps
+            const mapFileExt = this._inlineSourceMap ? SourceMapCache._jsFileExt : SourceMapCache._mapFileExt;
+            let mapFileNames = fs.readdirSync(this._sourceMapRoot, { encoding: null, recursive: true });
+            mapFileNames = mapFileNames.filter(file => {
+                return path.extname(file) === mapFileExt;
+            });
+
             for (let mapFileName of mapFileNames) {
                 const mapFullPath = path.resolve(this._sourceMapRoot, mapFileName);
                 let mapFile = fs.readFileSync(mapFullPath);
@@ -102,12 +103,8 @@ class SourceMapCache {
                         const decodedMap = Buffer.from(base64EncodedMap, 'base64').toString('utf8');
                         mapJson = JSON.parse(decodedMap);
                         mapJson.file = path.basename(mapFileName);
-                        const parts = mapFileName.split('\\scripts\\');
-                        if (parts.length > 1) {
-                            mapJson.sourceRoot = path.join(this._localRoot ?? '', path.dirname(parts[1]));
-                        }
                     } else {
-                        throw new InlineSourceMapError(`Failed to load inline source maps for file: ${mapFileName}`);
+                        throw new SourceMapError(`Failed to load inline source maps for file: ${mapFileName}`);
                     }
                 } else {
                     mapJson = JSON.parse(mapFile.toString());
@@ -161,7 +158,7 @@ class SourceMapCache {
                 }
             }
         } catch (e) {
-            if (e instanceof InlineSourceMapError) {
+            if (e instanceof SourceMapError) {
                 throw e;
             } else {
                 throw new Error(
@@ -172,30 +169,12 @@ class SourceMapCache {
 
         this._mapsLoaded = true;
     }
-
-    private _findAllMapFilesInFolder(
-        dirPath: string,
-        existingFiles?: Array<string>,
-        fileExtentsion: string = SourceMapCache._mapFileExt
-    ): Array<string> {
-        let fileNames = fs.readdirSync(dirPath);
-        let allFiles = existingFiles || [];
-        fileNames.forEach(file => {
-            const fullPath = path.join(dirPath, file);
-            if (fs.statSync(fullPath).isDirectory()) {
-                allFiles = this._findAllMapFilesInFolder(fullPath, allFiles, fileExtentsion);
-            } else if (path.extname(file) === fileExtentsion) {
-                allFiles.push(fullPath);
-            }
-        });
-        return allFiles;
-    }
 }
 
 // Source map manager, responsible for loading source maps and translating
 // from original to generated positions and back again.
 export class SourceMaps {
-    private _localRoot: string;
+    private _localRoot: string; // used as fallback when source maps don't resolve/load
     private _sourceMapRoot?: string;
     private _sourceMapCache: SourceMapCache;
     private _sourceMapBias: number = SourceMapConsumer.LEAST_UPPER_BOUND;
@@ -210,7 +189,7 @@ export class SourceMaps {
     ) {
         this._localRoot = path.normalize(localRoot);
         this._sourceMapRoot = sourceMapRoot ? path.normalize(sourceMapRoot) : undefined;
-        this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot, inlineSourceMap, localRoot);
+        this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot, inlineSourceMap);
         this._sourceMapBias =
             sourceMapBias === 'greatestLowerBound'
                 ? SourceMapConsumer.GREATEST_LOWER_BOUND

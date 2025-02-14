@@ -993,18 +993,6 @@ export class Session extends DebugSession {
         if (this._sourceMapRoot) {
             this.showNotification(`Source maps enabled.`, LogLevel.Log, true);
 
-            // look for .ts files, expected when source maps are enabled
-            const foundTS = this.doFilesWithExtExistAt(this._localRoot, ['.ts']);
-            if (foundTS) {
-                this.log(`Found .ts files at localRoot:[${this._localRoot}].`, LogLevel.Log);
-            } else {
-                this.showNotification(
-                    `Failed to find .ts files at localRoot:[${this._localRoot}].`,
-                    LogLevel.Warn,
-                    true
-                );
-            }
-
             // look for .map files, if not found enable inline source maps
             const foundMaps = this.doFilesWithExtExistAt(this._sourceMapRoot, ['.map']);
             if (foundMaps) {
@@ -1058,6 +1046,7 @@ export class Session extends DebugSession {
                 );
             }
 
+            // could help diagnose source maps if we error when .ts files are found but no sourceMapRoot is set
             const foundTS = this.doFilesWithExtExistAt(this._localRoot, ['.ts']);
             if (foundTS) {
                 this.showNotification(

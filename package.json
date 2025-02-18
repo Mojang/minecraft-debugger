@@ -128,10 +128,6 @@
                                 "type": "object",
                                 "description": "Module mapping for imports. Each key is an import name that will be mapped to the provided value. Used if modules are external (i.e. included as part of minecraft). Defaults to an empty object."
                             },
-                            "sourceMapBias": {
-                                "type": "string",
-                                "description": "The bias to use when mapping from generated code to source code. Can be either 'leastUpperBound' or 'greatestLowerBound'. Defaults to 'leastUpperBound'."
-                            },
                             "targetModuleUuid": {
                                 "type": "string",
                                 "description": "The script module uuid from the manifest.json of the Minecraft Add-On being debugged. Necessary if there are multiple Add-Ons active."

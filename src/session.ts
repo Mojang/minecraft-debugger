@@ -74,7 +74,6 @@ interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
     port?: number;
     inputPort?: string;
     moduleMapping?: ModuleMapping;
-    sourceMapBias?: string;
     targetModuleUuid?: string;
     passcode?: string;
 }
@@ -135,7 +134,6 @@ export class Session extends DebugSession {
     private _generatedSourceRoot?: string;
     private _inlineSourceMap: boolean = false;
     private _moduleMapping?: ModuleMapping;
-    private _sourceMapBias?: string;
     private _targetModuleUuid?: string;
     private _clientProtocolVersion: number = ProtocolVersion._Unknown; // determined after connection
     private _minecraftCapabilities: MinecraftCapabilities = { supportsCommands: false, supportsProfiler: false };
@@ -301,7 +299,6 @@ export class Session extends DebugSession {
         this._sourceMapRoot = args.sourceMapRoot ? path.normalize(args.sourceMapRoot) : undefined;
         this._generatedSourceRoot = args.generatedSourceRoot ? path.normalize(args.generatedSourceRoot) : undefined;
         this._moduleMapping = args.moduleMapping;
-        this._sourceMapBias = args.sourceMapBias;
 
         // Listen or connect (default), depending on mode.
         // Attach makes more sense to use connect, but some MC platforms require using listen.
@@ -688,8 +685,7 @@ export class Session extends DebugSession {
             this._localRoot,
             this._sourceMapRoot,
             this._generatedSourceRoot,
-            this._inlineSourceMap,
-            this._sourceMapBias
+            this._inlineSourceMap
         );
 
         // watch for source map changes

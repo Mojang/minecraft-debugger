@@ -178,26 +178,16 @@ export class SourceMaps {
     private _sourceMapRoot?: string;
     private _sourceMapCache: SourceMapCache;
     private _sourceMapBias: number = SourceMapConsumer.LEAST_UPPER_BOUND;
-    private _sourceMapBiasAlternate: number = SourceMapConsumer.GREATEST_LOWER_BOUND;
 
     public constructor(
         localRoot: string,
         sourceMapRoot?: string,
         generatedSourceRoot?: string,
-        inlineSourceMap: boolean = false,
-        sourceMapBias?: string
+        inlineSourceMap: boolean = false
     ) {
         this._localRoot = path.normalize(localRoot);
         this._sourceMapRoot = sourceMapRoot ? path.normalize(sourceMapRoot) : undefined;
         this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot, inlineSourceMap);
-        this._sourceMapBias =
-            sourceMapBias === 'greatestLowerBound'
-                ? SourceMapConsumer.GREATEST_LOWER_BOUND
-                : SourceMapConsumer.LEAST_UPPER_BOUND;
-        this._sourceMapBiasAlternate =
-            this._sourceMapBias === SourceMapConsumer.LEAST_UPPER_BOUND
-                ? SourceMapConsumer.GREATEST_LOWER_BOUND
-                : SourceMapConsumer.LEAST_UPPER_BOUND;
     }
 
     public clearCache() {
@@ -231,17 +221,20 @@ export class SourceMaps {
             source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
             line: originalPosition.line,
             column: originalPosition.column,
-            bias: this._sourceMapBias,
+            bias: this._getSourceMapBias(),
         });
 
-        // if specified bias did not find a result, try the alternate
+        // default bias did not find a result, try the alternate
         if (generatedPosition.line === null) {
             generatedPosition = mapInfo.sourceMap.generatedPositionFor({
                 source: mapInfo.preferAbsolute ? mapInfo.sourceAbsolutePath : mapInfo.originalSourceRelativePath,
                 line: originalPosition.line,
                 column: originalPosition.column,
-                bias: this._sourceMapBiasAlternate,
+                bias: this._getAlternateSourceMapBias(),
             });
+            if (generatedPosition.line) {
+                this._switchSourceMapBias(); // alternate worked, make it primary
+            }
         }
 
         return generatedPosition;
@@ -260,16 +253,19 @@ export class SourceMaps {
             let originalPos = mapInfo.sourceMap.originalPositionFor({
                 line: generatedPosition.line,
                 column: generatedPosition.column,
-                bias: this._sourceMapBias,
+                bias: this._getSourceMapBias(),
             });
 
-            // if specified bias did not find a result, try the alternate
+            // default bias did not find a result, try the alternate
             if (originalPos.line === null) {
                 originalPos = mapInfo.sourceMap.originalPositionFor({
                     line: generatedPosition.line,
                     column: generatedPosition.column,
-                    bias: this._sourceMapBiasAlternate,
+                    bias: this._getAlternateSourceMapBias(),
                 });
+                if (originalPos.line) {
+                    this._switchSourceMapBias();
+                }
             }
 
             if (originalPos.line !== null && originalPos.column !== null && originalPos.source !== null) {
@@ -286,5 +282,22 @@ export class SourceMaps {
         throw new Error(
             `Could not map original position for ${generatedPosition.source} at line ${generatedPosition.line}.`
         );
+    }
+
+    private _getSourceMapBias() {
+        return this._sourceMapBias;
+    }
+
+    private _getAlternateSourceMapBias() {
+        return this._sourceMapBias === SourceMapConsumer.LEAST_UPPER_BOUND
+            ? SourceMapConsumer.GREATEST_LOWER_BOUND
+            : SourceMapConsumer.LEAST_UPPER_BOUND;
+    }
+
+    private _switchSourceMapBias() {
+        this._sourceMapBias =
+            this._sourceMapBias === SourceMapConsumer.LEAST_UPPER_BOUND
+                ? SourceMapConsumer.GREATEST_LOWER_BOUND
+                : SourceMapConsumer.LEAST_UPPER_BOUND;
     }
 }

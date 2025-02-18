@@ -21,10 +21,7 @@ export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         this._eventEmitter = eventEmitter;
     }
 
-    createDebugAdapterDescriptor(
-        _session: vscode.DebugSession,
-        _executable: vscode.DebugAdapterExecutable | undefined
-    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+    createDebugAdapterDescriptor(): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         if (!this.server) {
             // start listening on a random port
             this.server = Net.createServer(socket => {
@@ -38,7 +35,7 @@ export class ServerDebugAdapterFactory implements vscode.DebugAdapterDescriptorF
         return new vscode.DebugAdapterServer((this.server.address() as Net.AddressInfo).port);
     }
 
-    dispose() {
+    dispose(): void {
         if (this.server) {
             this.server.close();
         }

@@ -11,7 +11,7 @@ import { ReplayStatsProvider } from './stats/replay-stats-provider';
 
 // called when extension is activated
 //
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): void {
     const liveStatsProvider = new StatsProvider('Live', 'minecraftDiagnosticsLive');
     const eventEmitter: EventEmitter = new EventEmitter();
 
@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('minecraft-js', configProvider));
 
     // register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
-    let descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, liveStatsProvider, eventEmitter);
+    const descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, liveStatsProvider, eventEmitter);
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
     if ('dispose' in descriptorFactory) {
         context.subscriptions.push(descriptorFactory);
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Create a command to allow keyboard shortcuts to run Minecraft commands
     const runMinecraftCommand = vscode.commands.registerCommand(
         'minecraft-debugger.runMinecraftCommand',
-        (...args: any[]) => {
+        (...args: unknown[]) => {
             if (args.length === 0) {
                 vscode.window.showErrorMessage('No command provided.');
                 return;
@@ -79,8 +79,8 @@ export function activate(context: vscode.ExtensionContext) {
                 canSelectMany: false,
                 openLabel: 'Open',
                 filters: {
-                    'MC Stats Files': ['mcstats'],
-                    'All Files': ['*'],
+                    'MC Stats Files': ['mcstats'], // eslint-disable-line @typescript-eslint/naming-convention
+                    'All Files': ['*'], // eslint-disable-line @typescript-eslint/naming-convention
                 },
             });
             if (!fileUri || fileUri.length === 0) {
@@ -101,7 +101,3 @@ export function activate(context: vscode.ExtensionContext) {
         replayDiagnosticsCommand
     );
 }
-
-// called when extension is deactivated
-//
-export function deactivate() {}

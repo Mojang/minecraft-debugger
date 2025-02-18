@@ -36,8 +36,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 interface PendingResponse {
-    onSuccess?: Function;
-    onFail?: Function;
+    onSuccess?: (result: any) => void;
+    onFail?: (error: Error) => void;
 }
 
 // Module mapping for getting line numbers for a given module
@@ -114,25 +114,24 @@ export interface MinecraftCapabilities {
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession {
-    private static DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportProfilerCaptures;
-
-    private static CONNECTION_RETRY_ATTEMPTS = 3;
-    private static CONNECTION_RETRY_WAIT_MS = 500;
+    private readonly _debuggerProtocolVersion = ProtocolVersion.SupportProfilerCaptures;
+    private readonly _connectionRetryAttempts = 3;
+    private readonly _connectionRetryWaitMs = 500;
 
     private _debugeeServer?: Server; // when listening for incoming connections
     private _connectionSocket?: Socket;
-    private _connected: boolean = false;
-    private _terminated: boolean = false;
+    private _connected = false;
+    private _terminated = false;
     private _threads = new Set<number>();
     private _requests = new Map<number, PendingResponse>();
     private _sourceMaps: SourceMaps = new SourceMaps('');
     private _sourceFileWatcher?: FileSystemWatcher;
-    private _activeThreadId: number = 0; // the one being debugged
-    private _localRoot: string = '';
+    private _activeThreadId = 0; // the one being debugged
+    private _localRoot = '';
     private _sourceBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
     private _sourceMapRoot?: string;
     private _generatedSourceRoot?: string;
-    private _inlineSourceMap: boolean = false;
+    private _inlineSourceMap = false;
     private _moduleMapping?: ModuleMapping;
     private _targetModuleUuid?: string;
     private _clientProtocolVersion: number = ProtocolVersion._Unknown; // determined after connection
@@ -242,10 +241,7 @@ export class Session extends DebugSession {
     // ------------------------------------------------------------------------
 
     // VSCode extension has been activated due to the 'onDebug' activation request defined in packages.json
-    protected initializeRequest(
-        response: DebugProtocol.InitializeResponse,
-        _args: DebugProtocol.InitializeRequestArguments
-    ): void {
+    protected initializeRequest(response: DebugProtocol.InitializeResponse): void {
         const capabilities: DebugProtocol.Capabilities = {
             // indicates VSCode should send the configurationDoneRequest
             supportsConfigurationDoneRequest: true,
@@ -266,26 +262,21 @@ export class Session extends DebugSession {
     }
 
     // VSCode starts MC exe, then waits for MC to boot and connect back to a listening VSCode
-    protected async launchRequest(
-        _response: DebugProtocol.LaunchResponse,
-        _args: DebugProtocol.LaunchRequestArguments,
-        _request?: DebugProtocol.Request
-    ) {
+    protected async launchRequest(): Promise<void> {
         // not implemented
     }
 
     // VSCode wants to attach to a debugee (MC), create socket connection on specified port
     protected async attachRequest(
         response: DebugProtocol.AttachResponse,
-        args: IAttachRequestArguments,
-        _request?: DebugProtocol.Request
-    ) {
+        args: IAttachRequestArguments
+    ): Promise<void> {
         this.closeSession();
 
         this.resolveEnvironmentVariables(args);
 
         const host = args.host || 'localhost';
-        let port = args.port || (args.inputPort ? parseInt(args.inputPort) : NaN);
+        const port = args.port || (args.inputPort ? parseInt(args.inputPort) : NaN);
         if (isNaN(port)) {
             this.sendErrorResponse(response, 1001, `Failed to attach to Minecraft, invalid port "${args.inputPort}".`);
             return;
@@ -318,12 +309,12 @@ export class Session extends DebugSession {
         this.sendResponse(response);
     }
 
-    protected resolveEnvironmentVariables(args: IAttachRequestArguments) {
+    protected resolveEnvironmentVariables(args: IAttachRequestArguments): void {
         const localAppDataDir = process.env.LOCALAPPDATA || '';
 
         for (const key of Object.keys(args)) {
             //if the value is a string and starts with %localappdata%, replace it with the actual path to AppData\Local
-            let value = args[key as keyof IAttachRequestArguments];
+            const value = args[key as keyof IAttachRequestArguments];
             if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
                 (args as any)[key] = path.join(localAppDataDir, value.substring('%localappdata%'.length));
             }
@@ -332,9 +323,8 @@ export class Session extends DebugSession {
 
     protected async setBreakPointsRequest(
         response: DebugProtocol.SetBreakpointsResponse,
-        args: DebugProtocol.SetBreakpointsArguments,
-        _request?: DebugProtocol.Request
-    ) {
+        args: DebugProtocol.SetBreakpointsArguments
+    ): Promise<void> {
         response.body = {
             breakpoints: [],
         };
@@ -348,11 +338,11 @@ export class Session extends DebugSession {
         this._sourceBreakpointsMap.set(args.source.path, args.breakpoints ?? []);
 
         // rebuild the generated breakpoints map each time a breakpoint is changed in any file
-        let generatedBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
+        const generatedBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();
 
         // get generated breakpoints from all sources
-        for (let [sourcePath, sourceBreakpoints] of this._sourceBreakpointsMap) {
-            let originalLocalAbsolutePath = path.normalize(sourcePath);
+        for (const [sourcePath, sourceBreakpoints] of this._sourceBreakpointsMap) {
+            const originalLocalAbsolutePath = path.normalize(sourcePath);
 
             const originalBreakpoints = sourceBreakpoints ?? [];
             let generatedRemoteLocalPath = undefined;
@@ -371,7 +361,7 @@ export class Session extends DebugSession {
 
                 // for all breakpoint positions set on the source file, get generated/mapped positions
                 if (originalBreakpoints.length) {
-                    for (let originalBreakpoint of originalBreakpoints) {
+                    for (const originalBreakpoint of originalBreakpoints) {
                         const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
                             source: originalLocalAbsolutePath,
                             column: originalBreakpoint.column ?? 0,
@@ -395,7 +385,7 @@ export class Session extends DebugSession {
         }
 
         // send full set of breakpoints for each generated file, a message per file
-        for (let [generatedRemoteLocalPath, generatedBreakpoints] of generatedBreakpointsMap) {
+        for (const [generatedRemoteLocalPath, generatedBreakpoints] of generatedBreakpointsMap) {
             const envelope = {
                 type: 'breakpoints',
                 breakpoints: {
@@ -417,8 +407,7 @@ export class Session extends DebugSession {
 
     protected setExceptionBreakPointsRequest(
         response: DebugProtocol.SetExceptionBreakpointsResponse,
-        args: DebugProtocol.SetExceptionBreakpointsArguments,
-        _request?: DebugProtocol.Request
+        args: DebugProtocol.SetExceptionBreakpointsArguments
     ): void {
         this.sendDebuggeeMessage({
             type: 'stopOnException',
@@ -428,11 +417,7 @@ export class Session extends DebugSession {
         this.sendResponse(response);
     }
 
-    protected configurationDoneRequest(
-        response: DebugProtocol.ConfigurationDoneResponse,
-        _args: DebugProtocol.ConfigurationDoneArguments,
-        _request?: DebugProtocol.Request
-    ): void {
+    protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse): void {
         this.sendDebuggeeMessage({
             type: 'resume',
         });
@@ -441,7 +426,7 @@ export class Session extends DebugSession {
     }
 
     // VSCode wants current threads (substitute JS contexts)
-    protected threadsRequest(response: DebugProtocol.ThreadsResponse, _request?: DebugProtocol.Request): void {
+    protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
         response.body = {
             threads: Array.from(this._threads.keys()).map(
                 thread => new Thread(thread, `thread 0x${thread.toString(16)}`)
@@ -486,7 +471,7 @@ export class Session extends DebugSession {
         this.sendResponse(response);
     }
 
-    protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments) {
+    protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
         // get scopes from debugee for this frame, args contains the desired stack frame id
         this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
             const scopes: Scope[] = [];
@@ -502,15 +487,19 @@ export class Session extends DebugSession {
 
     protected variablesRequest(
         response: DebugProtocol.VariablesResponse,
-        args: DebugProtocol.VariablesArguments,
-        _request?: DebugProtocol.Request
-    ) {
+        args: DebugProtocol.VariablesArguments
+    ): void {
         // get variables at this reference (all vars in scope or vars in object/array)
         this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
             const variables: Variable[] = [];
             for (const { name, value, type, variablesReference, indexedVariables } of body) {
                 // if variablesReference is non-zero then it represents an object and will trigger additional variablesRequests when expanded by user
-                let variable: DebugProtocol.Variable = new Variable(name, value, variablesReference, indexedVariables);
+                const variable: DebugProtocol.Variable = new Variable(
+                    name,
+                    value,
+                    variablesReference,
+                    indexedVariables
+                );
                 variable.type = type; // to show type when hovered
                 variables.push(variable);
             }
@@ -521,65 +510,49 @@ export class Session extends DebugSession {
         });
     }
 
-    protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments) {
+    protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
         this.sendDebugeeRequest(this._activeThreadId, response, args, (body: any) => {
             response.body = body;
             this.sendResponse(response);
         });
     }
 
-    protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments) {
+    protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
             this.sendResponse(response);
         });
     }
 
-    protected pauseRequest(
-        response: DebugProtocol.PauseResponse,
-        args: DebugProtocol.PauseArguments,
-        _request?: DebugProtocol.Request
-    ) {
+    protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments): void {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
             this.sendResponse(response);
         });
     }
 
-    protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments) {
+    protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
             this.sendResponse(response);
         });
     }
 
-    protected stepInRequest(
-        response: DebugProtocol.StepInResponse,
-        args: DebugProtocol.StepInArguments,
-        _request?: DebugProtocol.Request
-    ) {
+    protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments): void {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
             this.sendResponse(response);
         });
     }
 
-    protected stepOutRequest(
-        response: DebugProtocol.StepOutResponse,
-        args: DebugProtocol.StepOutArguments,
-        _request?: DebugProtocol.Request
-    ) {
+    protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments): void {
         this.sendDebugeeRequest(args.threadId, response, args, (body: any) => {
             response.body = body;
             this.sendResponse(response);
         });
     }
 
-    protected disconnectRequest(
-        response: DebugProtocol.DisconnectResponse,
-        _args: DebugProtocol.DisconnectArguments,
-        _request?: DebugProtocol.Request
-    ): void {
+    protected disconnectRequest(response: DebugProtocol.DisconnectResponse): void {
         // closeSession triggers the 'close' event on the socket which will call terminateSession
         this.closeServer();
         this.closeSession();
@@ -605,11 +578,11 @@ export class Session extends DebugSession {
         let socket: Socket | undefined = undefined;
 
         // try connecting for 5 seconds
-        for (let attempt = 0; attempt < Session.CONNECTION_RETRY_ATTEMPTS; attempt++) {
+        for (let attempt = 0; attempt < this._connectionRetryAttempts; attempt++) {
             this.log(`Connecting to host [${host}] on port [${port}], attempt [${attempt + 1}].`, LogLevel.Log);
             try {
                 socket = await new Promise<Socket>((resolve, reject) => {
-                    let client = createConnection({ host: host, port: port });
+                    const client = createConnection({ host: host, port: port });
                     client.on('connect', () => {
                         client.removeAllListeners();
                         resolve(client);
@@ -620,7 +593,7 @@ export class Session extends DebugSession {
                 });
                 break;
             } catch (e) {
-                await new Promise(resolve => setTimeout(resolve, Session.CONNECTION_RETRY_WAIT_MS));
+                await new Promise(resolve => setTimeout(resolve, this._connectionRetryWaitMs));
             }
         }
 
@@ -636,7 +609,7 @@ export class Session extends DebugSession {
         this._connectionSocket = socket;
 
         // create socket stream parser and setup event handlers
-        let socketStreamParser = new MessageStreamParser();
+        const socketStreamParser = new MessageStreamParser();
         socketStreamParser.on('message', (envelope: any) => {
             this.receiveDebugeeMessage(envelope);
         });
@@ -744,8 +717,8 @@ export class Session extends DebugSession {
 
     // async send message of type 'request' with promise and await results.
     private sendDebugeeRequestAsync(_thread: number, response: DebugProtocol.Response, args: any): Promise<any> {
-        let promise = new Promise((resolve, reject) => {
-            let requestSeq = response.request_seq;
+        const promise = new Promise((resolve, reject) => {
+            const requestSeq = response.request_seq;
             this._requests.set(requestSeq, {
                 onSuccess: resolve,
                 onFail: reject,
@@ -757,8 +730,13 @@ export class Session extends DebugSession {
     }
 
     // send message of type 'request' and callback with results.
-    private sendDebugeeRequest(_thread: number, response: DebugProtocol.Response, args: any, callback: Function) {
-        let requestSeq = response.request_seq;
+    private sendDebugeeRequest(
+        _thread: number,
+        response: DebugProtocol.Response,
+        args: any,
+        callback: (result: any) => void
+    ) {
+        const requestSeq = response.request_seq;
         this._requests.set(requestSeq, {
             onSuccess: callback,
             onFail: undefined,
@@ -768,10 +746,9 @@ export class Session extends DebugSession {
     }
 
     private makeRequestPayload(requestSeq: number, responseCommand: string, args: any) {
-        let envelope = {
+        const envelope = {
             type: 'request',
             request: {
-                // eslint-disable-next-line @typescript-eslint/naming-convention
                 request_seq: requestSeq,
                 command: responseCommand,
                 args,
@@ -785,17 +762,17 @@ export class Session extends DebugSession {
             return;
         }
 
-        let json = JSON.stringify(envelope);
-        let jsonBuffer = Buffer.from(json);
+        const json = JSON.stringify(envelope);
+        const jsonBuffer = Buffer.from(json);
         // length prefix is 8 hex followed by newline = 012345678\n
         // not efficient, but protocol is then human readable.
         // json = 1 line json + new line
-        let messageLength = jsonBuffer.byteLength + 1;
+        const messageLength = jsonBuffer.byteLength + 1;
         let length = '00000000' + messageLength.toString(16) + '\n';
         length = length.substring(length.length - 9);
-        let lengthBuffer = Buffer.from(length);
-        let newline = Buffer.from('\n');
-        let buffer = Buffer.concat([lengthBuffer, jsonBuffer, newline]);
+        const lengthBuffer = Buffer.from(length);
+        const newline = Buffer.from('\n');
+        const buffer = Buffer.concat([lengthBuffer, jsonBuffer, newline]);
 
         this._connectionSocket.write(buffer);
     }
@@ -832,7 +809,7 @@ export class Session extends DebugSession {
     private async handlePrintEvent(message: string, logLevel: LogLevel) {
         // Attempt to resolve type maps for file paths/line numbers in each message
         const jsFileLineNoColumRegex = /\(([a-zA-Z0-9_\-./\\ ]+\.js):(\d+)\)/g;
-        let matches = message.matchAll(jsFileLineNoColumRegex);
+        const matches = message.matchAll(jsFileLineNoColumRegex);
         for (const match of matches) {
             try {
                 const fullMatch = match[0];
@@ -866,8 +843,8 @@ export class Session extends DebugSession {
     // Debugee (MC) responses to pending VSCode requests. Promises contained in a map keyed by
     // the sequence number of the request. Fascilitates the 'await sendDebugeeRequestAsync(...)' pattern.
     private handleDebugeeResponse(envelope: any) {
-        let requestSeq: number = envelope.request_seq;
-        let pending = this._requests.get(requestSeq);
+        const requestSeq: number = envelope.request_seq;
+        const pending = this._requests.get(requestSeq);
         if (!pending) {
             return;
         }
@@ -895,10 +872,10 @@ export class Session extends DebugSession {
         // handle protocol capabilities here...
         // can fail connection on errors
         //
-        if (Session.DEBUGGER_PROTOCOL_VERSION < protocolCapabilities.version) {
+        if (this._debuggerProtocolVersion < protocolCapabilities.version) {
             this.terminateSession('protocol mismatch. Update Debugger Extension.', LogLevel.Error);
         } else {
-            if (protocolCapabilities.version == ProtocolVersion.SupportTargetModuleUuid) {
+            if (protocolCapabilities.version === ProtocolVersion.SupportTargetModuleUuid) {
                 this.onConnectionComplete(protocolCapabilities.version, undefined);
             } else if (protocolCapabilities.version >= ProtocolVersion.SupportTargetSelection) {
                 // no add-ons found, nothing to do
@@ -908,7 +885,7 @@ export class Session extends DebugSession {
                 }
 
                 // if passcode is required, prompt user for it
-                let passcode = await this.promptForPasscode(protocolCapabilities.require_passcode);
+                const passcode = await this.promptForPasscode(protocolCapabilities.require_passcode);
 
                 // if a targetuuid was provided, make sure it's valid
                 if (this._targetModuleUuid) {
@@ -1072,8 +1049,8 @@ export class Session extends DebugSession {
             return false;
         }
         try {
-            let fileNames = fs.readdirSync(filePath, { encoding: null, recursive: true });
-            for (let fn of fileNames) {
+            const fileNames = fs.readdirSync(filePath, { encoding: null, recursive: true });
+            for (const fn of fileNames) {
                 if (extensions.some(ext => fn.endsWith(ext))) {
                     return true;
                 }
@@ -1164,7 +1141,7 @@ export class Session extends DebugSession {
         this.sendEvent(new LogOutputEvent(message + '\n', logLevel));
     }
 
-    private showNotification(message: string, logLevel: LogLevel, toLog: boolean = false) {
+    private showNotification(message: string, logLevel: LogLevel, toLog = false) {
         if (logLevel === LogLevel.Log) {
             window.showInformationMessage(message);
         } else if (logLevel === LogLevel.Warn) {

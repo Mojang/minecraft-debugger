@@ -38,42 +38,42 @@ export class StatsProvider {
         this._statListeners = [];
     }
 
-    public setStats(stats: StatMessageModel) {
+    public setStats(stats: StatMessageModel): void {
         for (const stat of stats.stats) {
             this._fireStatUpdated(stat, stats.tick);
         }
     }
 
-    public start() {
+    public start(): void {
         throw new Error('Method not implemented.');
     }
-    public stop() {
+    public stop(): void {
         throw new Error('Method not implemented.');
     }
-    public pause() {
+    public pause(): void {
         throw new Error('Method not implemented.');
     }
-    public resume() {
+    public resume(): void {
         throw new Error('Method not implemented.');
     }
-    public faster() {
+    public faster(): void {
         throw new Error('Method not implemented.');
     }
-    public slower() {
+    public slower(): void {
         throw new Error('Method not implemented.');
     }
-    public setSpeed(speed: string) {
+    public setSpeed(_speed: string): void {
         throw new Error('Method not implemented.');
     }
     public manualControl(): boolean {
         return false;
     }
 
-    public addStatListener(listener: StatsListener) {
+    public addStatListener(listener: StatsListener): void {
         this._statListeners.push(listener);
     }
 
-    public removeStatListener(listener: StatsListener) {
+    public removeStatListener(listener: StatsListener): void {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
@@ -91,6 +91,7 @@ export class StatsProvider {
                 values: stat.values ?? [],
                 tick: tick,
             };
+
             listener.onStatUpdated?.(statData);
 
             if (stat.children) {

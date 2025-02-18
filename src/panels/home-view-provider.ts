@@ -20,7 +20,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this._eventEmitter = eventEmitter;
     }
 
-    public setDebuggerStatus(isConnected: boolean, minecraftCapabilities: MinecraftCapabilities) {
+    public setDebuggerStatus(isConnected: boolean, minecraftCapabilities: MinecraftCapabilities): void {
         this._view?.webview.postMessage({
             type: 'debugger-status',
             isConnected: isConnected,
@@ -33,11 +33,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this._eventEmitter.emit('request-debugger-status');
     }
 
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        _context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
-    ) {
+    public resolveWebviewView(webviewView: vscode.WebviewView): void {
         this._view = webviewView;
 
         this._view.webview.options = {

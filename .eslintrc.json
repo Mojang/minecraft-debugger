@@ -8,12 +8,44 @@
     "plugins": [
         "@typescript-eslint"
     ],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
     "rules": {
-        "@typescript-eslint/naming-convention": "warn",
+        "@typescript-eslint/naming-convention": [
+            "warn",
+            { 
+                "selector": "default", 
+                "format": ["camelCase", "snake_case"], // protocol messages use snake_case
+                "leadingUnderscore": "allow"
+            },
+            {
+                "selector": "enumMember",
+                "format": ["PascalCase"],
+                "leadingUnderscore": "allow"
+            },
+            {
+                "selector": "variable",
+                "format": ["UPPER_CASE", "PascalCase"], // TODO: remove PascalCase uses
+                "modifiers": ["global", "const"]
+            },
+            {
+                "selector": "typeLike",
+                "format": ["PascalCase"]
+            }
+        ],
+        "@typescript-eslint/no-explicit-any": "off", // TODO: enable when messages are typed
+        "@typescript-eslint/no-non-null-assertion": "off",
         "@typescript-eslint/semi": ["warn", "always"],
         "curly": "warn",
         "eqeqeq": "warn",
-        "no-throw-literal": "warn"
+        // indent 4 spaces
+        "indent": ["warn", 4, { "SwitchCase": 1 }],
+        "no-throw-literal": "warn",
+        // turn off base rules as they can report incorrect errors
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
     },
     "ignorePatterns": [
         "**/*.d.ts"

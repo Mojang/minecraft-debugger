@@ -11,8 +11,8 @@ interface ReplayStatMessageHeader {
 }
 
 export class ReplayResults {
-    statLinesRead: number = 0;
-    statEventsSent: number = 0;
+    statLinesRead = 0;
+    statEventsSent = 0;
 }
 
 export class ReplayStatsProvider extends StatsProvider {
@@ -29,24 +29,24 @@ export class ReplayStatsProvider extends StatsProvider {
     private _onComplete: ((results: ReplayResults) => void) | undefined;
 
     // resume stream when lines drop below this threshold
-    private static readonly PENDING_STATS_BUFFER_MIN = 256;
+    private static readonly pendingStatsBufferMin = 256;
     // pause stream when lines exceed this threshold
-    private static readonly PENDING_STATS_BUFFER_MAX = ReplayStatsProvider.PENDING_STATS_BUFFER_MIN * 2;
+    private static readonly pendingStatsBufferMax = ReplayStatsProvider.pendingStatsBufferMin * 2;
     // supported encodings
-    private readonly ENCODING_BASE64_GZIP = 'base64-gzip';
-    private readonly ENCODING_UTF8 = 'utf8';
+    private readonly encodingBase64GZip = 'base64-gzip';
+    private readonly encodingUtf8 = 'utf8';
 
     // ticks per second (frequency)
-    private readonly MILLIS_PER_SECOND = 1000;
-    private readonly DEFAULT_SPEED = 20; // ticks per second
-    private readonly MIN_SPEED = 5;
-    private readonly MAX_SPEED = 160;
+    private readonly millisPerSecond = 1000;
+    private readonly defaultSpeed = 20; // ticks per second
+    private readonly minSpeed = 5;
+    private readonly maxSpeed = 160;
 
     constructor(replayFilePath: string) {
         super(path.basename(replayFilePath), replayFilePath);
         this._replayFilePath = replayFilePath;
         this._replayStreamReader = null;
-        this._simTickFreqency = this.DEFAULT_SPEED;
+        this._simTickFreqency = this.defaultSpeed;
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._simTickCurrent = 0;
         this._simTimeoutId = null;
@@ -79,7 +79,7 @@ export class ReplayStatsProvider extends StatsProvider {
         });
     }
 
-    public override stop() {
+    public override stop(): void {
         this._fireStopped();
         if (this._simTimeoutId) {
             clearTimeout(this._simTimeoutId);
@@ -91,7 +91,7 @@ export class ReplayStatsProvider extends StatsProvider {
             this._replayStreamReader.close();
             this._replayStreamReader = null;
         }
-        this._simTickFreqency = this.DEFAULT_SPEED;
+        this._simTickFreqency = this.defaultSpeed;
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._simTickCurrent = 0;
         this._simTimeoutId = null;
@@ -102,7 +102,7 @@ export class ReplayStatsProvider extends StatsProvider {
         this._onComplete = undefined;
     }
 
-    public override pause() {
+    public override pause(): void {
         if (this._simTimeoutId) {
             clearTimeout(this._simTimeoutId);
             this._simTimeoutId = null;
@@ -110,7 +110,7 @@ export class ReplayStatsProvider extends StatsProvider {
         this._firePauseChanged();
     }
 
-    public override resume() {
+    public override resume(): void {
         if (this._simTickCurrent === 0) {
             this.start();
         } else {
@@ -119,30 +119,30 @@ export class ReplayStatsProvider extends StatsProvider {
         this._firePauseChanged();
     }
 
-    public override faster() {
+    public override faster(): void {
         this._simTickFreqency *= 2;
-        if (this._simTickFreqency > this.MAX_SPEED) {
-            this._simTickFreqency = this.MAX_SPEED;
+        if (this._simTickFreqency > this.maxSpeed) {
+            this._simTickFreqency = this.maxSpeed;
         }
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._fireSpeedChanged();
     }
 
-    public override slower() {
+    public override slower(): void {
         this._simTickFreqency /= 2;
-        if (this._simTickFreqency < this.MIN_SPEED) {
-            this._simTickFreqency = this.MIN_SPEED;
+        if (this._simTickFreqency < this.minSpeed) {
+            this._simTickFreqency = this.minSpeed;
         }
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._fireSpeedChanged();
     }
 
-    public override setSpeed(speed: string) {
+    public override setSpeed(speed: string): void {
         this._simTickFreqency = parseInt(speed);
-        if (this._simTickFreqency < this.MIN_SPEED) {
-            this._simTickFreqency = this.MIN_SPEED;
-        } else if (this._simTickFreqency > this.MAX_SPEED) {
-            this._simTickFreqency = this.MAX_SPEED;
+        if (this._simTickFreqency < this.minSpeed) {
+            this._simTickFreqency = this.minSpeed;
+        } else if (this._simTickFreqency > this.maxSpeed) {
+            this._simTickFreqency = this.maxSpeed;
         }
         this._simTickPeriod = this._calcSimPeriod(this._simTickFreqency);
         this._fireSpeedChanged();
@@ -152,7 +152,7 @@ export class ReplayStatsProvider extends StatsProvider {
         return true;
     }
 
-    private _updateSim() {
+    private _updateSim(): void {
         const nextStatsMessage = this._pendingStats[0];
         if (nextStatsMessage) {
             if (nextStatsMessage.tick > this._simTickCurrent) {
@@ -168,7 +168,7 @@ export class ReplayStatsProvider extends StatsProvider {
             }
         }
         // resume stream if we're running low on data
-        if (this._pendingStats.length < ReplayStatsProvider.PENDING_STATS_BUFFER_MIN) {
+        if (this._pendingStats.length < ReplayStatsProvider.pendingStatsBufferMin) {
             this._replayStreamReader?.resume();
         }
         // schedule next update as long as we have pending data to process or there's still a stream to read
@@ -189,8 +189,8 @@ export class ReplayStatsProvider extends StatsProvider {
                 } else {
                     // first line was header, set encoding and return
                     this._replayHeader = headerJson as ReplayStatMessageHeader;
-                    const encoding = this._replayHeader.encoding ?? this.ENCODING_UTF8;
-                    this._base64Gzipped = encoding === this.ENCODING_BASE64_GZIP;
+                    const encoding = this._replayHeader.encoding ?? this.encodingUtf8;
+                    this._base64Gzipped = encoding === this.encodingBase64GZip;
                     return;
                 }
             } catch (error) {
@@ -221,7 +221,7 @@ export class ReplayStatsProvider extends StatsProvider {
             // add stats messages to queue
             this._pendingStats.push(statMessage);
             // pause stream reader if we've got enough data for now
-            if (this._pendingStats.length > ReplayStatsProvider.PENDING_STATS_BUFFER_MAX) {
+            if (this._pendingStats.length > ReplayStatsProvider.pendingStatsBufferMax) {
                 this._replayStreamReader?.pause();
             }
         } catch (error) {
@@ -250,7 +250,7 @@ export class ReplayStatsProvider extends StatsProvider {
     private _firePauseChanged() {
         this._statListeners.forEach((listener: StatsListener) => {
             // paused if no timeout id
-            listener.onPauseUpdated?.(this._simTimeoutId == null);
+            listener.onPauseUpdated?.(this._simTimeoutId === null);
         });
     }
 
@@ -267,6 +267,6 @@ export class ReplayStatsProvider extends StatsProvider {
     }
 
     private _calcSimPeriod(simFrequency: number): number {
-        return this.MILLIS_PER_SECOND / simFrequency;
+        return this.millisPerSecond / simFrequency;
     }
 }

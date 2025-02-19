@@ -32,18 +32,19 @@ class MapLookup {
     }
 }
 
+const MAP_FILE_EXT = '.map';
+const JS_FILE_EXT = '.js';
+
 // Load and cache source map files
 class SourceMapCache {
-    private static readonly _mapFileExt: string = '.map';
-    private static readonly _jsFileExt: string = '.js';
     private _sourceMapRoot?: string;
     public _generatedSourceRoot?: string;
-    private _mapsLoaded: boolean = false;
+    private _mapsLoaded = false;
     public _originalSourcePathToMapLookup = new MapLookup();
     public _generatedSourcePathToMapLookup = new MapLookup();
-    private _inlineSourceMap: boolean = false;
+    private _inlineSourceMap = false;
 
-    public constructor(sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap: boolean = false) {
+    public constructor(sourceMapRoot?: string, generatedSourceRoot?: string, inlineSourceMap = false) {
         this._sourceMapRoot = sourceMapRoot ? path.normalize(sourceMapRoot) : undefined;
         this._generatedSourceRoot = generatedSourceRoot ? path.normalize(generatedSourceRoot) : undefined;
         this._inlineSourceMap = inlineSourceMap;
@@ -83,15 +84,15 @@ class SourceMapCache {
             }
 
             // find all .map files in the sourceMapRoot, or .js files if using inline source maps
-            const mapFileExt = this._inlineSourceMap ? SourceMapCache._jsFileExt : SourceMapCache._mapFileExt;
+            const mapFileExt = this._inlineSourceMap ? JS_FILE_EXT : MAP_FILE_EXT;
             let mapFileNames = fs.readdirSync(this._sourceMapRoot, { encoding: null, recursive: true });
             mapFileNames = mapFileNames.filter(file => {
                 return path.extname(file) === mapFileExt;
             });
 
-            for (let mapFileName of mapFileNames) {
+            for (const mapFileName of mapFileNames) {
                 const mapFullPath = path.resolve(this._sourceMapRoot, mapFileName);
-                let mapFile = fs.readFileSync(mapFullPath);
+                const mapFile = fs.readFileSync(mapFullPath);
 
                 let mapJson;
                 if (this._inlineSourceMap) {
@@ -112,17 +113,20 @@ class SourceMapCache {
                     // Assume a .map file aligns 1:1 with a .js file
                     // if there is no file name provided
                     if (mapJson.file === undefined) {
-                        mapJson.file = path.basename(mapFileName).replace(SourceMapCache._mapFileExt, '');
+                        mapJson.file = path.basename(mapFileName).replace(MAP_FILE_EXT, '');
                     }
                 }
-                let sourceMapConsumer = await new SourceMapConsumer(mapJson);
+                const sourceMapConsumer = await new SourceMapConsumer(mapJson);
 
                 // map has relative path to generated source, resolve for absolute path
-                let generatedSourceAbsolutePath = path.resolve(path.dirname(mapFullPath), sourceMapConsumer.file);
-                let generatedSourceRelativePath = path.relative(this._generatedSourceRoot, generatedSourceAbsolutePath);
+                const generatedSourceAbsolutePath = path.resolve(path.dirname(mapFullPath), sourceMapConsumer.file);
+                const generatedSourceRelativePath = path.relative(
+                    this._generatedSourceRoot,
+                    generatedSourceAbsolutePath
+                );
 
                 // generate lookup tables for source maps, original to remote and remote to original
-                for (let originalSource of sourceMapConsumer.sources) {
+                for (const originalSource of sourceMapConsumer.sources) {
                     let originalSourceAbsolutePath: string;
                     let originalSourceRelative: string;
                     let preferAbsolute = false;
@@ -139,7 +143,7 @@ class SourceMapCache {
                     }
 
                     // collect all relevant path info, used for resolving original->generated and generated->original
-                    let mapInfo: MapInfo = {
+                    const mapInfo: MapInfo = {
                         mapAbsoluteDirectory: path.dirname(mapFullPath),
                         originalSourceRelativePath: originalSourceRelative,
                         generatedSourceRelativePath: generatedSourceRelativePath,
@@ -183,19 +187,19 @@ export class SourceMaps {
         localRoot: string,
         sourceMapRoot?: string,
         generatedSourceRoot?: string,
-        inlineSourceMap: boolean = false
+        inlineSourceMap = false
     ) {
         this._localRoot = path.normalize(localRoot);
         this._sourceMapRoot = sourceMapRoot ? path.normalize(sourceMapRoot) : undefined;
         this._sourceMapCache = new SourceMapCache(this._sourceMapRoot, generatedSourceRoot, inlineSourceMap);
     }
 
-    public clearCache() {
+    public clearCache(): void {
         this._sourceMapCache.reset();
     }
 
     public async getGeneratedRemoteRelativePath(originalSource: string): Promise<string> {
-        let mapInfo = await this._sourceMapCache.getMapFromOriginalSource(originalSource);
+        const mapInfo = await this._sourceMapCache.getMapFromOriginalSource(originalSource);
         if (!mapInfo || !this._sourceMapRoot) {
             // no source map, convert to remote relative path suitable for debugger.
             return normalizePathForRemote(path.relative(this._localRoot, originalSource));
@@ -206,7 +210,7 @@ export class SourceMaps {
     }
 
     public async getGeneratedPositionFor(originalPosition: MappedPosition): Promise<NullablePosition> {
-        let mapInfo = await this._sourceMapCache.getMapFromOriginalSource(originalPosition.source);
+        const mapInfo = await this._sourceMapCache.getMapFromOriginalSource(originalPosition.source);
         if (!mapInfo) {
             // no source maps, return original position as is
             return {
@@ -243,12 +247,12 @@ export class SourceMaps {
     public async getOriginalPositionFor(generatedPosition: MappedPosition): Promise<MappedPosition> {
         if (!this._sourceMapRoot) {
             // no source maps, convert remote relative path to local absolute
-            let originalLocalRelativePosition: MappedPosition = Object.assign({}, generatedPosition);
+            const originalLocalRelativePosition: MappedPosition = Object.assign({}, generatedPosition);
             originalLocalRelativePosition.source = path.resolve(this._localRoot, generatedPosition.source);
             return originalLocalRelativePosition;
         }
 
-        let mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(generatedPosition.source);
+        const mapInfo = await this._sourceMapCache.getMapFromGeneratedSource(generatedPosition.source);
         if (mapInfo) {
             let originalPos = mapInfo.sourceMap.originalPositionFor({
                 line: generatedPosition.line,
@@ -270,7 +274,7 @@ export class SourceMaps {
 
             if (originalPos.line !== null && originalPos.column !== null && originalPos.source !== null) {
                 // combine directory of map and relative path from map to .ts to arrive at absolute path of .ts
-                let originalSourceAbsolutePath = path.resolve(mapInfo.mapAbsoluteDirectory, originalPos.source);
+                const originalSourceAbsolutePath = path.resolve(mapInfo.mapAbsoluteDirectory, originalPos.source);
                 return {
                     source: originalSourceAbsolutePath,
                     line: originalPos.line,

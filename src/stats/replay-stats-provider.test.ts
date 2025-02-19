@@ -8,14 +8,14 @@ describe('ReplayStatsProvider', () => {
         const replayFilePath = path.resolve('./test/diagnostics-replay-compressed.mcstats');
         const replay = new ReplayStatsProvider(replayFilePath);
         let statCount = 0;
-        let statsCallback: StatsListener = {
+        const statsCallback: StatsListener = {
             onStatUpdated: (stat: StatData) => {
                 statCount++;
                 expect(stat).toBeDefined();
             },
         };
         replay.addStatListener(statsCallback);
-        let results = await replay.start();
+        const results = await replay.start();
         expect(results.statLinesRead).toBe(3);
         expect(results.statEventsSent).toBe(3);
         expect(statCount).toBeGreaterThan(0); // no idea how many are in there
@@ -25,14 +25,14 @@ describe('ReplayStatsProvider', () => {
         const replayFilePath = path.resolve('./test/diagnostics-replay-uncompressed.mcstats');
         const replay = new ReplayStatsProvider(replayFilePath);
         let statCount = 0;
-        let statsCallback: StatsListener = {
+        const statsCallback: StatsListener = {
             onStatUpdated: (stat: StatData) => {
                 statCount++;
                 expect(stat).toBeDefined();
             },
         };
         replay.addStatListener(statsCallback);
-        let results = await replay.start();
+        const results = await replay.start();
         expect(results.statLinesRead).toBe(3);
         expect(results.statEventsSent).toBe(3);
         expect(statCount).toBeGreaterThan(0);
@@ -42,14 +42,14 @@ describe('ReplayStatsProvider', () => {
         const replayFilePath = path.resolve('./test/diagnostics-replay-uncompressed-no-header.mcstats');
         const replay = new ReplayStatsProvider(replayFilePath);
         let statCount = 0;
-        let statsCallback: StatsListener = {
+        const statsCallback: StatsListener = {
             onStatUpdated: (stat: StatData) => {
                 statCount++;
                 expect(stat).toBeDefined();
             },
         };
         replay.addStatListener(statsCallback);
-        let results = await replay.start();
+        const results = await replay.start();
         expect(results.statLinesRead).toBe(3);
         expect(results.statEventsSent).toBe(3);
         expect(statCount).toBeGreaterThan(0);
@@ -59,19 +59,19 @@ describe('ReplayStatsProvider', () => {
         const replayFilePath = path.resolve('./test/diagnostics-replay-compressed.mcstats');
         const replay = new ReplayStatsProvider(replayFilePath);
         let statCount = 0;
-        let statsCallback: StatsListener = {
+        const statsCallback: StatsListener = {
             onStatUpdated: (stat: StatData) => {
                 statCount++;
                 expect(stat).toBeDefined();
             },
         };
         replay.addStatListener(statsCallback);
-        let results = await replay.start();
+        const results = await replay.start();
         expect(results.statLinesRead).toBe(3);
         expect(results.statEventsSent).toBe(3);
         expect(statCount).toBeGreaterThan(0);
         replay.stop();
-        let results2 = await replay.start();
+        const results2 = await replay.start();
         expect(results2.statLinesRead).toBe(3);
         expect(results2.statEventsSent).toBe(3);
     });
@@ -80,13 +80,13 @@ describe('ReplayStatsProvider', () => {
         const replayFilePath = './not-a-real-file.mcstats';
         const replay = new ReplayStatsProvider(replayFilePath);
         let notification = '';
-        let statsCallback: StatsListener = {
+        const statsCallback: StatsListener = {
             onNotification: (message: string) => {
                 notification = message;
             },
         };
         replay.addStatListener(statsCallback);
-        let results = await replay.start();
+        const results = await replay.start();
         expect(results.statLinesRead).toBe(0);
         expect(notification).toBe('Failed to read replay file.');
     });

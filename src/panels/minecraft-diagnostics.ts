@@ -99,7 +99,7 @@ export class MinecraftDiagnosticsPanel {
         this._statsTracker.addStatListener(this._statsCallback);
     }
 
-    public static render(extensionUri: Uri, statsTracker: StatsProvider) {
+    public static render(extensionUri: Uri, statsTracker: StatsProvider): void {
         const statsTrackerId = statsTracker.uniqueId;
         const existingPanel = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.find(
             panel => panel._statsTracker.uniqueId === statsTrackerId
@@ -126,7 +126,7 @@ export class MinecraftDiagnosticsPanel {
         }
     }
 
-    public dispose() {
+    public dispose(): void {
         if (this._statsCallback !== undefined) {
             this._statsTracker.removeStatListener(this._statsCallback);
             this._statsCallback = undefined;

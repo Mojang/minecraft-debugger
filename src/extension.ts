@@ -48,25 +48,30 @@ export function activate(context: vscode.ExtensionContext): void {
         eventEmitter.emit('run-minecraft-command', 'reload');
     });
 
-    // Create a command to allow keyboard shortcuts to run Minecraft commands
-    const runMinecraftCommand = vscode.commands.registerCommand(
-        'minecraft-debugger.runMinecraftCommand',
-        (...args: unknown[]) => {
-            if (args.length === 0) {
+    const runMinecraftCommand = vscode.commands.registerCommand('minecraft-debugger.runMinecraftCommand', () => {
+        if (!vscode.debug.activeDebugSession) {
+            vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+            return;
+        }
+
+        vscode.window.showInputBox({
+            placeHolder: 'Please enter the command to run.',
+            value: '',
+        }).then(command => {
+            if (!command) {
                 vscode.window.showErrorMessage('No command provided.');
                 return;
             }
-            const command = args[0]; // Use only the first argument
-            if (typeof command !== 'string') {
-                vscode.window.showErrorMessage('Command must be a string.');
-                return;
-            }
+
+            // Check for active session again in case the session closed while the prompt was open
             if (!vscode.debug.activeDebugSession) {
                 vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+                return;
             }
+
             eventEmitter.emit('run-minecraft-command', command);
-        }
-    );
+        });
+    });
 
     const liveDiagnosticsCommand = vscode.commands.registerCommand('minecraft-debugger.liveDiagnostics', () => {
         MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider);

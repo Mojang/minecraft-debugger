@@ -64,6 +64,11 @@
             {
                 "command": "minecraft-debugger.minecraftReload",
                 "title": "Minecraft Reload"
+            },
+            {
+                "command": "minecraft-debugger.runMinecraftCommand",
+                "enablement": "inDebugMode",
+                "title": "Minecraft Run Command"
             }
         ],
         "keybindings": [

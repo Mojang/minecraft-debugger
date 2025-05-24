@@ -74,6 +74,14 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     this._eventEmitter.emit('run-minecraft-command', message.command);
                     break;
                 }
+                case 'change-minecraft-game-setting': {
+                    if (!message.setting || message.setting.trim() === '') {
+                        vscode.window.showErrorMessage('Minecraft Game Setting can not be empty.');
+                        return;
+                    }
+                    this._eventEmitter.emit('change-minecraft-game-setting', message.setting, message.value);
+                    break;
+                }
                 case 'start-profiler': {
                     this._eventEmitter.emit('start-profiler');
                     break;

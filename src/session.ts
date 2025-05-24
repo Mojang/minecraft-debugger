@@ -154,6 +154,7 @@ export class Session extends DebugSession {
         this.setDebuggerColumnsStartAt1(true);
 
         this._eventEmitter.on('run-minecraft-command', this.onRunMinecraftCommand.bind(this));
+        this._eventEmitter.on('change-minecraft-game-setting', this.onChangeSetting.bind(this));
         this._eventEmitter.on('start-profiler', this.onStartProfiler.bind(this));
         this._eventEmitter.on('stop-profiler', this.onStopProfiler.bind(this));
         this._eventEmitter.on('request-debugger-status', this.onRequestDebuggerStatus.bind(this));
@@ -161,6 +162,7 @@ export class Session extends DebugSession {
 
     public dispose(): void {
         this._eventEmitter.removeAllListeners('run-minecraft-command');
+        this._eventEmitter.removeAllListeners('change-minecraft-game-setting');
         this._eventEmitter.removeAllListeners('start-profiler');
         this._eventEmitter.removeAllListeners('stop-profiler');
         this._eventEmitter.removeAllListeners('request-debugger-status');
@@ -191,6 +193,16 @@ export class Session extends DebugSession {
                 },
             });
         }
+    }
+
+    private onChangeSetting(setting: string, value: string): void {
+        this.sendDebuggeeMessage({
+            type: 'changeGameSetting',
+            setting: {
+                setting: setting,
+                new_value: value,
+            },
+        });
     }
 
     private onStartProfiler(): void {

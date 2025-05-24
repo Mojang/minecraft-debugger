@@ -54,24 +54,52 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
         }
 
-        vscode.window.showInputBox({
-            placeHolder: 'Please enter the command to run.',
-            value: '',
-        }).then(command => {
-            if (!command) {
-                vscode.window.showErrorMessage('No command provided.');
-                return;
-            }
+        vscode.window
+            .showInputBox({
+                placeHolder: 'Please enter the command to run.',
+                value: '',
+            })
+            .then(command => {
+                if (!command) {
+                    vscode.window.showErrorMessage('No command provided.');
+                    return;
+                }
 
-            // Check for active session again in case the session closed while the prompt was open
-            if (!vscode.debug.activeDebugSession) {
-                vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
-                return;
-            }
+                // Check for active session again in case the session closed while the prompt was open
+                if (!vscode.debug.activeDebugSession) {
+                    vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+                    return;
+                }
 
-            eventEmitter.emit('run-minecraft-command', command);
-        });
+                eventEmitter.emit('run-minecraft-command', command);
+            });
     });
+
+    // TODO: Uncomment when the command is implemented
+    // const changeMinecraftGameSetting = vscode.commands.registerCommand('minecraft-debugger.changeMinecraftGameSetting', () => {
+    //     if (!vscode.debug.activeDebugSession) {
+    //         vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+    //         return;
+    //     }
+
+    //     vscode.window.showInputBox({
+    //         placeHolder: 'Please enter the setting to change.',
+    //         value: '',
+    //     }).then(command => {
+    //         if (!command) {
+    //             vscode.window.showErrorMessage('No command provided.');
+    //             return;
+    //         }
+
+    //         // Check for active session again in case the session closed while the prompt was open
+    //         if (!vscode.debug.activeDebugSession) {
+    //             vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+    //             return;
+    //         }
+
+    //         eventEmitter.emit('change-minecraft-game-setting', command);
+    //     });
+    // });
 
     const liveDiagnosticsCommand = vscode.commands.registerCommand('minecraft-debugger.liveDiagnostics', () => {
         MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider);

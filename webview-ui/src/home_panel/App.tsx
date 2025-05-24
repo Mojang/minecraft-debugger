@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import CommandSection from './controls/CommandSection';
+import SettingSection from './controls/SettingsSection';
 import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
 import GeneralSection from './controls/GeneralSection';
 import ProfilerSection from './controls/ProfilerSection';
@@ -9,6 +10,7 @@ import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/P
 import StatusSection from './controls/StatusSection';
 import { WebviewApi } from 'vscode-webview';
 import './App.css';
+import { GameSettingHandlers, getGameSettingHandlers } from './handlers/GameSettingHandlers';
 
 interface SaveState {
     commandButtons: CommandButton[];
@@ -30,7 +32,13 @@ const onShowSettings = () => {
 };
 
 const onRunCommand = (command: string) => {
+    console.log('onRunCommand', command);
     vscode.postMessage({ type: 'run-minecraft-command', command: command });
+};
+
+const onChangeSetting = (setting: string, value: string) => {
+    console.log('onChangeSetting', setting, value);
+    vscode.postMessage({ type: 'change-minecraft-game-setting', setting: setting, value: value });
 };
 
 const onCaptureBasePathBrowseButtonPressed = () => {
@@ -44,6 +52,8 @@ const App = () => {
 
     const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
         getCommandHandlers();
+
+    const gameSettingHandlers: GameSettingHandlers = getGameSettingHandlers();
 
     const {
         scrollingListRef,
@@ -133,6 +143,15 @@ const App = () => {
                 onEditCommand={onEditCommand}
                 onRunCommand={onRunCommand}
                 onDeleteCommand={onDeleteCommand}
+            />
+            <SettingSection
+                debuggerConnected={debuggerConnected}
+                settingButtons={gameSettingHandlers.settingButtons}
+                onAddSetting={gameSettingHandlers.onAddSetting}
+                onEditSetting={gameSettingHandlers.onEditSetting}
+                onEditSettingValue={gameSettingHandlers.onEditSettingValue}
+                onChangeSetting={onChangeSetting}
+                onDeleteSetting={gameSettingHandlers.onDeleteSetting}
             />
             <ProfilerSection
                 capturesBasePath={capturesBasePath}

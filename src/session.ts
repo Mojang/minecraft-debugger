@@ -90,6 +90,14 @@ class TargetPluginItem implements QuickPickItem {
     }
 }
 
+interface DebuggerStackFrame {
+    id: number;
+    name: string;
+    filename: string;
+    line: number;
+    column: number;
+}
+
 // protocol version history
 // 1 - initial version
 // 2 - add targetModuleUuid to protocol event
@@ -133,6 +141,7 @@ export class Session extends DebugSession {
     private _generatedSourceRoot?: string;
     private _inlineSourceMap = false;
     private _moduleMapping?: ModuleMapping;
+    private _moduleMaps?: Record<string, SourceMaps>;
     private _targetModuleUuid?: string;
     private _clientProtocolVersion: number = ProtocolVersion._Unknown; // determined after connection
     private _minecraftCapabilities: MinecraftCapabilities = { supportsCommands: false, supportsProfiler: false };
@@ -435,22 +444,34 @@ export class Session extends DebugSession {
         this.sendResponse(response);
     }
 
-    // VSCode requesting stack trace for threads, follows threadsRequest
-    protected async stackTraceRequest(
-        response: DebugProtocol.StackTraceResponse,
-        args: DebugProtocol.StackTraceArguments
-    ): Promise<void> {
-        const threadId = args.threadId;
-        const stacksBody = await this.sendDebugeeRequestAsync(threadId, response, args);
+    static createModuleMap(
+        localRoot: string,
+        mapping: ModuleMapping | undefined
+    ): Record<string, SourceMaps> | undefined {
+        if (!mapping) {
+            return undefined;
+        }
+        const maps: Record<string, SourceMaps> = {};
+        for (const module of Object.keys(mapping)) {
+            maps[module] = new SourceMaps(localRoot, path.dirname(mapping[module]));
+        }
+        return maps;
+    }
 
-        this._activeThreadId = threadId;
-
+    static async mapStackFrames(
+        debuggerStackFrames: DebuggerStackFrame[],
+        moduleMapping: ModuleMapping | undefined,
+        moduleMaps: Record<string, SourceMaps> | undefined,
+        baseSourceMaps: SourceMaps
+    ): Promise<StackFrame[]> {
         const stackFrames: StackFrame[] = [];
-        for (const { id, name, filename, line, column } of stacksBody) {
-            const mappedFilename = this._moduleMapping?.[filename] ?? filename;
+        for (const { id, name, filename, line, column } of debuggerStackFrames) {
+            const mappedFilename = moduleMapping?.[filename];
+            const sourceMaps = mappedFilename ? moduleMaps![filename] : baseSourceMaps;
+            const sourceFilename = mappedFilename ? path.basename(mappedFilename) : filename;
             try {
-                const originalLocation = await this._sourceMaps.getOriginalPositionFor({
-                    source: mappedFilename,
+                const originalLocation = await sourceMaps.getOriginalPositionFor({
+                    source: sourceFilename,
                     line: line || 0,
                     column: column || 0,
                 });
@@ -460,7 +481,25 @@ export class Session extends DebugSession {
                 stackFrames.push(new StackFrame(id, name));
             }
         }
+        return stackFrames;
+    }
 
+    // VSCode requesting stack trace for threads, follows threadsRequest
+    protected async stackTraceRequest(
+        response: DebugProtocol.StackTraceResponse,
+        args: DebugProtocol.StackTraceArguments
+    ): Promise<void> {
+        const threadId = args.threadId;
+        const stacksBody = (await this.sendDebugeeRequestAsync(threadId, response, args)) as DebuggerStackFrame[];
+
+        this._activeThreadId = threadId;
+
+        const stackFrames: StackFrame[] = await Session.mapStackFrames(
+            stacksBody,
+            this._moduleMapping,
+            this._moduleMaps,
+            this._sourceMaps
+        );
         const totalFrames = stacksBody.length;
 
         response.body = {
@@ -660,6 +699,8 @@ export class Session extends DebugSession {
             this._generatedSourceRoot,
             this._inlineSourceMap
         );
+
+        this._moduleMaps = Session.createModuleMap(this._localRoot, this._moduleMapping);
 
         // watch for source map changes
         this.createSourceMapFileWatcher(this._localRoot, this._sourceMapRoot);

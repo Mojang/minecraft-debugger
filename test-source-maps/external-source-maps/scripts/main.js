@@ -47,7 +47,7 @@ class Company {
         return this.employees.length;
     }
 }
-Company.companyName = "Tech Corp";
+Company.companyName = 'Tech Corp';
 Company.employees = [];
 // Class with getters and setters
 class Project {
@@ -69,22 +69,27 @@ class Project {
     }
 }
 // Example usage
-const emp1 = new Employee("Alice", 30, "Developer", Role.Developer);
-const emp2 = new Manager("Bob", 40, "Manager", "IT");
+const emp1 = new Employee('Alice', 30, 'Developer', Role.Developer);
+const emp2 = new Manager('Bob', 40, 'Manager', 'IT');
 Company.addEmployee(emp1);
 Company.addEmployee(emp2);
 console.log(emp1.greet());
 console.log(emp2.getDepartment());
 console.log(`Total employees: ${Company.getEmployeeCount()}`);
-const project = new Project("New Website", 6);
+const project = new Project('New Website', 6);
 console.log(`Project: ${project.name}, Duration: ${project.duration} months`);
 project.duration = 8;
 console.log(`Updated Duration: ${project.duration} months`);
 // Using the generic function
-const output = identity("Hello, TypeScript!");
+const output = identity('Hello, TypeScript!');
 console.log(output);
 // Type assertion
-let someValue = "this is a string";
+let someValue = 'this is a string';
 let strLength = someValue.length;
 console.log(`String length: ${strLength}`);
+// Fake a module call (pretend ./module doesn't exist)
+// @ts-ignore
+import('./module').then(m => {
+    m.fakeModuleCall();
+});
 //# sourceMappingURL=main.js.map

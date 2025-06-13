@@ -1,11 +1,10 @@
 {
 	"extends": "./tsconfig-base.json",
 	"include": [
-		"src/main.ts"
+		"src/module.ts"
 	],
 	"compilerOptions": {
-		"outDir": "external-source-maps/scripts",
-		"noResolve": true,
+		"outDir": "external-source-maps/module",
 		"rootDir": null,
 		"sourceMap": true,
         "inlineSourceMap": false

@@ -5,6 +5,7 @@
 	],
 	"compilerOptions": {
 		"outDir": "inline-source-maps/scripts",
+		"noResolve": true,
 		"rootDir": null,
 		"sourceMap": false,
         "inlineSourceMap": true

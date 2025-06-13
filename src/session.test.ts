@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 import { describe, it, expect, vi } from 'vitest';
 import { Session } from './session';
 import path from 'path';

@@ -1,6 +1,6 @@
 {
     "include": ["src/**/*.ts", "vitest.d.ts"],
-    "exclude": ["dist", "out", "node_modules", "webview-ui"],
+    "exclude": ["dist", "out", "node_modules", "webview-ui", "src/mocks/*"],
     "compilerOptions": {
         "module": "ES2022",
         "target": "es6",

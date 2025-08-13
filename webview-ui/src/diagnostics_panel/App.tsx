@@ -7,9 +7,15 @@ import { StatisticType, YAxisStyle, YAxisType, createStatResolver } from './Stat
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
 import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
-import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
+import {
+    MultipleStatisticProvider,
+    RegexStatisticProvider,
+    SimpleStatisticProvider,
+    StatisticUpdatedMessage,
+} from './StatisticProvider';
 import ReplayControls from './controls/ReplayControls';
 import * as statPrefabs from './StatisticPrefabs';
+import { MinecraftEventTable } from './controls/MinecraftEventTable';
 import { Icons } from './Icons';
 import './App.css';
 
@@ -118,6 +124,7 @@ function App() {
                 <VSCodePanelTab id="tab-6">Networking - Bandwidth</VSCodePanelTab>
                 <VSCodePanelTab id="tab-7">Handle Counts</VSCodePanelTab>
                 <VSCodePanelTab id="tab-8">Subscriber Counts</VSCodePanelTab>
+                <VSCodePanelTab id="tab-9">Global Dynamic Properties</VSCodePanelTab>
                 <VSCodePanelView id="view-1" style={{ flexDirection: 'column' }}>
                     <div style={{ flexDirection: 'row', display: 'flex' }}>
                         {statPrefabs.entityCount.reactNode}
@@ -265,6 +272,28 @@ function App() {
                             tickRange: 20 * 15 /* About 15 seconds */,
                             yAxisType: YAxisType.Absolute,
                         })}
+                    />
+                </VSCodePanelView>
+                <VSCodePanelView id="view-9">
+                    <StatGroupSelectionBox
+                        labelName="Global Dynamic Properties"
+                        statParentId="global_dynamic_properties"
+                        onChange={handlePluginSelection}
+                    />
+                    <MinecraftEventTable
+                        title="Global Dynamic Properties"
+                        statisticDataProviders={{
+                            'Property Name': new RegexStatisticProvider({
+                                statisticParentId: /networking_packets_details_.*/,
+                                statisticId: 'received',
+                                ignoredValues: [0],
+                            }),
+                            'Property Value': new RegexStatisticProvider({
+                                statisticParentId: /networking_packets_details_.*/,
+                                statisticId: 'sent',
+                                ignoredValues: [0],
+                            }),
+                        }}
                     />
                 </VSCodePanelView>
             </VSCodePanels>

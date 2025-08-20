@@ -275,22 +275,17 @@ function App() {
                     />
                 </VSCodePanelView>
                 <VSCodePanelView id="view-9">
-                    <StatGroupSelectionBox
-                        labelName="Global Dynamic Properties"
-                        statParentId="global_dynamic_properties"
-                        onChange={handlePluginSelection}
-                    />
                     <MinecraftEventTable
                         title="Global Dynamic Properties"
                         statisticDataProviders={{
                             'Property Name': new RegexStatisticProvider({
-                                statisticParentId: /networking_packets_details_.*/,
-                                statisticId: 'received',
+                                statisticParentId: /dynamic_property_values*/,
+                                statisticId: 'name',
                                 ignoredValues: [0],
                             }),
                             'Property Value': new RegexStatisticProvider({
-                                statisticParentId: /networking_packets_details_.*/,
-                                statisticId: 'sent',
+                                statisticParentId: /dynamic_property_values*/,
+                                statisticId: 'value',
                                 ignoredValues: [0],
                             }),
                         }}

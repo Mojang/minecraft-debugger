@@ -1,8 +1,9 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { VSCodeDataGrid, VSCodeDataGridCell, VSCodeDataGridRow } from '@vscode/webview-ui-toolkit/react';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
+import { DataGrid } from '@vscode/webview-ui-toolkit';
 
 type SelectionBoxProps = {
     title: string;
@@ -48,6 +49,11 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
                         }
                     }
 
+                    // Sort the data by tick
+                    newState.sort((a, b) => {
+                        return a.tick - b.tick;
+                    });
+
                     // Remove old data
                     while (newState.length > MAX_EVENTS) {
                         newState.shift();
@@ -80,9 +86,12 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
     return (
         <VSCodeDataGrid id="my-grid">
             <VSCodeDataGridRow rowType="header">
+                <VSCodeDataGridCell cellType="columnheader" gridColumn="1">
+                    Tick
+                </VSCodeDataGridCell>
                 {Object.keys(statisticDataProviders).map((statisticDataProviderName, index) => {
                     return (
-                        <VSCodeDataGridCell cellType="columnheader" gridColumn={(index + 1).toString()}>
+                        <VSCodeDataGridCell cellType="columnheader" gridColumn={(index + 2).toString()}>
                             {statisticDataProviderName}
                         </VSCodeDataGridCell>
                     );
@@ -93,13 +102,11 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
                     <VSCodeDataGridCell gridColumn="1">{eventTick.tick}</VSCodeDataGridCell>
                     {Object.keys(statisticDataProviders).map((statisticDataProviderName, index) => {
                         return (
-                            <VSCodeDataGridCell gridColumn={(index + 1).toString()}>
+                            <VSCodeDataGridCell gridColumn={(index + 2).toString()}>
                                 {eventTick.events[statisticDataProviderName]?.map(event => {
                                     return (
                                         <a>
-                                            {`${event.group_name}${
-                                                event.values.length > 1 ? ` x${event.values.length}` : ''
-                                            }`}
+                                            {`${event.group_name}`}
                                             <br />
                                         </a>
                                     );

@@ -3,6 +3,7 @@
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
     values: number[];
+    string_values: string[];
     id: string;
     name: string;
     group: string;

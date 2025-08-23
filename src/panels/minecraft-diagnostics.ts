@@ -66,6 +66,7 @@ export class MinecraftDiagnosticsPanel {
                     const message = {
                         type: 'statistic-updated',
                         values: stat.values,
+                        string_values: stat.string_values,
                         id: stat.id,
                         name: stat.name,
                         group_name: stat.parent_name,

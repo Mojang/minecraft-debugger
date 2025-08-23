@@ -8,6 +8,7 @@ export interface StatData {
     parent_id: string;
     parent_full_id: string;
     values: number[];
+    string_values: string[];
     tick: number;
 }
 
@@ -15,6 +16,7 @@ export interface StatDataModel {
     name: string;
     children?: StatDataModel[];
     values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
+    string_values?: string[];
 }
 
 export interface StatMessageModel {
@@ -89,6 +91,7 @@ export class StatsProvider {
                 parent_id: parent !== undefined ? parent.id : '',
                 parent_full_id: parent !== undefined ? parent.full_id : '',
                 values: stat.values ?? [],
+                string_values: stat.string_values ?? [],
                 tick: tick,
             };
 

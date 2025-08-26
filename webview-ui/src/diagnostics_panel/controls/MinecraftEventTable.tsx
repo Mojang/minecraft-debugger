@@ -82,30 +82,23 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
     return (
         <VSCodeDataGrid id="my-grid">
             <VSCodeDataGridRow rowType="header">
-                {Object.keys(statisticDataProviders).map((statisticDataProviderName, index) => {
-                    return (
-                        <VSCodeDataGridCell cellType="columnheader" gridColumn={(index + 2).toString()}>
-                            {statisticDataProviderName}
-                        </VSCodeDataGridCell>
-                    );
-                })}
+                <VSCodeDataGridCell cellType="columnheader" gridColumn="1">
+                    Tick
+                </VSCodeDataGridCell>
+                <VSCodeDataGridCell cellType="columnheader" gridColumn={(2).toString()}>
+                    {'Name'}
+                </VSCodeDataGridCell>
+                <VSCodeDataGridCell cellType="columnheader" gridColumn={(3).toString()}>
+                    {'Value'}
+                </VSCodeDataGridCell>
             </VSCodeDataGridRow>
-            <VSCodeDataGridRow>
-                {Object.keys(statisticDataProviders).map(index => {
-                    return (
-                        <VSCodeDataGridCell gridColumn={(index + 2).toString()}>
-                            {events.map(event => {
-                                return (
-                                    <a>
-                                        {`${JSON.stringify(event)}`}
-                                        <br />
-                                    </a>
-                                );
-                            })}
-                        </VSCodeDataGridCell>
-                    );
-                })}
-            </VSCodeDataGridRow>
+            {events.map(event => (
+                <VSCodeDataGridRow>
+                    <VSCodeDataGridCell gridColumn="1">{0}</VSCodeDataGridCell>
+                    <VSCodeDataGridCell gridColumn={(2).toString()}>{`${event.name}`}</VSCodeDataGridCell>
+                    <VSCodeDataGridCell gridColumn={(3).toString()}>{`${event.value}`}</VSCodeDataGridCell>
+                </VSCodeDataGridRow>
+            ))}
         </VSCodeDataGrid>
     );
 }

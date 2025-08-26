@@ -4,17 +4,12 @@ import { useEffect, useState } from 'react';
 import { VSCodeDataGrid, VSCodeDataGridCell, VSCodeDataGridRow } from '@vscode/webview-ui-toolkit/react';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 
-type SelectionBoxProps = {
-    title: string;
-    statisticDataProviders: Record<string, StatisticProvider>;
-};
-
 type DynamicProperty = {
     name: string;
     value: string;
 };
 
-export function MinecraftEventTable({ title, statisticDataProviders }: SelectionBoxProps) {
+export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<string, StatisticProvider>) {
     // the groups directly under the 'statParentId'
     const [events, setEvents] = useState<DynamicProperty[]>([]);
 

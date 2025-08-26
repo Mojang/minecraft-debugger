@@ -15,7 +15,7 @@ import {
 } from './StatisticProvider';
 import ReplayControls from './controls/ReplayControls';
 import * as statPrefabs from './StatisticPrefabs';
-import { MinecraftEventTable } from './controls/MinecraftEventTable';
+import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
 import { Icons } from './Icons';
 import './App.css';
 
@@ -275,15 +275,14 @@ function App() {
                     />
                 </VSCodePanelView>
                 <VSCodePanelView id="view-9">
-                    <MinecraftEventTable
-                        title="Global Dynamic Properties"
-                        statisticDataProviders={{
-                            'Property Name': new RegexStatisticProvider({
+                    <MinecraftDynamicPropertiesTable
+                        statisticDataProviders={
+                            new RegexStatisticProvider({
                                 statisticParentId: /dynamic_property_values*/,
                                 statisticId: 'name_and_value',
                                 ignoredValues: [0],
-                            }),
-                        }}
+                            })
+                        }
                     />
                 </VSCodePanelView>
             </VSCodePanels>

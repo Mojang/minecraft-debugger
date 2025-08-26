@@ -193,7 +193,7 @@ export class RegexStatisticProvider extends StatisticProvider {
         }
 
         // No new data
-        if (event.values.length === 0) {
+        if (event.values.length === 0 && event.string_values.length === 0) {
             return;
         }
 

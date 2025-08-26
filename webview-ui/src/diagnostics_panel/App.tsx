@@ -280,7 +280,7 @@ function App() {
                             new RegexStatisticProvider({
                                 statisticParentId: /dynamic_property_values*/,
                                 statisticId: 'name_and_value',
-                                ignoredValues: [0],
+                                ignoredValues: [-1],
                             })
                         }
                     />

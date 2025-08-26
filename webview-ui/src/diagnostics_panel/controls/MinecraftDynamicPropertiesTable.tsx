@@ -24,6 +24,15 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
                 setEvents((prevState: DynamicProperty[]): DynamicProperty[] => {
                     const newState = [...prevState];
 
+                    if (
+                        event === undefined ||
+                        event.string_values === undefined ||
+                        event.string_values[0] === undefined ||
+                        event.string_values[1] === undefined
+                    ) {
+                        return [];
+                    }
+
                     let isNewVariable = true;
                     for (let i = 0; i < newState.length; i++) {
                         if (newState[i].name === event.string_values[0]) {
@@ -64,7 +73,6 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
             });
         };
     }, [events]);
-
     return (
         <VSCodeDataGrid id="my-grid">
             <VSCodeDataGridRow rowType="header">

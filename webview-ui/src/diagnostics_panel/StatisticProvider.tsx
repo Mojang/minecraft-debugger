@@ -192,11 +192,6 @@ export class RegexStatisticProvider extends StatisticProvider {
             return;
         }
 
-        // No new data
-        if (event.values.length === 0 && event.string_values.length === 0) {
-            return;
-        }
-
         let ignore = true;
         if (this.options.ignoredValues !== undefined) {
             ignore = this.options.ignoredValues.every((v: number) => event.values.indexOf(v) !== -1);

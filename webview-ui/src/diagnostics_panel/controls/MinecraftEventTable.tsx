@@ -1,26 +1,18 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { VSCodeDataGrid, VSCodeDataGridCell, VSCodeDataGridRow } from '@vscode/webview-ui-toolkit/react';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
-import { DataGrid } from '@vscode/webview-ui-toolkit';
 
 type SelectionBoxProps = {
     title: string;
     statisticDataProviders: Record<string, StatisticProvider>;
 };
 
-type EventTick = {
-    tick: number;
-    events: Record<string, StatisticUpdatedMessage[]>;
-};
-
 type DynamicProperty = {
     name: string;
     value: string;
 };
-
-const MAX_EVENTS = 100;
 
 export function MinecraftEventTable({ title, statisticDataProviders }: SelectionBoxProps) {
     // the groups directly under the 'statParentId'
@@ -31,7 +23,6 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
         const eventHandlersByName = new Map<string, (event: StatisticUpdatedMessage) => void>();
 
         Object.keys(statisticDataProviders).forEach(statisticDataProviderName => {
-            console.warn(JSON.stringify(event));
             const statsProvider = statisticDataProviders[statisticDataProviderName];
             const eventHandler = (event: StatisticUpdatedMessage): void => {
                 // Update data with new data point
@@ -78,25 +69,21 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
             });
         };
     }, [events]);
-    console.warn(JSON.stringify(events));
+
     return (
         <VSCodeDataGrid id="my-grid">
             <VSCodeDataGridRow rowType="header">
-                <VSCodeDataGridCell cellType="columnheader" gridColumn="1">
-                    Tick
-                </VSCodeDataGridCell>
-                <VSCodeDataGridCell cellType="columnheader" gridColumn={(2).toString()}>
+                <VSCodeDataGridCell cellType="columnheader" gridColumn={'1'}>
                     {'Name'}
                 </VSCodeDataGridCell>
-                <VSCodeDataGridCell cellType="columnheader" gridColumn={(3).toString()}>
+                <VSCodeDataGridCell cellType="columnheader" gridColumn={'2'}>
                     {'Value'}
                 </VSCodeDataGridCell>
             </VSCodeDataGridRow>
             {events.map(event => (
                 <VSCodeDataGridRow>
-                    <VSCodeDataGridCell gridColumn="1">{0}</VSCodeDataGridCell>
-                    <VSCodeDataGridCell gridColumn={(2).toString()}>{`${event.name}`}</VSCodeDataGridCell>
-                    <VSCodeDataGridCell gridColumn={(3).toString()}>{`${event.value}`}</VSCodeDataGridCell>
+                    <VSCodeDataGridCell gridColumn={'1'}>{`${event.name}`}</VSCodeDataGridCell>
+                    <VSCodeDataGridCell gridColumn={'2'}>{`${event.value}`}</VSCodeDataGridCell>
                 </VSCodeDataGridRow>
             ))}
         </VSCodeDataGrid>

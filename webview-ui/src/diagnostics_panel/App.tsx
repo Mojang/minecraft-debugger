@@ -280,12 +280,7 @@ function App() {
                         statisticDataProviders={{
                             'Property Name': new RegexStatisticProvider({
                                 statisticParentId: /dynamic_property_values*/,
-                                statisticId: 'name',
-                                ignoredValues: [0],
-                            }),
-                            'Property Value': new RegexStatisticProvider({
-                                statisticParentId: /dynamic_property_values*/,
-                                statisticId: 'value',
+                                statisticId: 'name_and_value',
                                 ignoredValues: [0],
                             }),
                         }}

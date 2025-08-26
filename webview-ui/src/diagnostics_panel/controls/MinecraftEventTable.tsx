@@ -15,48 +15,44 @@ type EventTick = {
     events: Record<string, StatisticUpdatedMessage[]>;
 };
 
+type DynamicProperty = {
+    name: string;
+    value: string;
+};
+
 const MAX_EVENTS = 100;
 
 export function MinecraftEventTable({ title, statisticDataProviders }: SelectionBoxProps) {
     // the groups directly under the 'statParentId'
-    const [events, setEvents] = useState<EventTick[]>([]);
+    const [events, setEvents] = useState<DynamicProperty[]>([]);
 
     //draws chart
     useEffect(() => {
         const eventHandlersByName = new Map<string, (event: StatisticUpdatedMessage) => void>();
 
         Object.keys(statisticDataProviders).forEach(statisticDataProviderName => {
+            console.warn(JSON.stringify(event));
             const statsProvider = statisticDataProviders[statisticDataProviderName];
             const eventHandler = (event: StatisticUpdatedMessage): void => {
                 // Update data with new data point
-                setEvents((prevState: EventTick[]): EventTick[] => {
+                setEvents((prevState: DynamicProperty[]): DynamicProperty[] => {
                     const newState = [...prevState];
 
-                    const eventTick = newState.find(eventTick => eventTick.tick === event.time);
-                    if (eventTick === undefined) {
-                        newState.push({
-                            tick: event.time,
-                            events: {
-                                [statisticDataProviderName]: [event],
-                            },
-                        });
-                    } else {
-                        const events = eventTick.events[statisticDataProviderName];
-                        if (events === undefined) {
-                            eventTick.events[statisticDataProviderName] = [event];
-                        } else {
-                            events.push(event);
+                    let isNewVariable = true;
+                    for (let i = 0; i < newState.length; i++) {
+                        if (newState[i].name === event.string_values[0]) {
+                            newState[i].value = event.string_values[1];
+                            isNewVariable = false;
+                            break;
                         }
                     }
 
-                    // Sort the data by tick
-                    newState.sort((a, b) => {
-                        return a.tick - b.tick;
-                    });
-
-                    // Remove old data
-                    while (newState.length > MAX_EVENTS) {
-                        newState.shift();
+                    if (isNewVariable) {
+                        const newProp: DynamicProperty = {
+                            name: event.string_values[0],
+                            value: event.string_values[1],
+                        };
+                        newState.push(newProp);
                     }
 
                     return newState;
@@ -82,13 +78,10 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
             });
         };
     }, [events]);
-
+    console.warn(JSON.stringify(events));
     return (
         <VSCodeDataGrid id="my-grid">
             <VSCodeDataGridRow rowType="header">
-                <VSCodeDataGridCell cellType="columnheader" gridColumn="1">
-                    Tick
-                </VSCodeDataGridCell>
                 {Object.keys(statisticDataProviders).map((statisticDataProviderName, index) => {
                     return (
                         <VSCodeDataGridCell cellType="columnheader" gridColumn={(index + 2).toString()}>
@@ -97,25 +90,22 @@ export function MinecraftEventTable({ title, statisticDataProviders }: Selection
                     );
                 })}
             </VSCodeDataGridRow>
-            {events.map(eventTick => (
-                <VSCodeDataGridRow>
-                    <VSCodeDataGridCell gridColumn="1">{eventTick.tick}</VSCodeDataGridCell>
-                    {Object.keys(statisticDataProviders).map((statisticDataProviderName, index) => {
-                        return (
-                            <VSCodeDataGridCell gridColumn={(index + 2).toString()}>
-                                {eventTick.events[statisticDataProviderName]?.map(event => {
-                                    return (
-                                        <a>
-                                            {`${event.string_values}`}
-                                            <br />
-                                        </a>
-                                    );
-                                })}
-                            </VSCodeDataGridCell>
-                        );
-                    })}
-                </VSCodeDataGridRow>
-            ))}
+            <VSCodeDataGridRow>
+                {Object.keys(statisticDataProviders).map(index => {
+                    return (
+                        <VSCodeDataGridCell gridColumn={(index + 2).toString()}>
+                            {events.map(event => {
+                                return (
+                                    <a>
+                                        {`${JSON.stringify(event)}`}
+                                        <br />
+                                    </a>
+                                );
+                            })}
+                        </VSCodeDataGridCell>
+                    );
+                })}
+            </VSCodeDataGridRow>
         </VSCodeDataGrid>
     );
 }

@@ -5,6 +5,7 @@ import { VSCodeDataGrid, VSCodeDataGridCell, VSCodeDataGridRow } from '@vscode/w
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 
 type DynamicProperty = {
+    tick: number;
     name: string;
     value: string;
 };
@@ -26,6 +27,7 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
 
                     if (
                         event === undefined ||
+                        event.time === undefined ||
                         event.string_values === undefined ||
                         event.string_values[0] === undefined ||
                         event.string_values[1] === undefined
@@ -33,10 +35,12 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
                         return [];
                     }
 
+                    const currentTick = event.time;
                     let isNewVariable = true;
                     for (let i = 0; i < newState.length; i++) {
                         if (newState[i].name === event.string_values[0]) {
                             newState[i].value = event.string_values[1];
+                            newState[i].tick = currentTick;
                             isNewVariable = false;
                             break;
                         }
@@ -44,13 +48,21 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
 
                     if (isNewVariable) {
                         const newProp: DynamicProperty = {
+                            tick: currentTick,
                             name: event.string_values[0],
                             value: event.string_values[1],
                         };
                         newState.push(newProp);
                     }
 
-                    return newState;
+                    const cleanState: DynamicProperty[] = [];
+                    for (let i = 0; i < newState.length; i++) {
+                        if (newState[i].tick === currentTick) {
+                            cleanState.push(newState[i]);
+                        }
+                    }
+
+                    return cleanState;
                 });
             };
 

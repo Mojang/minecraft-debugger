@@ -12,7 +12,7 @@ type DynamicProperty = {
 
 export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<string, StatisticProvider>) {
     // the groups directly under the 'statParentId'
-    const [events, setEvents] = useState<DynamicProperty[]>([]);
+    const [events, setEvents] = useState<string[][]>([]);
 
     //draws chart
     useEffect(() => {
@@ -22,47 +22,9 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
             const statsProvider = statisticDataProviders[statisticDataProviderName];
             const eventHandler = (event: StatisticUpdatedMessage): void => {
                 // Update data with new data point
-                setEvents((prevState: DynamicProperty[]): DynamicProperty[] => {
-                    const newState = [...prevState];
-
-                    if (
-                        event === undefined ||
-                        event.time === undefined ||
-                        event.string_values === undefined ||
-                        event.string_values[0] === undefined ||
-                        event.string_values[1] === undefined
-                    ) {
-                        return [];
-                    }
-
-                    const currentTick = event.time;
-                    let isNewVariable = true;
-                    for (let i = 0; i < newState.length; i++) {
-                        if (newState[i].name === event.string_values[0]) {
-                            newState[i].value = event.string_values[1];
-                            newState[i].tick = currentTick;
-                            isNewVariable = false;
-                            break;
-                        }
-                    }
-
-                    if (isNewVariable) {
-                        const newProp: DynamicProperty = {
-                            tick: currentTick,
-                            name: event.string_values[0],
-                            value: event.string_values[1],
-                        };
-                        newState.push(newProp);
-                    }
-
-                    const cleanState: DynamicProperty[] = [];
-                    for (let i = 0; i < newState.length; i++) {
-                        if (newState[i].tick === currentTick) {
-                            cleanState.push(newState[i]);
-                        }
-                    }
-
-                    return cleanState;
+                setEvents(() => {
+                    console.warn(JSON.stringify(event));
+                    return event.children_string_values;
                 });
             };
 
@@ -97,8 +59,8 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
             </VSCodeDataGridRow>
             {events.map(event => (
                 <VSCodeDataGridRow>
-                    <VSCodeDataGridCell gridColumn={'1'}>{`${event.name}`}</VSCodeDataGridCell>
-                    <VSCodeDataGridCell gridColumn={'2'}>{`${event.value}`}</VSCodeDataGridCell>
+                    <VSCodeDataGridCell gridColumn={'1'}>{`${event[0]}`}</VSCodeDataGridCell>
+                    <VSCodeDataGridCell gridColumn={'2'}>{`${event[1]}`}</VSCodeDataGridCell>
                 </VSCodeDataGridRow>
             ))}
         </VSCodeDataGrid>

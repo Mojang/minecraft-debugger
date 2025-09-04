@@ -9,6 +9,8 @@ export interface StatData {
     parent_full_id: string;
     values: number[];
     string_values: string[];
+    children_string_values: string[][];
+    is_modular: boolean;
     tick: number;
 }
 
@@ -17,6 +19,7 @@ export interface StatDataModel {
     children?: StatDataModel[];
     values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
     string_values?: string[];
+    is_modular: boolean;
 }
 
 export interface StatMessageModel {
@@ -82,7 +85,6 @@ export class StatsProvider {
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
         this._statListeners.forEach((listener: StatsListener) => {
             const statId = stat.name.toLowerCase();
-
             const statData: StatData = {
                 ...stat,
                 id: statId,
@@ -92,15 +94,44 @@ export class StatsProvider {
                 parent_full_id: parent !== undefined ? parent.full_id : '',
                 values: stat.values ?? [],
                 string_values: stat.string_values ?? [],
+                children_string_values: [],
+                is_modular: stat.is_modular,
                 tick: tick,
             };
 
             listener.onStatUpdated?.(statData);
 
-            if (stat.children) {
+            if (stat.is_modular && stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
                     this._fireStatUpdated(child, tick, statData);
                 });
+            }
+
+            if (stat.is_modular === false) {
+                const childStringValues: string[][] = [];
+
+                if (stat.children) {
+                    stat.children.forEach((child: StatDataModel) => {
+                        if (child.children && child.children[0].string_values) {
+                            childStringValues.push(child.children[0].string_values);
+                        }
+                    });
+                }
+
+                const childStatData: StatData = {
+                    ...stat,
+                    id: 'name_and_value',
+                    full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_name_and_value',
+                    parent_name: stat.name,
+                    parent_id: statId,
+                    parent_full_id: statId,
+                    values: stat.values ?? [],
+                    string_values: stat.string_values ?? [],
+                    children_string_values: childStringValues,
+                    is_modular: stat.is_modular,
+                    tick: tick,
+                };
+                listener.onStatUpdated?.(childStatData);
             }
         });
     }

@@ -38,9 +38,11 @@ export interface StatsListener {
 
 export class StatsProvider {
     protected _statListeners: StatsListener[];
+    protected _dynamicPropertyCache: Map<string, string>;
 
     constructor(public readonly name: string, public readonly uniqueId: string) {
         this._statListeners = [];
+        this._dynamicPropertyCache = new Map<string, string>();
     }
 
     public setStats(stats: StatMessageModel): void {
@@ -109,29 +111,50 @@ export class StatsProvider {
 
             if (stat.is_modular === false) {
                 const childStringValues: string[][] = [];
+                let cacheDirty = false;
 
                 if (stat.children) {
                     stat.children.forEach((child: StatDataModel) => {
                         if (child.children && child.children[0].string_values) {
                             childStringValues.push(child.children[0].string_values);
+
+                            if (
+                                this._dynamicPropertyCache.has(child.children[0].string_values[0]) === false ||
+                                this._dynamicPropertyCache.get(child.children[0].string_values[0]) !==
+                                    child.children[0].string_values[1]
+                            ) {
+                                this._dynamicPropertyCache.set(
+                                    child.children[0].string_values[0],
+                                    child.children[0].string_values[1]
+                                );
+                                cacheDirty = true;
+                            }
                         }
-                    });
+                    }, this);
+
+                    //Something has been removed
+                    if (this._dynamicPropertyCache.size !== childStringValues.length) {
+                        cacheDirty = true;
+                        this._dynamicPropertyCache.clear();
+                    }
                 }
 
-                const childStatData: StatData = {
-                    ...stat,
-                    id: 'name_and_value',
-                    full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_name_and_value',
-                    parent_name: stat.name,
-                    parent_id: statId,
-                    parent_full_id: statId,
-                    values: stat.values ?? [],
-                    string_values: stat.string_values ?? [],
-                    children_string_values: childStringValues,
-                    is_modular: stat.is_modular,
-                    tick: tick,
-                };
-                listener.onStatUpdated?.(childStatData);
+                if (cacheDirty) {
+                    const childStatData: StatData = {
+                        ...stat,
+                        id: 'name_and_value',
+                        full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_name_and_value',
+                        parent_name: stat.name,
+                        parent_id: statId,
+                        parent_full_id: statId,
+                        values: stat.values ?? [],
+                        string_values: stat.string_values ?? [],
+                        children_string_values: childStringValues,
+                        is_modular: stat.is_modular,
+                        tick: tick,
+                    };
+                    listener.onStatUpdated?.(childStatData);
+                }
             }
         });
     }

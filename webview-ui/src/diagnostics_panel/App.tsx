@@ -279,7 +279,7 @@ function App() {
                         statisticDataProviders={
                             new RegexStatisticProvider({
                                 statisticParentId: /dynamic_property_values*/,
-                                statisticId: 'name_and_value',
+                                statisticId: 'consolidated_data',
                                 ignoredValues: [-1],
                             })
                         }

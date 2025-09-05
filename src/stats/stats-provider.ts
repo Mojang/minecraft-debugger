@@ -155,8 +155,8 @@ export class StatsProvider {
                 if ((stat.is_persistent && cacheDirty) || stat.is_persistent === false) {
                     const childStatData: StatData = {
                         ...stat,
-                        id: 'name_and_value',
-                        full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_name_and_value',
+                        id: 'consolidated_data',
+                        full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
                         parent_name: stat.name,
                         parent_id: statId,
                         parent_full_id: statId,

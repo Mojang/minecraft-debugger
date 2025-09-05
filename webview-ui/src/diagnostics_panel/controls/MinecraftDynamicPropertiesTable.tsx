@@ -23,7 +23,6 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
             const eventHandler = (event: StatisticUpdatedMessage): void => {
                 // Update data with new data point
                 setEvents(() => {
-                    console.warn(JSON.stringify(event));
                     return event.children_string_values;
                 });
             };

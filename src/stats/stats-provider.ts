@@ -10,8 +10,7 @@ export interface StatData {
     values: number[];
     string_values: string[];
     children_string_values: string[][];
-    is_modular: boolean;
-    is_persistent: boolean;
+    is_dynamic_property: boolean;
     tick: number;
 }
 
@@ -20,8 +19,7 @@ export interface StatDataModel {
     children?: StatDataModel[];
     values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
     string_values?: string[];
-    is_modular: boolean;
-    is_persistent: boolean;
+    is_dynamic_property: boolean;
 }
 
 export interface StatMessageModel {
@@ -100,27 +98,24 @@ export class StatsProvider {
                 values: stat.values ?? [],
                 string_values: stat.string_values ?? [],
                 children_string_values: [],
-                is_modular: stat.is_modular,
-                is_persistent: stat.is_persistent,
+                is_dynamic_property: stat.is_dynamic_property,
                 tick: tick,
             };
 
             listener.onStatUpdated?.(statData);
 
-            if (stat.is_modular && stat.children) {
+            if (stat.is_dynamic_property === false && stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
                     this._fireStatUpdated(child, tick, statData);
                 });
             }
 
-            if (stat.is_modular === false) {
+            if (stat.is_dynamic_property === true) {
                 const childStringValues: string[][] = [];
 
                 let cacheDirty = false;
-                if (stat.is_persistent) {
-                    if (this._propertyCache.has(statId) === false) {
-                        this._propertyCache.set(statId, new Map<string, string[]>());
-                    }
+                if (this._propertyCache.has(statId) === false) {
+                    this._propertyCache.set(statId, new Map<string, string[]>());
                 }
 
                 if (stat.children) {
@@ -130,7 +125,6 @@ export class StatsProvider {
                             childStringValues.push(child.children[0].string_values);
 
                             if (
-                                stat.is_persistent &&
                                 cache &&
                                 (cache.has(child.name) === false ||
                                     JSON.stringify(cache.get(child.name)) !==
@@ -143,16 +137,14 @@ export class StatsProvider {
                     }, this);
 
                     //Something has been removed
-                    if (stat.is_persistent) {
-                        const cache = this._propertyCache.get(statId);
-                        if (cache && cache.size !== childStringValues.length) {
-                            cacheDirty = true;
-                            cache.clear();
-                        }
+                    const cache = this._propertyCache.get(statId);
+                    if (cache && cache.size !== childStringValues.length) {
+                        cacheDirty = true;
+                        cache.clear();
                     }
                 }
 
-                if ((stat.is_persistent && cacheDirty) || stat.is_persistent === false) {
+                if (cacheDirty) {
                     const childStatData: StatData = {
                         ...stat,
                         id: 'consolidated_data',
@@ -163,8 +155,7 @@ export class StatsProvider {
                         values: stat.values ?? [],
                         string_values: stat.string_values ?? [],
                         children_string_values: childStringValues,
-                        is_modular: stat.is_modular,
-                        is_persistent: stat.is_persistent,
+                        is_dynamic_property: stat.is_dynamic_property,
                         tick: tick,
                     };
                     listener.onStatUpdated?.(childStatData);

@@ -65,8 +65,7 @@ export class MinecraftDiagnosticsPanel {
                 if (stat.parent_id !== undefined) {
                     const message = {
                         type: 'statistic-updated',
-                        is_modular: stat.is_modular,
-                        is_persistent: stat.is_persistent,
+                        is_dynamic_property: stat.is_dynamic_property,
                         values: stat.values,
                         string_values: stat.string_values,
                         children_string_values: stat.children_string_values,

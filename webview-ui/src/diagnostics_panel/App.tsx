@@ -7,12 +7,7 @@ import { StatisticType, YAxisStyle, YAxisType, createStatResolver } from './Stat
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
 import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
-import {
-    MultipleStatisticProvider,
-    RegexStatisticProvider,
-    SimpleStatisticProvider,
-    StatisticUpdatedMessage,
-} from './StatisticProvider';
+import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
 import ReplayControls from './controls/ReplayControls';
 import * as statPrefabs from './StatisticPrefabs';
 import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
@@ -277,10 +272,9 @@ function App() {
                 <VSCodePanelView id="view-9">
                     <MinecraftDynamicPropertiesTable
                         statisticDataProviders={
-                            new RegexStatisticProvider({
+                            new SimpleStatisticProvider({
                                 statisticParentId: /dynamic_property_values*/,
                                 statisticId: 'consolidated_data',
-                                ignoredValues: [-1],
                             })
                         }
                     />

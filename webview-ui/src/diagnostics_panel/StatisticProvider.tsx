@@ -2,8 +2,7 @@
 
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
-    is_modular: boolean;
-    is_persistent: boolean;
+    is_dynamic_property: boolean;
     values: number[];
     string_values: string[];
     children_string_values: string[][];
@@ -85,7 +84,7 @@ export class SimpleStatisticProvider extends StatisticProvider {
             return;
         }
 
-        if (event.values.length === 0) {
+        if (event.values.length === 0 && event.string_values.length === 0 && event.is_dynamic_property === false) {
             return;
         }
 
@@ -192,6 +191,11 @@ export class RegexStatisticProvider extends StatisticProvider {
 
         // Check event type
         if (event.id !== this.options.statisticId) {
+            return;
+        }
+
+        // No new data
+        if (event.values.length === 0) {
             return;
         }
 

@@ -3,6 +3,7 @@
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
     is_modular: boolean;
+    is_persistent: boolean;
     values: number[];
     string_values: string[];
     children_string_values: string[][];

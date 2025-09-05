@@ -66,6 +66,7 @@ export class MinecraftDiagnosticsPanel {
                     const message = {
                         type: 'statistic-updated',
                         is_modular: stat.is_modular,
+                        is_persistent: stat.is_persistent,
                         values: stat.values,
                         string_values: stat.string_values,
                         children_string_values: stat.children_string_values,
@@ -77,7 +78,6 @@ export class MinecraftDiagnosticsPanel {
                         time: stat.tick,
                         group_full_id: stat.parent_full_id,
                     };
-
                     this._panel.webview.postMessage(message);
                 }
             },

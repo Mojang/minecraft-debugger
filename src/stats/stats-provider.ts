@@ -11,6 +11,7 @@ export interface StatData {
     string_values: string[];
     children_string_values: string[][];
     is_modular: boolean;
+    is_persistent: boolean;
     tick: number;
 }
 
@@ -20,6 +21,7 @@ export interface StatDataModel {
     values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
     string_values?: string[];
     is_modular: boolean;
+    is_persistent: boolean;
 }
 
 export interface StatMessageModel {
@@ -38,11 +40,11 @@ export interface StatsListener {
 
 export class StatsProvider {
     protected _statListeners: StatsListener[];
-    protected _dynamicPropertyCache: Map<string, string>;
+    protected _propertyCache: Map<string, Map<string, string[]>>;
 
     constructor(public readonly name: string, public readonly uniqueId: string) {
         this._statListeners = [];
-        this._dynamicPropertyCache = new Map<string, string>();
+        this._propertyCache = new Map<string, Map<string, string[]>>();
     }
 
     public setStats(stats: StatMessageModel): void {
@@ -87,6 +89,7 @@ export class StatsProvider {
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
         this._statListeners.forEach((listener: StatsListener) => {
             const statId = stat.name.toLowerCase();
+
             const statData: StatData = {
                 ...stat,
                 id: statId,
@@ -98,6 +101,7 @@ export class StatsProvider {
                 string_values: stat.string_values ?? [],
                 children_string_values: [],
                 is_modular: stat.is_modular,
+                is_persistent: stat.is_persistent,
                 tick: tick,
             };
 
@@ -111,31 +115,35 @@ export class StatsProvider {
 
             if (stat.is_modular === false) {
                 const childStringValues: string[][] = [];
+
                 let cacheDirty = false;
+                if (this._propertyCache.has(statId) === false) {
+                    this._propertyCache.set(statId, new Map<string, string[]>());
+                }
 
                 if (stat.children) {
                     stat.children.forEach((child: StatDataModel) => {
+                        const cache = this._propertyCache.get(statId);
                         if (child.children && child.children[0].string_values) {
                             childStringValues.push(child.children[0].string_values);
 
                             if (
-                                this._dynamicPropertyCache.has(child.children[0].string_values[0]) === false ||
-                                this._dynamicPropertyCache.get(child.children[0].string_values[0]) !==
-                                    child.children[0].string_values[1]
+                                cache &&
+                                (cache.has(child.name) === false ||
+                                    JSON.stringify(cache.get(child.name)) !==
+                                        JSON.stringify(child.children[0].string_values))
                             ) {
-                                this._dynamicPropertyCache.set(
-                                    child.children[0].string_values[0],
-                                    child.children[0].string_values[1]
-                                );
+                                cache.set(child.name, child.children[0].string_values);
                                 cacheDirty = true;
                             }
                         }
                     }, this);
 
                     //Something has been removed
-                    if (this._dynamicPropertyCache.size !== childStringValues.length) {
+                    const cache = this._propertyCache.get(statId);
+                    if (cache && cache.size !== childStringValues.length) {
                         cacheDirty = true;
-                        this._dynamicPropertyCache.clear();
+                        cache.clear();
                     }
                 }
 
@@ -151,6 +159,7 @@ export class StatsProvider {
                         string_values: stat.string_values ?? [],
                         children_string_values: childStringValues,
                         is_modular: stat.is_modular,
+                        is_persistent: stat.is_persistent,
                         tick: tick,
                     };
                     listener.onStatUpdated?.(childStatData);

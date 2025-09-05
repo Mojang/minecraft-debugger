@@ -117,8 +117,10 @@ export class StatsProvider {
                 const childStringValues: string[][] = [];
 
                 let cacheDirty = false;
-                if (this._propertyCache.has(statId) === false) {
-                    this._propertyCache.set(statId, new Map<string, string[]>());
+                if (stat.is_persistent) {
+                    if (this._propertyCache.has(statId) === false) {
+                        this._propertyCache.set(statId, new Map<string, string[]>());
+                    }
                 }
 
                 if (stat.children) {
@@ -128,6 +130,7 @@ export class StatsProvider {
                             childStringValues.push(child.children[0].string_values);
 
                             if (
+                                stat.is_persistent &&
                                 cache &&
                                 (cache.has(child.name) === false ||
                                     JSON.stringify(cache.get(child.name)) !==
@@ -140,14 +143,16 @@ export class StatsProvider {
                     }, this);
 
                     //Something has been removed
-                    const cache = this._propertyCache.get(statId);
-                    if (cache && cache.size !== childStringValues.length) {
-                        cacheDirty = true;
-                        cache.clear();
+                    if (stat.is_persistent) {
+                        const cache = this._propertyCache.get(statId);
+                        if (cache && cache.size !== childStringValues.length) {
+                            cacheDirty = true;
+                            cache.clear();
+                        }
                     }
                 }
 
-                if (cacheDirty) {
+                if ((stat.is_persistent && cacheDirty) || stat.is_persistent === false) {
                     const childStatData: StatData = {
                         ...stat,
                         id: 'name_and_value',

@@ -84,6 +84,80 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
+    private static _stringArraysAreEqual(strA: string[] | undefined, strB: string[] | undefined) {
+        if (strA === undefined || strB === undefined || strA.length !== strB.length) {
+            return false;
+        }
+
+        for (let i = 0; i < strA.length; i++) {
+            if (strA[i] !== strB[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private _onDynamicPropertyUpdate(
+        listener: StatsListener,
+        statId: string,
+        stat: StatDataModel,
+        tick: number,
+        parent?: StatData
+    ) {
+        const childStringValues: string[][] = [];
+
+        let cacheDirty = false;
+        if (this._propertyCache.has(statId) === false) {
+            this._propertyCache.set(statId, new Map<string, string[]>());
+        }
+
+        if (stat.children) {
+            stat.children.forEach((child: StatDataModel) => {
+                const cache = this._propertyCache.get(statId);
+                if (child.children && child.children[0].string_values) {
+                    childStringValues.push(child.children[0].string_values);
+
+                    if (
+                        cache &&
+                        (cache.has(child.name) === false ||
+                            !StatsProvider._stringArraysAreEqual(
+                                cache.get(child.name),
+                                child.children[0].string_values
+                            ))
+                    ) {
+                        cache.set(child.name, child.children[0].string_values);
+                        cacheDirty = true;
+                    }
+                }
+            }, this);
+
+            //Something has been removed
+            const cache = this._propertyCache.get(statId);
+            if (cache && cache.size !== childStringValues.length) {
+                cacheDirty = true;
+                cache.clear();
+            }
+        }
+
+        if (cacheDirty) {
+            const childStatData: StatData = {
+                ...stat,
+                id: 'consolidated_data',
+                full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
+                parent_name: stat.name,
+                parent_id: statId,
+                parent_full_id: statId,
+                values: stat.values ?? [],
+                string_values: stat.string_values ?? [],
+                children_string_values: childStringValues,
+                is_dynamic_property: stat.is_dynamic_property,
+                tick: tick,
+            };
+            listener.onStatUpdated?.(childStatData);
+        }
+    }
+
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
         this._statListeners.forEach((listener: StatsListener) => {
             const statId = stat.name.toLowerCase();
@@ -111,55 +185,7 @@ export class StatsProvider {
             }
 
             if (stat.is_dynamic_property === true) {
-                const childStringValues: string[][] = [];
-
-                let cacheDirty = false;
-                if (this._propertyCache.has(statId) === false) {
-                    this._propertyCache.set(statId, new Map<string, string[]>());
-                }
-
-                if (stat.children) {
-                    stat.children.forEach((child: StatDataModel) => {
-                        const cache = this._propertyCache.get(statId);
-                        if (child.children && child.children[0].string_values) {
-                            childStringValues.push(child.children[0].string_values);
-
-                            if (
-                                cache &&
-                                (cache.has(child.name) === false ||
-                                    JSON.stringify(cache.get(child.name)) !==
-                                        JSON.stringify(child.children[0].string_values))
-                            ) {
-                                cache.set(child.name, child.children[0].string_values);
-                                cacheDirty = true;
-                            }
-                        }
-                    }, this);
-
-                    //Something has been removed
-                    const cache = this._propertyCache.get(statId);
-                    if (cache && cache.size !== childStringValues.length) {
-                        cacheDirty = true;
-                        cache.clear();
-                    }
-                }
-
-                if (cacheDirty) {
-                    const childStatData: StatData = {
-                        ...stat,
-                        id: 'consolidated_data',
-                        full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
-                        parent_name: stat.name,
-                        parent_id: statId,
-                        parent_full_id: statId,
-                        values: stat.values ?? [],
-                        string_values: stat.string_values ?? [],
-                        children_string_values: childStringValues,
-                        is_dynamic_property: stat.is_dynamic_property,
-                        tick: tick,
-                    };
-                    listener.onStatUpdated?.(childStatData);
-                }
+                this._onDynamicPropertyUpdate(listener, statId, stat, tick, parent);
             }
         });
     }

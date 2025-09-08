@@ -112,32 +112,27 @@ export class StatsProvider {
             this._propertyCache.set(statId, new Map<string, string[]>());
         }
 
-        if (stat.children) {
-            stat.children.forEach((child: StatDataModel) => {
-                const cache = this._propertyCache.get(statId);
-                if (child.children && child.children[0].string_values) {
-                    childStringValues.push(child.children[0].string_values);
-
-                    if (
-                        cache &&
-                        (cache.has(child.name) === false ||
-                            !StatsProvider._stringArraysAreEqual(
-                                cache.get(child.name),
-                                child.children[0].string_values
-                            ))
-                    ) {
-                        cache.set(child.name, child.children[0].string_values);
-                        cacheDirty = true;
-                    }
-                }
-            }, this);
-
-            //Something has been removed
+        for (const child of stat.children ?? []) {
             const cache = this._propertyCache.get(statId);
-            if (cache && cache.size !== childStringValues.length) {
-                cacheDirty = true;
-                cache.clear();
+            if (child.children && child.children[0].string_values) {
+                childStringValues.push(child.children[0].string_values);
+
+                if (
+                    cache &&
+                    (cache.has(child.name) === false ||
+                        !StatsProvider._stringArraysAreEqual(cache.get(child.name), child.children[0].string_values))
+                ) {
+                    cache.set(child.name, child.children[0].string_values);
+                    cacheDirty = true;
+                }
             }
+        }
+
+        //Something has been removed
+        const cache = this._propertyCache.get(statId);
+        if (cache && cache.size !== childStringValues.length) {
+            cacheDirty = true;
+            cache.clear();
         }
 
         if (cacheDirty) {
@@ -178,13 +173,13 @@ export class StatsProvider {
 
             listener.onStatUpdated?.(statData);
 
-            if (stat.is_dynamic_property === false && stat.children) {
+            if (!stat.is_dynamic_property && stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
                     this._fireStatUpdated(child, tick, statData);
                 });
             }
 
-            if (stat.is_dynamic_property === true) {
+            if (stat.is_dynamic_property) {
                 this._onDynamicPropertyUpdate(listener, statId, stat, tick, parent);
             }
         });

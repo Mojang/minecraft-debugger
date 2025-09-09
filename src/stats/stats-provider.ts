@@ -105,6 +105,8 @@ export class StatsProvider {
         tick: number,
         parent?: StatData
     ) {
+        console.warn(JSON.stringify(stat));
+
         const childStringValues: string[][] = [];
 
         let cacheDirty = false;
@@ -114,15 +116,15 @@ export class StatsProvider {
 
         for (const child of stat.children ?? []) {
             const cache = this._propertyCache.get(statId);
-            if (child.children && child.children[0].string_values) {
-                childStringValues.push(child.children[0].string_values);
+            if (child.string_values) {
+                childStringValues.push(child.string_values);
 
                 if (
                     cache &&
                     (cache.has(child.name) === false ||
-                        !StatsProvider._stringArraysAreEqual(cache.get(child.name), child.children[0].string_values))
+                        !StatsProvider._stringArraysAreEqual(cache.get(child.name), child.string_values))
                 ) {
-                    cache.set(child.name, child.children[0].string_values);
+                    cache.set(child.name, child.string_values);
                     cacheDirty = true;
                 }
             }

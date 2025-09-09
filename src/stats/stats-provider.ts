@@ -38,11 +38,11 @@ export interface StatsListener {
 
 export class StatsProvider {
     protected _statListeners: StatsListener[];
-    protected _propertyCache: Map<string, Map<string, string[]>>;
+    protected _propertyCache: Map<string, Map<string, string>>;
 
     constructor(public readonly name: string, public readonly uniqueId: string) {
         this._statListeners = [];
-        this._propertyCache = new Map<string, Map<string, string[]>>();
+        this._propertyCache = new Map<string, Map<string, string>>();
     }
 
     public setStats(stats: StatMessageModel): void {
@@ -84,20 +84,6 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
-    private static _stringArraysAreEqual(strA: string[] | undefined, strB: string[] | undefined) {
-        if (strA === undefined || strB === undefined || strA.length !== strB.length) {
-            return false;
-        }
-
-        for (let i = 0; i < strA.length; i++) {
-            if (strA[i] !== strB[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private _onDynamicPropertyUpdate(
         listener: StatsListener,
         statId: string,
@@ -109,20 +95,16 @@ export class StatsProvider {
 
         let cacheDirty = false;
         if (this._propertyCache.has(statId) === false) {
-            this._propertyCache.set(statId, new Map<string, string[]>());
+            this._propertyCache.set(statId, new Map<string, string>());
         }
 
         for (const child of stat.children ?? []) {
             const cache = this._propertyCache.get(statId);
             if (child.string_values) {
-                childStringValues.push(child.string_values);
+                childStringValues.push([child.name, child.string_values[0]]);
 
-                if (
-                    cache &&
-                    (cache.has(child.name) === false ||
-                        !StatsProvider._stringArraysAreEqual(cache.get(child.name), child.string_values))
-                ) {
-                    cache.set(child.name, child.string_values);
+                if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.string_values[0])) {
+                    cache.set(child.name, child.string_values[0]);
                     cacheDirty = true;
                 }
             }

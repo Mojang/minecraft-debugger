@@ -105,8 +105,6 @@ export class StatsProvider {
         tick: number,
         parent?: StatData
     ) {
-        console.warn(JSON.stringify(stat));
-
         const childStringValues: string[][] = [];
 
         let cacheDirty = false;

@@ -230,7 +230,11 @@ export class Session extends DebugSession {
 
         //const dataJson = data.toJSON();
         const dataJson = JSON.parse(`${data}`);
-        console.warn(JSON.stringify(dataJson));
+
+        const tsCodeFunctionCalls = dataJson['$vscode']?.['locations'];
+        for (let i = 0; i < tsCodeFunctionCalls.length; i++) {
+            console.warn(tsCodeFunctionCalls[i]['callFrame']);
+        }
 
         const encoder = new TextEncoder();
         return Buffer.from(encoder.encode(JSON.stringify(dataJson)));
@@ -242,11 +246,7 @@ export class Session extends DebugSession {
         const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
         const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
         //const data = Buffer.from(profilerCapture.capture_data, 'base64');
-
         const data = this.injectSourceMapIntoProfilerCapture(profilerCapture.capture_data);
-
-        console.warn(`Raw Data: ${profilerCapture.capture_data}`);
-        console.warn(`Base64 Data: ${data}`);
         fs.writeFile(captureFullPath, data, err => {
             if (err) {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);

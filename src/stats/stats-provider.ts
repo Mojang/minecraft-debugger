@@ -8,7 +8,7 @@ export interface StatData {
     parent_id: string;
     parent_full_id: string;
     values: number[];
-    string_values: string[];
+    string_value: string;
     children_string_values: string[][];
     is_dynamic_property: boolean;
     tick: number;
@@ -18,7 +18,7 @@ export interface StatDataModel {
     name: string;
     children?: StatDataModel[];
     values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
-    string_values?: string[];
+    string_value: string;
     is_dynamic_property: boolean;
 }
 
@@ -98,20 +98,19 @@ export class StatsProvider {
             this._propertyCache.set(statId, new Map<string, string>());
         }
 
+        const cache = this._propertyCache.get(statId);
         for (const child of stat.children ?? []) {
-            const cache = this._propertyCache.get(statId);
-            if (child.string_values) {
-                childStringValues.push([child.name, child.string_values[0]]);
+            if (child.string_value && child.string_value.length > 0) {
+                childStringValues.push([child.name, child.string_value]);
 
-                if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.string_values[0])) {
-                    cache.set(child.name, child.string_values[0]);
+                if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.string_value)) {
+                    cache.set(child.name, child.string_value);
                     cacheDirty = true;
                 }
             }
         }
 
         //Something has been removed
-        const cache = this._propertyCache.get(statId);
         if (cache && cache.size !== childStringValues.length) {
             cacheDirty = true;
             cache.clear();
@@ -126,7 +125,7 @@ export class StatsProvider {
                 parent_id: statId,
                 parent_full_id: statId,
                 values: stat.values ?? [],
-                string_values: stat.string_values ?? [],
+                string_value: stat.string_value !== undefined ? stat.string_value : '',
                 children_string_values: childStringValues,
                 is_dynamic_property: stat.is_dynamic_property,
                 tick: tick,
@@ -147,7 +146,7 @@ export class StatsProvider {
                 parent_id: parent !== undefined ? parent.id : '',
                 parent_full_id: parent !== undefined ? parent.full_id : '',
                 values: stat.values ?? [],
-                string_values: stat.string_values ?? [],
+                string_value: stat.string_value !== undefined ? stat.string_value : '',
                 children_string_values: [],
                 is_dynamic_property: stat.is_dynamic_property,
                 tick: tick,

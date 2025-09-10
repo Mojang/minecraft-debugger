@@ -67,7 +67,7 @@ export class MinecraftDiagnosticsPanel {
                         type: 'statistic-updated',
                         is_dynamic_property: stat.is_dynamic_property,
                         values: stat.values,
-                        string_values: stat.string_values,
+                        string_value: stat.string_value,
                         children_string_values: stat.children_string_values,
                         id: stat.id,
                         name: stat.name,

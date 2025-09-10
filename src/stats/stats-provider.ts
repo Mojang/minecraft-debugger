@@ -100,13 +100,15 @@ export class StatsProvider {
 
         const cache = this._propertyCache.get(statId);
         for (const child of stat.children ?? []) {
-            if (child.string_value && child.string_value.length > 0) {
-                childStringValues.push([child.name, child.string_value]);
+            if (!(child.string_value && child.string_value.length > 0)) {
+                continue;
+            }
 
-                if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.string_value)) {
-                    cache.set(child.name, child.string_value);
-                    cacheDirty = true;
-                }
+            childStringValues.push([child.name, child.string_value]);
+
+            if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.string_value)) {
+                cache.set(child.name, child.string_value);
+                cacheDirty = true;
             }
         }
 

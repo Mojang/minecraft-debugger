@@ -225,12 +225,28 @@ export class Session extends DebugSession {
         this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
     }
 
+    private injectSourceMapIntoProfilerCapture(rawData: string) {
+        const data = Buffer.from(rawData, 'base64');
+
+        //const dataJson = data.toJSON();
+        const dataJson = JSON.parse(`${data}`);
+        console.warn(JSON.stringify(dataJson));
+
+        const encoder = new TextEncoder();
+        return Buffer.from(encoder.encode(JSON.stringify(dataJson)));
+    }
+
     // MC has sent the profiler capture results to the debugger
     private handleProfilerCapture(profilerCapture: ProfilerCapture): void {
         const formattedDate = new Date().toISOString().replace(/:/g, '-');
         const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
         const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
-        const data = Buffer.from(profilerCapture.capture_data, 'base64');
+        //const data = Buffer.from(profilerCapture.capture_data, 'base64');
+
+        const data = this.injectSourceMapIntoProfilerCapture(profilerCapture.capture_data);
+
+        console.warn(`Raw Data: ${profilerCapture.capture_data}`);
+        console.warn(`Base64 Data: ${data}`);
         fs.writeFile(captureFullPath, data, err => {
             if (err) {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);

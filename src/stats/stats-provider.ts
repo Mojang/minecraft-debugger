@@ -82,6 +82,10 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
+    public clearCache(): void {
+        this._propertyCache.clear();
+    }
+
     private _cacheAndAggregateData(
         statId: string,
         stat: StatDataModel,

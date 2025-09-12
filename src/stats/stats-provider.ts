@@ -7,19 +7,17 @@ export interface StatData {
     full_id: string;
     parent_id: string;
     parent_full_id: string;
-    values: number[];
-    string_value: string;
+    values: (number | string)[];
     children_string_values: string[][];
-    is_dynamic_property: boolean;
+    should_aggregate: boolean;
     tick: number;
 }
 
 export interface StatDataModel {
     name: string;
     children?: StatDataModel[];
-    values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
-    string_value: string;
-    is_dynamic_property: boolean;
+    values?: (number | string)[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
+    should_aggregate: boolean;
 }
 
 export interface StatMessageModel {
@@ -84,13 +82,12 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
-    private _onDynamicPropertyUpdate(
-        listener: StatsListener,
+    private _cacheAndAggregateData(
         statId: string,
         stat: StatDataModel,
         tick: number,
         parent?: StatData
-    ) {
+    ): StatData | undefined {
         const childStringValues: string[][] = [];
 
         let cacheDirty = false;
@@ -100,14 +97,14 @@ export class StatsProvider {
 
         const cache = this._propertyCache.get(statId);
         for (const child of stat.children ?? []) {
-            if (!(child.string_value && child.string_value.length > 0)) {
+            if (!(child.values && typeof child.values[0] === 'string' && (child.values[0] as string).length > 0)) {
                 continue;
             }
 
-            childStringValues.push([child.name, child.string_value]);
+            childStringValues.push([child.name, child.values[0]]);
 
-            if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.string_value)) {
-                cache.set(child.name, child.string_value);
+            if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.values[0])) {
+                cache.set(child.name, child.values[0]);
                 cacheDirty = true;
             }
         }
@@ -127,43 +124,47 @@ export class StatsProvider {
                 parent_id: statId,
                 parent_full_id: statId,
                 values: stat.values ?? [],
-                string_value: stat.string_value !== undefined ? stat.string_value : '',
                 children_string_values: childStringValues,
-                is_dynamic_property: stat.is_dynamic_property,
+                should_aggregate: stat.should_aggregate,
                 tick: tick,
             };
-            listener.onStatUpdated?.(childStatData);
+
+            return childStatData;
         }
+
+        return undefined;
     }
 
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
+        const statId = stat.name.toLowerCase();
+
+        const statData: StatData = {
+            ...stat,
+            id: statId,
+            full_id: parent !== undefined ? parent.full_id + '_' + statId : statId,
+            parent_name: parent !== undefined ? parent.name : '',
+            parent_id: parent !== undefined ? parent.id : '',
+            parent_full_id: parent !== undefined ? parent.full_id : '',
+            values: stat.values ?? [],
+            children_string_values: [],
+            should_aggregate: stat.should_aggregate,
+            tick: tick,
+        };
+
+        let aggregateChildData = undefined;
+        if (stat.should_aggregate) {
+            aggregateChildData = this._cacheAndAggregateData(statId, stat, tick, parent);
+        }
+
         this._statListeners.forEach((listener: StatsListener) => {
-            const statId = stat.name.toLowerCase();
-
-            const statData: StatData = {
-                ...stat,
-                id: statId,
-                full_id: parent !== undefined ? parent.full_id + '_' + statId : statId,
-                parent_name: parent !== undefined ? parent.name : '',
-                parent_id: parent !== undefined ? parent.id : '',
-                parent_full_id: parent !== undefined ? parent.full_id : '',
-                values: stat.values ?? [],
-                string_value: stat.string_value !== undefined ? stat.string_value : '',
-                children_string_values: [],
-                is_dynamic_property: stat.is_dynamic_property,
-                tick: tick,
-            };
-
             listener.onStatUpdated?.(statData);
 
-            if (!stat.is_dynamic_property && stat.children) {
+            if (aggregateChildData !== undefined) {
+                listener.onStatUpdated?.(aggregateChildData);
+            } else if (stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
                     this._fireStatUpdated(child, tick, statData);
                 });
-            }
-
-            if (stat.is_dynamic_property) {
-                this._onDynamicPropertyUpdate(listener, statId, stat, tick, parent);
             }
         });
     }

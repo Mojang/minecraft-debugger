@@ -2,9 +2,8 @@
 
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
-    is_dynamic_property: boolean;
+    should_aggregate: boolean;
     values: number[];
-    string_value: string;
     children_string_values: string[][];
     id: string;
     name: string;
@@ -84,7 +83,7 @@ export class SimpleStatisticProvider extends StatisticProvider {
             return;
         }
 
-        if (event.values.length === 0 && event.string_value.length === 0 && event.is_dynamic_property === false) {
+        if (event.values.length === 0 && event.should_aggregate === false) {
             return;
         }
 

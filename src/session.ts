@@ -228,11 +228,9 @@ export class Session extends DebugSession {
 
     private async injectSourceMapIntoProfilerCapture(rawData: string) {
         const data = Buffer.from(rawData, 'base64');
-
-        //const dataJson = data.toJSON();
         const dataJson = JSON.parse(`${data}`);
-
         const tsCodeFunctionCalls = dataJson['$vscode']?.['locations'];
+
         for (let i = 0; i < tsCodeFunctionCalls.length; i++) {
             const callFrame = tsCodeFunctionCalls[i]['callFrame'];
             const locations = tsCodeFunctionCalls[i]['locations'][0];
@@ -271,14 +269,11 @@ export class Session extends DebugSession {
                 continue;
             }
 
-            // callFrame['functionName'];
-            // callFrame['scriptId'];
             callFrame['url'] = originalPosition.source;
             callFrame['lineNumber'] = originalPosition.line;
             callFrame['columnNumber'] = originalPosition.column;
             locations['lineNumber'] = originalPosition.line;
             locations['columnNumber'] = originalPosition.column;
-            // locationsSource['name'];
             locationsSource['path'] = originalPosition.source;
         }
 
@@ -291,7 +286,6 @@ export class Session extends DebugSession {
         const formattedDate = new Date().toISOString().replace(/:/g, '-');
         const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
         const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
-        //const data = Buffer.from(profilerCapture.capture_data, 'base64');
         const data = await this.injectSourceMapIntoProfilerCapture(profilerCapture.capture_data);
         fs.writeFile(captureFullPath, data, err => {
             if (err) {

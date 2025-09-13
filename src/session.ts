@@ -231,7 +231,6 @@ export class Session extends DebugSession {
 
         //const dataJson = data.toJSON();
         const dataJson = JSON.parse(`${data}`);
-        console.log(JSON.stringify(dataJson));
 
         const tsCodeFunctionCalls = dataJson['$vscode']?.['locations'];
         for (let i = 0; i < tsCodeFunctionCalls.length; i++) {

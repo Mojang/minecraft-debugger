@@ -34,6 +34,7 @@ import { HomeViewProvider } from './panels/home-view-provider';
 import { isUUID } from './utils';
 import * as path from 'path';
 import * as fs from 'fs';
+import { MappedPosition } from 'source-map';
 
 interface PendingResponse {
     onSuccess?: (result: any) => void;
@@ -225,15 +226,61 @@ export class Session extends DebugSession {
         this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
     }
 
-    private injectSourceMapIntoProfilerCapture(rawData: string) {
+    private async injectSourceMapIntoProfilerCapture(rawData: string) {
         const data = Buffer.from(rawData, 'base64');
 
         //const dataJson = data.toJSON();
         const dataJson = JSON.parse(`${data}`);
+        console.log(JSON.stringify(dataJson));
 
         const tsCodeFunctionCalls = dataJson['$vscode']?.['locations'];
         for (let i = 0; i < tsCodeFunctionCalls.length; i++) {
-            console.warn(tsCodeFunctionCalls[i]['callFrame']);
+            const callFrame = tsCodeFunctionCalls[i]['callFrame'];
+            const locations = tsCodeFunctionCalls[i]['locations'][0];
+
+            if (callFrame === undefined || locations === undefined) {
+                continue;
+            }
+
+            const callFrameUrl = callFrame['url'];
+            const callFrameLineNumber = callFrame['lineNumber'];
+            const callFrameColumnNumber = callFrame['columnNumber'];
+            const locationsSource = locations['source'];
+
+            if (
+                callFrameUrl === undefined ||
+                callFrameLineNumber === undefined ||
+                callFrameColumnNumber === undefined ||
+                locationsSource === undefined
+            ) {
+                continue;
+            }
+
+            let originalPosition: MappedPosition | undefined;
+
+            try {
+                originalPosition = await this._sourceMaps.getOriginalPositionFor({
+                    source: callFrameUrl,
+                    line: callFrameLineNumber - 1,
+                    column: callFrameColumnNumber,
+                });
+            } catch (_e) {
+                continue;
+            }
+
+            if (!originalPosition) {
+                continue;
+            }
+
+            // callFrame['functionName'];
+            // callFrame['scriptId'];
+            callFrame['url'] = originalPosition.source;
+            callFrame['lineNumber'] = originalPosition.line;
+            callFrame['columnNumber'] = originalPosition.column;
+            locations['lineNumber'] = originalPosition.line;
+            locations['columnNumber'] = originalPosition.column;
+            // locationsSource['name'];
+            locationsSource['path'] = originalPosition.source;
         }
 
         const encoder = new TextEncoder();
@@ -241,12 +288,12 @@ export class Session extends DebugSession {
     }
 
     // MC has sent the profiler capture results to the debugger
-    private handleProfilerCapture(profilerCapture: ProfilerCapture): void {
+    private async handleProfilerCapture(profilerCapture: ProfilerCapture) {
         const formattedDate = new Date().toISOString().replace(/:/g, '-');
         const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
         const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
         //const data = Buffer.from(profilerCapture.capture_data, 'base64');
-        const data = this.injectSourceMapIntoProfilerCapture(profilerCapture.capture_data);
+        const data = await this.injectSourceMapIntoProfilerCapture(profilerCapture.capture_data);
         fs.writeFile(captureFullPath, data, err => {
             if (err) {
                 this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);

@@ -231,12 +231,14 @@ export class Session extends DebugSession {
         const dataJson = JSON.parse(`${data}`);
         const tsCodeFunctionCalls = dataJson['$vscode']?.['locations'];
 
+        let hasChanges = false;
+
         for (let i = 0; i < tsCodeFunctionCalls.length; i++) {
             const callFrame = tsCodeFunctionCalls[i]['callFrame'];
             const locations = tsCodeFunctionCalls[i]['locations'][0];
 
             if (callFrame === undefined || locations === undefined) {
-                return undefined;
+                continue;
             }
 
             const callFrameUrl = callFrame['url'];
@@ -250,7 +252,7 @@ export class Session extends DebugSession {
                 callFrameColumnNumber === undefined ||
                 locationsSource === undefined
             ) {
-                return undefined;
+                continue;
             }
 
             let originalPosition: MappedPosition | undefined;
@@ -262,11 +264,11 @@ export class Session extends DebugSession {
                     column: callFrameColumnNumber,
                 });
             } catch (_e) {
-                return undefined;
+                continue;
             }
 
             if (!originalPosition) {
-                return undefined;
+                continue;
             }
 
             callFrame['url'] = originalPosition.source;
@@ -275,6 +277,12 @@ export class Session extends DebugSession {
             locations['lineNumber'] = originalPosition.line;
             locations['columnNumber'] = originalPosition.column;
             locationsSource['path'] = originalPosition.source;
+
+            hasChanges = true;
+        }
+
+        if (!hasChanges) {
+            return undefined;
         }
 
         return dataJson;

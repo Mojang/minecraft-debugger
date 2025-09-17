@@ -17,6 +17,7 @@ function updateCachedData(propertyCache: Map<string, string>, data: string[][]):
         const value = data[i][1];
 
         if (!(name && value)) {
+            console.error(`Invalid Dynamic Property - Name: ${name}, Value: ${value}`);
             continue;
         }
 

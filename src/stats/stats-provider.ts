@@ -82,10 +82,6 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
-    public clearCache(): void {
-        this._propertyCache.clear();
-    }
-
     private _cacheAndAggregateData(
         statId: string,
         stat: StatDataModel,
@@ -94,49 +90,28 @@ export class StatsProvider {
     ): StatData | undefined {
         const childStringValues: string[][] = [];
 
-        let cacheDirty = false;
-        if (this._propertyCache.has(statId) === false) {
-            this._propertyCache.set(statId, new Map<string, string>());
-        }
-
-        const cache = this._propertyCache.get(statId);
         for (const child of stat.children ?? []) {
             if (!(child.values && typeof child.values[0] === 'string' && (child.values[0] as string).length > 0)) {
                 continue;
             }
 
             childStringValues.push([child.name, child.values[0]]);
-
-            if (cache && (cache.has(child.name) === false || cache.get(child.name) !== child.values[0])) {
-                cache.set(child.name, child.values[0]);
-                cacheDirty = true;
-            }
         }
 
-        //Something has been removed
-        if (cache && cache.size !== childStringValues.length) {
-            cacheDirty = true;
-            cache.clear();
-        }
+        const childStatData: StatData = {
+            ...stat,
+            id: 'consolidated_data',
+            full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
+            parent_name: stat.name,
+            parent_id: statId,
+            parent_full_id: statId,
+            values: stat.values ?? [],
+            children_string_values: childStringValues,
+            should_aggregate: stat.should_aggregate,
+            tick: tick,
+        };
 
-        if (cacheDirty) {
-            const childStatData: StatData = {
-                ...stat,
-                id: 'consolidated_data',
-                full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
-                parent_name: stat.name,
-                parent_id: statId,
-                parent_full_id: statId,
-                values: stat.values ?? [],
-                children_string_values: childStringValues,
-                should_aggregate: stat.should_aggregate,
-                tick: tick,
-            };
-
-            return childStatData;
-        }
-
-        return undefined;
+        return childStatData;
     }
 
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {

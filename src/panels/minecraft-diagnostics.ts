@@ -102,7 +102,6 @@ export class MinecraftDiagnosticsPanel {
     }
 
     public static render(extensionUri: Uri, statsTracker: StatsProvider): void {
-        statsTracker.clearCache();
         const statsTrackerId = statsTracker.uniqueId;
         const existingPanel = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.find(
             panel => panel._statsTracker.uniqueId === statsTrackerId

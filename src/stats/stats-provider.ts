@@ -84,7 +84,7 @@ export class StatsProvider {
         const childStringValues: string[][] = [];
 
         for (const child of stat.children ?? []) {
-            if (!(child.values && typeof child.values[0] === 'string' && (child.values[0] as string).length > 0)) {
+            if (!(child.values && typeof child.values[0] === 'string' && child.values[0].length > 0)) {
                 continue;
             }
 

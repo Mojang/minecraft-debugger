@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import { VSCodeDataGrid, VSCodeDataGridCell, VSCodeDataGridRow } from '@vscode/webview-ui-toolkit/react';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 
-function updateCachedData(propertyCache: Map<string, string>, data: string[][]) {
+function updateCachedData(propertyCache: Map<string, string>, data: string[][]): boolean {
+    let hasChanges = false;
+
     if (propertyCache.size !== data.length) {
         propertyCache.clear();
+        hasChanges = true;
     }
 
     for (let i = 0; i < data.length; i++) {
@@ -20,8 +23,11 @@ function updateCachedData(propertyCache: Map<string, string>, data: string[][]) 
         const cachedValue = propertyCache.get(name);
         if (!cachedValue || (cachedValue && value !== cachedValue)) {
             propertyCache.set(name, value);
+            hasChanges = true;
         }
     }
+
+    return hasChanges;
 }
 
 export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<string, StatisticProvider>) {
@@ -38,9 +44,11 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
                 // Update data with new data point
                 setDynamicValueCache((prevCache: Map<string, string>): Map<string, string> => {
                     const propertyCache = new Map(prevCache);
-                    updateCachedData(propertyCache, event.children_string_values);
+                    if (updateCachedData(propertyCache, event.children_string_values)) {
+                        return propertyCache;
+                    }
 
-                    return propertyCache;
+                    return prevCache;
                 });
             };
 

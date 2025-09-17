@@ -64,6 +64,33 @@ interface ProfilerCapture {
     capture_data: string;
 }
 
+interface ProfilerCallFrame {
+    functionName: string;
+    scriptId: string;
+    url: string;
+    lineNumber: number;
+    columnNumber: number;
+}
+
+interface ProfilerLocation {
+    lineNumber: number;
+    columnNumber: number;
+    source: {
+        name: string;
+        path: string;
+        sourceReference: number;
+    };
+}
+
+interface ProfilerData {
+    callFrame: ProfilerCallFrame;
+    locations: ProfilerLocation[];
+}
+
+interface ProfilerVScodeLocations {
+    locations: ProfilerData[];
+}
+
 // Interface for specific launch arguments.
 // See package.json for schema.
 interface IAttachRequestArguments extends DebugProtocol.AttachRequestArguments {
@@ -229,29 +256,17 @@ export class Session extends DebugSession {
     private async injectSourceMapIntoProfilerCapture(rawData: string): Promise<string | undefined> {
         const data = Buffer.from(rawData, 'base64');
         const dataJson = JSON.parse(`${data}`);
-        const tsCodeFunctionCalls = dataJson['$vscode']?.['locations'];
+        const tsCodeFunctionCalls: ProfilerVScodeLocations = { locations: [] };
+        tsCodeFunctionCalls.locations = dataJson['$vscode']?.['locations'];
 
         let hasChanges = false;
 
-        for (let i = 0; i < tsCodeFunctionCalls.length; i++) {
-            const callFrame = tsCodeFunctionCalls[i]['callFrame'];
-            const locations = tsCodeFunctionCalls[i]['locations'][0];
+        for (let i = 0; i < tsCodeFunctionCalls.locations.length; i++) {
+            const profilerData: ProfilerData = tsCodeFunctionCalls.locations[i];
+            const callFrame = profilerData.callFrame;
+            const locations = profilerData.locations[0];
 
             if (callFrame === undefined || locations === undefined) {
-                continue;
-            }
-
-            const callFrameUrl = callFrame['url'];
-            const callFrameLineNumber = callFrame['lineNumber'];
-            const callFrameColumnNumber = callFrame['columnNumber'];
-            const locationsSource = locations['source'];
-
-            if (
-                callFrameUrl === undefined ||
-                callFrameLineNumber === undefined ||
-                callFrameColumnNumber === undefined ||
-                locationsSource === undefined
-            ) {
                 continue;
             }
 
@@ -259,9 +274,9 @@ export class Session extends DebugSession {
 
             try {
                 originalPosition = await this._sourceMaps.getOriginalPositionFor({
-                    source: callFrameUrl,
-                    line: callFrameLineNumber - 1,
-                    column: callFrameColumnNumber,
+                    source: callFrame.url,
+                    line: callFrame.lineNumber - 1,
+                    column: callFrame.columnNumber,
                 });
             } catch (_e) {
                 continue;
@@ -271,12 +286,12 @@ export class Session extends DebugSession {
                 continue;
             }
 
-            callFrame['url'] = originalPosition.source;
-            callFrame['lineNumber'] = originalPosition.line;
-            callFrame['columnNumber'] = originalPosition.column;
-            locations['lineNumber'] = originalPosition.line;
-            locations['columnNumber'] = originalPosition.column;
-            locationsSource['path'] = originalPosition.source;
+            callFrame.url = originalPosition.source;
+            callFrame.lineNumber = originalPosition.line;
+            callFrame.columnNumber = originalPosition.column;
+            locations.lineNumber = originalPosition.line;
+            locations.columnNumber = originalPosition.column;
+            locations.source.path = originalPosition.source;
 
             hasChanges = true;
         }

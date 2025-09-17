@@ -1153,6 +1153,7 @@ export class Session extends DebugSession {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 // always clear source maps
+                this._sourceMaps.clearCache();
                 // and optionally reload Minecraft
                 if (reloadOnSourceChangesEnabled) {
                     this.onRunMinecraftCommand('say §aPerforming Auto-Reload');

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { VSCodeDataGrid, VSCodeDataGridCell, VSCodeDataGridRow } from '@vscode/webview-ui-toolkit/react';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 
-function cacheAndAggregateData(propertyCache: Map<string, string>, data: string[][]) {
+function updateCachedData(propertyCache: Map<string, string>, data: string[][]) {
     if (propertyCache.size !== data.length) {
         propertyCache.clear();
     }
@@ -26,7 +26,7 @@ function cacheAndAggregateData(propertyCache: Map<string, string>, data: string[
 
 export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<string, StatisticProvider>) {
     // the groups directly under the 'statParentId'
-    const [events, setEvents] = useState<Map<string, string>>(new Map<string, string>());
+    const [dynamicValueCache, setDynamicValueCache] = useState<Map<string, string>>(new Map<string, string>());
 
     //draws chart
     useEffect(() => {
@@ -36,9 +36,9 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
             const statsProvider = statisticDataProviders[statisticDataProviderName];
             const eventHandler = (event: StatisticUpdatedMessage): void => {
                 // Update data with new data point
-                setEvents((oldData: Map<string, string>): Map<string, string> => {
-                    const propertyCache = new Map(oldData);
-                    cacheAndAggregateData(propertyCache, event.children_string_values);
+                setDynamicValueCache((prevCache: Map<string, string>): Map<string, string> => {
+                    const propertyCache = new Map(prevCache);
+                    updateCachedData(propertyCache, event.children_string_values);
 
                     return propertyCache;
                 });
@@ -62,7 +62,7 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
                 statsProvider.unregisterWindowListener(window);
             });
         };
-    }, [events]);
+    }, [dynamicValueCache]);
     return (
         <VSCodeDataGrid id="my-grid">
             <VSCodeDataGridRow rowType="header">
@@ -73,7 +73,7 @@ export function MinecraftDynamicPropertiesTable(statisticDataProviders: Record<s
                     {'Value'}
                 </VSCodeDataGridCell>
             </VSCodeDataGridRow>
-            {Array.from(events.entries()).map(event => (
+            {Array.from(dynamicValueCache.entries()).map(event => (
                 <VSCodeDataGridRow>
                     <VSCodeDataGridCell gridColumn={'1'}>{`${event[0]}`}</VSCodeDataGridCell>
                     <VSCodeDataGridCell gridColumn={'2'}>{`${event[1]}`}</VSCodeDataGridCell>

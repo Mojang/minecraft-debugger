@@ -36,11 +36,9 @@ export interface StatsListener {
 
 export class StatsProvider {
     protected _statListeners: StatsListener[];
-    protected _propertyCache: Map<string, Map<string, string>>;
 
     constructor(public readonly name: string, public readonly uniqueId: string) {
         this._statListeners = [];
-        this._propertyCache = new Map<string, Map<string, string>>();
     }
 
     public setStats(stats: StatMessageModel): void {
@@ -82,12 +80,7 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
-    private _cacheAndAggregateData(
-        statId: string,
-        stat: StatDataModel,
-        tick: number,
-        parent?: StatData
-    ): StatData | undefined {
+    private _aggregateData(statId: string, stat: StatDataModel, tick: number, parent?: StatData): StatData | undefined {
         const childStringValues: string[][] = [];
 
         for (const child of stat.children ?? []) {
@@ -132,7 +125,7 @@ export class StatsProvider {
 
         let aggregateChildData = undefined;
         if (stat.should_aggregate) {
-            aggregateChildData = this._cacheAndAggregateData(statId, stat, tick, parent);
+            aggregateChildData = this._aggregateData(statId, stat, tick, parent);
         }
 
         this._statListeners.forEach((listener: StatsListener) => {

@@ -87,7 +87,7 @@ interface ProfilerData {
     locations: ProfilerLocation[];
 }
 
-interface ProfilerVScodeLocations {
+export interface ProfilerVScodeLocations {
     locations: ProfilerData[];
 }
 
@@ -253,7 +253,12 @@ export class Session extends DebugSession {
         this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
     }
 
-    private async injectSourceMapIntoProfilerCapture(rawData: string): Promise<string | undefined> {
+    static async injectSourceMapIntoProfilerCapture(
+        moduleMapping: ModuleMapping | undefined,
+        moduleMaps: Record<string, SourceMaps> | undefined,
+        baseSourceMaps: SourceMaps,
+        rawData: string
+    ): Promise<string | undefined> {
         const data = Buffer.from(rawData, 'base64');
         const dataJson = JSON.parse(`${data}`);
         const tsCodeFunctionCalls: ProfilerVScodeLocations = { locations: [] };
@@ -270,11 +275,15 @@ export class Session extends DebugSession {
                 continue;
             }
 
+            const mappedFilename = moduleMapping?.[callFrame.url];
+            const sourceMaps = mappedFilename ? moduleMaps![callFrame.url] : baseSourceMaps;
+            const sourceFilename = mappedFilename ? path.basename(mappedFilename) : callFrame.url;
+
             let originalPosition: MappedPosition | undefined;
 
             try {
-                originalPosition = await this._sourceMaps.getOriginalPositionFor({
-                    source: callFrame.url,
+                originalPosition = await sourceMaps.getOriginalPositionFor({
+                    source: sourceFilename,
                     line: callFrame.lineNumber - 1,
                     column: callFrame.columnNumber,
                 });
@@ -324,7 +333,12 @@ export class Session extends DebugSession {
 
         const newCaptureFileNameTS = `Capture_${formattedDate}_TS.cpuprofile`;
         const captureFullPathTS = path.join(profilerCapture.capture_base_path, newCaptureFileNameTS);
-        const rawDataTS = await this.injectSourceMapIntoProfilerCapture(profilerCapture.capture_data);
+        const rawDataTS = await Session.injectSourceMapIntoProfilerCapture(
+            this._moduleMapping,
+            this._moduleMaps,
+            this._sourceMaps,
+            profilerCapture.capture_data
+        );
         let tsFileCreated = false;
         if (rawDataTS !== undefined) {
             const encoder = new TextEncoder();

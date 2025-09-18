@@ -265,7 +265,9 @@ export class Session extends DebugSession {
         tsCodeFunctionCalls.locations = dataJson['$vscode']?.['locations'];
 
         let hasChanges = false;
+        const callFrameMap: Map<string, ProfilerCallFrame> = new Map<string, ProfilerCallFrame>();
 
+        //Locations Changes
         for (let i = 0; i < tsCodeFunctionCalls.locations.length; i++) {
             const profilerData: ProfilerData = tsCodeFunctionCalls.locations[i];
             const callFrame = profilerData.callFrame;
@@ -302,7 +304,28 @@ export class Session extends DebugSession {
             locations.columnNumber = originalPosition.column;
             locations.source.path = originalPosition.source;
 
+            const pathSplit = originalPosition.source.split('\\');
+            if (pathSplit.length === 0) {
+                locations.source.name = originalPosition.source;
+            } else {
+                locations.source.name = pathSplit[pathSplit.length - 1];
+            }
+
+            callFrameMap.set(callFrame.functionName, callFrame);
+
             hasChanges = true;
+        }
+
+        //Find Matching Nodes
+        const nodes = dataJson['nodes'];
+        for (let i = 0; i < nodes.length; i++) {
+            const nodeCallFrame: ProfilerCallFrame = nodes[i]['callFrame'];
+            const cachedCallFrame = callFrameMap.get(nodeCallFrame.functionName);
+            if (cachedCallFrame) {
+                nodeCallFrame.url = cachedCallFrame.url;
+                nodeCallFrame.lineNumber = cachedCallFrame.lineNumber;
+                nodeCallFrame.columnNumber = cachedCallFrame.columnNumber;
+            }
         }
 
         if (!hasChanges) {

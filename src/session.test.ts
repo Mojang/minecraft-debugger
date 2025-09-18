@@ -189,6 +189,12 @@ describe('Session', () => {
 
         const jsonData = JSON.parse(JSON.stringify(injectedData));
 
+        const fakeModuleCallNodeCallFrame = jsonData['nodes']?.[0]['callFrame'];
+        expect(fakeModuleCallNodeCallFrame['functionName']).toBe('fakeModuleCall');
+        expect(fakeModuleCallNodeCallFrame['url']).toBe(localRoot + '\\module.ts');
+        expect(fakeModuleCallNodeCallFrame['lineNumber']).toBe(5);
+        expect(fakeModuleCallNodeCallFrame['columnNumber']).toBe(31);
+
         const fakeModuleCallCallFrame = jsonData['$vscode']?.['locations']?.[0]['callFrame'];
         expect(fakeModuleCallCallFrame['functionName']).toBe('fakeModuleCall');
         expect(fakeModuleCallCallFrame['url']).toBe(localRoot + '\\module.ts');
@@ -198,7 +204,14 @@ describe('Session', () => {
         const fakeModuleCallLocation = jsonData['$vscode']?.['locations']?.[0]['locations'][0];
         expect(fakeModuleCallLocation['lineNumber']).toBe(5);
         expect(fakeModuleCallLocation['columnNumber']).toBe(31);
+        expect(fakeModuleCallLocation['source']['name']).toBe('module.ts');
         expect(fakeModuleCallLocation['source']['path']).toBe(localRoot + '\\module.ts');
+
+        const anonymousNodeCallFrame = jsonData['nodes']?.[1]['callFrame'];
+        expect(anonymousNodeCallFrame['functionName']).toBe('<anonymous>');
+        expect(anonymousNodeCallFrame['url']).toBe(localRoot + '\\main.ts');
+        expect(anonymousNodeCallFrame['lineNumber']).toBe(130);
+        expect(anonymousNodeCallFrame['columnNumber']).toBe(20);
 
         const anonymousCallFrame = jsonData['$vscode']?.['locations']?.[1]['callFrame'];
         expect(anonymousCallFrame['functionName']).toBe('<anonymous>');
@@ -209,6 +222,7 @@ describe('Session', () => {
         const anonymousLocation = jsonData['$vscode']?.['locations']?.[1]['locations'][0];
         expect(anonymousLocation['lineNumber']).toBe(130);
         expect(anonymousLocation['columnNumber']).toBe(20);
+        expect(anonymousLocation['source']['name']).toBe('main.ts');
         expect(anonymousLocation['source']['path']).toBe(localRoot + '\\main.ts');
     });
 });

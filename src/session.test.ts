@@ -191,13 +191,13 @@ describe('Session', () => {
 
         const fakeModuleCallNodeCallFrame = jsonData['nodes']?.[0]['callFrame'];
         expect(fakeModuleCallNodeCallFrame['functionName']).toBe('fakeModuleCall');
-        expect(fakeModuleCallNodeCallFrame['url']).toBe(localRoot + '\\module.ts');
+        expect(fakeModuleCallNodeCallFrame['url']).toBe(path.resolve(localRoot, 'module.ts'));
         expect(fakeModuleCallNodeCallFrame['lineNumber']).toBe(5);
         expect(fakeModuleCallNodeCallFrame['columnNumber']).toBe(31);
 
         const fakeModuleCallCallFrame = jsonData['$vscode']?.['locations']?.[0]['callFrame'];
         expect(fakeModuleCallCallFrame['functionName']).toBe('fakeModuleCall');
-        expect(fakeModuleCallCallFrame['url']).toBe(localRoot + '\\module.ts');
+        expect(fakeModuleCallCallFrame['url']).toBe(path.resolve(localRoot, 'module.ts'));
         expect(fakeModuleCallCallFrame['lineNumber']).toBe(5);
         expect(fakeModuleCallCallFrame['columnNumber']).toBe(31);
 
@@ -205,17 +205,17 @@ describe('Session', () => {
         expect(fakeModuleCallLocation['lineNumber']).toBe(5);
         expect(fakeModuleCallLocation['columnNumber']).toBe(31);
         expect(fakeModuleCallLocation['source']['name']).toBe('module.ts');
-        expect(fakeModuleCallLocation['source']['path']).toBe(localRoot + '\\module.ts');
+        expect(fakeModuleCallLocation['source']['path']).toBe(path.resolve(localRoot, 'module.ts'));
 
         const anonymousNodeCallFrame = jsonData['nodes']?.[1]['callFrame'];
         expect(anonymousNodeCallFrame['functionName']).toBe('<anonymous>');
-        expect(anonymousNodeCallFrame['url']).toBe(localRoot + '\\main.ts');
+        expect(anonymousNodeCallFrame['url']).toBe(path.resolve(localRoot, 'main.ts'));
         expect(anonymousNodeCallFrame['lineNumber']).toBe(130);
         expect(anonymousNodeCallFrame['columnNumber']).toBe(20);
 
         const anonymousCallFrame = jsonData['$vscode']?.['locations']?.[1]['callFrame'];
         expect(anonymousCallFrame['functionName']).toBe('<anonymous>');
-        expect(anonymousCallFrame['url']).toBe(localRoot + '\\main.ts');
+        expect(anonymousCallFrame['url']).toBe(path.resolve(localRoot, 'main.ts'));
         expect(anonymousCallFrame['lineNumber']).toBe(130);
         expect(anonymousCallFrame['columnNumber']).toBe(20);
 
@@ -223,6 +223,6 @@ describe('Session', () => {
         expect(anonymousLocation['lineNumber']).toBe(130);
         expect(anonymousLocation['columnNumber']).toBe(20);
         expect(anonymousLocation['source']['name']).toBe('main.ts');
-        expect(anonymousLocation['source']['path']).toBe(localRoot + '\\main.ts');
+        expect(anonymousLocation['source']['path']).toBe(path.resolve(localRoot, 'main.ts'));
     });
 });

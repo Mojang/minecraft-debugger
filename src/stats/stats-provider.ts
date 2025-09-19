@@ -80,7 +80,7 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
-    private _aggregateData(statId: string, stat: StatDataModel, tick: number, parent?: StatData): StatData | undefined {
+    static aggregateData(statId: string, stat: StatDataModel, tick: number, parent?: StatData): StatData | undefined {
         const childStringValues: string[][] = [];
 
         for (const child of stat.children ?? []) {
@@ -125,7 +125,7 @@ export class StatsProvider {
 
         let aggregateChildData = undefined;
         if (stat.should_aggregate) {
-            aggregateChildData = this._aggregateData(statId, stat, tick, parent);
+            aggregateChildData = StatsProvider.aggregateData(statId, stat, tick, parent);
         }
 
         this._statListeners.forEach((listener: StatsListener) => {

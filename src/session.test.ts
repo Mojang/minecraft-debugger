@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Session } from './session';
+import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
 import path from 'path';
 import { SourceMaps } from './source-maps';
 
@@ -87,6 +88,73 @@ describe('Session', () => {
         expect(stackFrames[1].line).toBe(130);
         expect(stackFrames[1].column).toBe(20);
         expect(stackFrames[1].name).toBe('anonymous');
+    });
+
+    it('Could not find source map to inject into profiler', async () => {
+        const localRoot = path.resolve('./test-source-maps/src');
+        const sourceMapRoot = path.resolve('./test-source-maps/external-source-maps/scripts');
+        const sourceMaps = new SourceMaps(localRoot, sourceMapRoot);
+        const moduleMapping = {
+            'module.js': './test-source-maps/external-source-maps/module/module.js',
+        };
+        const moduleMaps = Session.createModuleMap(localRoot, moduleMapping);
+        const mockData = {
+            nodes: [
+                {
+                    id: 0,
+                    hitCount: 2,
+                    callFrame: {
+                        functionName: 'fakeModuleCall',
+                        scriptId: '974',
+                        url: 'fakeModule.js',
+                        lineNumber: 5,
+                        columnNumber: 18,
+                    },
+                    locationId: 0,
+                },
+            ],
+            samples: [0, 0, 2, 0, 2],
+            timeDeltas: [0, 7206663, 297, 9994911, 140],
+            startTime: 1757464170077429,
+            endTime: 1757464189237976,
+            $vscode: {
+                rootPath: '.',
+                locations: [
+                    {
+                        callFrame: {
+                            functionName: 'fakeModuleCall',
+                            scriptId: '974',
+                            url: 'fakeModule.js',
+                            lineNumber: 5,
+                            columnNumber: 18,
+                        },
+                        locations: [
+                            {
+                                lineNumber: 5,
+                                columnNumber: 18,
+                                source: {
+                                    name: 'fakeModule.js',
+                                    path: 'fakeModule.js',
+                                    sourceReference: 0,
+                                },
+                            },
+                        ],
+                    },
+                ],
+            },
+        };
+
+        const encoder = new TextEncoder();
+        const encodedData = Buffer.from(encoder.encode(JSON.stringify(mockData))).toString('base64');
+
+        const injectedData = await injectSourceMapIntoProfilerCapture(
+            moduleMapping,
+            moduleMaps,
+            sourceMaps,
+            JSON.stringify(encodedData)
+        );
+
+        expect(injectedData).toBe(undefined);
     });
 
     it('Can inject source map into profiler', async () => {
@@ -180,7 +248,7 @@ describe('Session', () => {
         const encoder = new TextEncoder();
         const encodedData = Buffer.from(encoder.encode(JSON.stringify(mockData))).toString('base64');
 
-        const injectedData = await Session.injectSourceMapIntoProfilerCapture(
+        const injectedData = await injectSourceMapIntoProfilerCapture(
             moduleMapping,
             moduleMaps,
             sourceMaps,

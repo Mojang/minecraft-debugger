@@ -28,13 +28,13 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { EventEmitter } from 'events';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './message-stream-parser';
+import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
 import { HomeViewProvider } from './panels/home-view-provider';
 import { isUUID } from './utils';
 import * as path from 'path';
 import * as fs from 'fs';
-import { MappedPosition } from 'source-map';
 
 interface PendingResponse {
     onSuccess?: (result: any) => void;
@@ -42,7 +42,7 @@ interface PendingResponse {
 }
 
 // Module mapping for getting line numbers for a given module
-interface ModuleMapping {
+export interface ModuleMapping {
     [moduleName: string]: string;
 }
 
@@ -62,33 +62,6 @@ interface ProfilerCapture {
     type: string;
     capture_base_path: string;
     capture_data: string;
-}
-
-interface ProfilerCallFrame {
-    functionName: string;
-    scriptId: string;
-    url: string;
-    lineNumber: number;
-    columnNumber: number;
-}
-
-interface ProfilerLocation {
-    lineNumber: number;
-    columnNumber: number;
-    source: {
-        name: string;
-        path: string;
-        sourceReference: number;
-    };
-}
-
-interface ProfilerData {
-    callFrame: ProfilerCallFrame;
-    locations: ProfilerLocation[];
-}
-
-export interface ProfilerVScodeLocations {
-    locations: ProfilerData[];
 }
 
 // Interface for specific launch arguments.
@@ -249,90 +222,29 @@ export class Session extends DebugSession {
         });
     }
 
-    private onRequestDebuggerStatus(): void {
-        this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
+    private writeProfilerCaptureToFile(
+        captureData: string,
+        capturePath: string,
+        basePath: string,
+        fileName: string
+    ): boolean {
+        const data = Buffer.from(captureData, 'base64');
+
+        try {
+            fs.writeFileSync(capturePath, data);
+
+            // notify home view of new capture
+            this._eventEmitter.emit('new-profiler-capture', basePath, fileName);
+        } catch (err: any) {
+            this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
+            return false;
+        }
+
+        return true;
     }
 
-    static async injectSourceMapIntoProfilerCapture(
-        moduleMapping: ModuleMapping | undefined,
-        moduleMaps: Record<string, SourceMaps> | undefined,
-        baseSourceMaps: SourceMaps,
-        rawData: string
-    ): Promise<string | undefined> {
-        const data = Buffer.from(rawData, 'base64');
-        const dataJson = JSON.parse(`${data}`);
-        const tsCodeFunctionCalls: ProfilerVScodeLocations = { locations: [] };
-        tsCodeFunctionCalls.locations = dataJson['$vscode']?.['locations'];
-
-        let hasChanges = false;
-        const callFrameMap: Map<string, ProfilerCallFrame> = new Map<string, ProfilerCallFrame>();
-
-        //Locations Changes
-        for (let i = 0; i < tsCodeFunctionCalls.locations.length; i++) {
-            const profilerData: ProfilerData = tsCodeFunctionCalls.locations[i];
-            const callFrame = profilerData.callFrame;
-            const locations = profilerData.locations[0];
-
-            if (callFrame === undefined || locations === undefined) {
-                continue;
-            }
-
-            const mappedFilename = moduleMapping?.[callFrame.url];
-            const sourceMaps = mappedFilename ? moduleMaps![callFrame.url] : baseSourceMaps;
-            const sourceFilename = mappedFilename ? path.basename(mappedFilename) : callFrame.url;
-
-            let originalPosition: MappedPosition | undefined;
-
-            try {
-                originalPosition = await sourceMaps.getOriginalPositionFor({
-                    source: sourceFilename,
-                    line: callFrame.lineNumber - 1,
-                    column: callFrame.columnNumber,
-                });
-            } catch (_e) {
-                continue;
-            }
-
-            if (!originalPosition) {
-                continue;
-            }
-
-            callFrame.url = originalPosition.source;
-            callFrame.lineNumber = originalPosition.line;
-            callFrame.columnNumber = originalPosition.column;
-            locations.lineNumber = originalPosition.line;
-            locations.columnNumber = originalPosition.column;
-            locations.source.path = originalPosition.source;
-
-            const pathSplit = originalPosition.source.split('\\');
-            if (pathSplit.length === 0) {
-                locations.source.name = originalPosition.source;
-            } else {
-                locations.source.name = pathSplit[pathSplit.length - 1];
-            }
-
-            callFrameMap.set(callFrame.functionName, callFrame);
-
-            hasChanges = true;
-        }
-
-        //Find Matching Nodes
-        const nodes = dataJson['nodes'];
-        for (let i = 0; i < nodes.length; i++) {
-            const nodeCallFrame: ProfilerCallFrame = nodes[i]['callFrame'];
-            const cachedCallFrame = callFrameMap.get(nodeCallFrame.functionName);
-            if (cachedCallFrame) {
-                nodeCallFrame.url = cachedCallFrame.url;
-                nodeCallFrame.lineNumber = cachedCallFrame.lineNumber;
-                nodeCallFrame.columnNumber = cachedCallFrame.columnNumber;
-            }
-        }
-
-        if (!hasChanges) {
-            return undefined;
-        }
-
-        return dataJson;
+    private onRequestDebuggerStatus(): void {
+        this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
     }
 
     // MC has sent the profiler capture results to the debugger
@@ -340,46 +252,34 @@ export class Session extends DebugSession {
         const formattedDate = new Date().toISOString().replace(/:/g, '-');
         const newCaptureFileNameJS = `Capture_${formattedDate}_JS.cpuprofile`;
         const captureFullPathJS = path.join(profilerCapture.capture_base_path, newCaptureFileNameJS);
-        const dataJS = Buffer.from(profilerCapture.capture_data, 'base64');
 
-        let jsFileCreated = false;
-        try {
-            fs.writeFileSync(captureFullPathJS, dataJS);
-            jsFileCreated = true;
-
-            // notify home view of new capture
-            this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, newCaptureFileNameJS);
-        } catch (err: any) {
-            this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
-            return;
-        }
+        const jsFileCreated = this.writeProfilerCaptureToFile(
+            profilerCapture.capture_data,
+            captureFullPathJS,
+            profilerCapture.capture_base_path,
+            newCaptureFileNameJS
+        );
 
         const newCaptureFileNameTS = `Capture_${formattedDate}_TS.cpuprofile`;
         const captureFullPathTS = path.join(profilerCapture.capture_base_path, newCaptureFileNameTS);
-        const rawDataTS = await Session.injectSourceMapIntoProfilerCapture(
+        const rawDataTS = await injectSourceMapIntoProfilerCapture(
             this._moduleMapping,
             this._moduleMaps,
             this._sourceMaps,
             profilerCapture.capture_data
         );
+
         let tsFileCreated = false;
         if (rawDataTS !== undefined) {
             const encoder = new TextEncoder();
-            const dataTS = Buffer.from(encoder.encode(JSON.stringify(rawDataTS)));
-            try {
-                fs.writeFileSync(captureFullPathTS, dataTS);
-                tsFileCreated = true;
+            const dataTS = Buffer.from(encoder.encode(JSON.stringify(rawDataTS))).toString('base64');
 
-                // notify home view of new capture
-                this._eventEmitter.emit(
-                    'new-profiler-capture',
-                    profilerCapture.capture_base_path,
-                    newCaptureFileNameTS
-                );
-            } catch (err: any) {
-                this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
-                return;
-            }
+            tsFileCreated = this.writeProfilerCaptureToFile(
+                dataTS,
+                captureFullPathTS,
+                profilerCapture.capture_base_path,
+                newCaptureFileNameTS
+            );
         }
 
         if (tsFileCreated) {

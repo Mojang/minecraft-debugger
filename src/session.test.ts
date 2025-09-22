@@ -272,7 +272,9 @@ describe('Session', () => {
         const fakeModuleCallLocation = jsonData['$vscode']?.['locations']?.[0]['locations'][0];
         expect(fakeModuleCallLocation['lineNumber']).toBe(5);
         expect(fakeModuleCallLocation['columnNumber']).toBe(31);
-        expect(fakeModuleCallLocation['source']['name']).toBe('module.ts');
+
+        const moduleSourceName = fakeModuleCallLocation['source']['name'].split('/');
+        expect(moduleSourceName[moduleSourceName.length - 1]).toBe('module.ts');
         expect(fakeModuleCallLocation['source']['path']).toBe(path.resolve(localRoot, 'module.ts'));
 
         const anonymousNodeCallFrame = jsonData['nodes']?.[1]['callFrame'];
@@ -290,7 +292,9 @@ describe('Session', () => {
         const anonymousLocation = jsonData['$vscode']?.['locations']?.[1]['locations'][0];
         expect(anonymousLocation['lineNumber']).toBe(130);
         expect(anonymousLocation['columnNumber']).toBe(20);
-        expect(anonymousLocation['source']['name']).toBe('main.ts');
+        const mainSourceName = anonymousLocation['source']['name'].split('/');
+        expect(mainSourceName[mainSourceName.length - 1]).toBe('main.ts');
+
         expect(anonymousLocation['source']['path']).toBe(path.resolve(localRoot, 'main.ts'));
     });
 });

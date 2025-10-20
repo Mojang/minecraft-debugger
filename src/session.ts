@@ -28,6 +28,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { EventEmitter } from 'events';
 import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
 import { MessageStreamParser } from './message-stream-parser';
+import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
 import { HomeViewProvider } from './panels/home-view-provider';
@@ -41,7 +42,7 @@ interface PendingResponse {
 }
 
 // Module mapping for getting line numbers for a given module
-interface ModuleMapping {
+export interface ModuleMapping {
     [moduleName: string]: string;
 }
 
@@ -221,28 +222,75 @@ export class Session extends DebugSession {
         });
     }
 
+    private writeProfilerCaptureToFile(
+        captureData: string,
+        capturePath: string,
+        basePath: string,
+        fileName: string
+    ): boolean {
+        const data = Buffer.from(captureData, 'base64');
+
+        try {
+            fs.writeFileSync(capturePath, data);
+
+            // notify home view of new capture
+            this._eventEmitter.emit('new-profiler-capture', basePath, fileName);
+        } catch (err: any) {
+            this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
+            return false;
+        }
+
+        return true;
+    }
+
     private onRequestDebuggerStatus(): void {
         this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
     }
 
     // MC has sent the profiler capture results to the debugger
-    private handleProfilerCapture(profilerCapture: ProfilerCapture): void {
+    private async handleProfilerCapture(profilerCapture: ProfilerCapture) {
         const formattedDate = new Date().toISOString().replace(/:/g, '-');
-        const newCaptureFileName = `Capture_${formattedDate}.cpuprofile`;
-        const captureFullPath = path.join(profilerCapture.capture_base_path, newCaptureFileName);
-        const data = Buffer.from(profilerCapture.capture_data, 'base64');
-        fs.writeFile(captureFullPath, data, err => {
-            if (err) {
-                this.showNotification(`Failed to write to temp file: ${err.message}`, LogLevel.Error);
-                return;
-            }
-            commands.executeCommand('vscode.open', Uri.file(captureFullPath)).then(undefined, error => {
+        const newCaptureFileNameJS = `Capture_${formattedDate}_JS.cpuprofile`;
+        const captureFullPathJS = path.join(profilerCapture.capture_base_path, newCaptureFileNameJS);
+
+        const jsFileCreated = this.writeProfilerCaptureToFile(
+            profilerCapture.capture_data,
+            captureFullPathJS,
+            profilerCapture.capture_base_path,
+            newCaptureFileNameJS
+        );
+
+        const newCaptureFileNameTS = `Capture_${formattedDate}_TS.cpuprofile`;
+        const captureFullPathTS = path.join(profilerCapture.capture_base_path, newCaptureFileNameTS);
+        const rawDataTS = await injectSourceMapIntoProfilerCapture(
+            this._moduleMapping,
+            this._moduleMaps,
+            this._sourceMaps,
+            profilerCapture.capture_data
+        );
+
+        let tsFileCreated = false;
+        if (rawDataTS !== undefined) {
+            const encoder = new TextEncoder();
+            const dataTS = Buffer.from(encoder.encode(JSON.stringify(rawDataTS))).toString('base64');
+
+            tsFileCreated = this.writeProfilerCaptureToFile(
+                dataTS,
+                captureFullPathTS,
+                profilerCapture.capture_base_path,
+                newCaptureFileNameTS
+            );
+        }
+
+        if (tsFileCreated) {
+            commands.executeCommand('vscode.open', Uri.file(captureFullPathTS)).then(undefined, error => {
                 this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
             });
-
-            // notify home view of new capture
-            this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, newCaptureFileName);
-        });
+        } else if (jsFileCreated) {
+            commands.executeCommand('vscode.open', Uri.file(captureFullPathJS)).then(undefined, error => {
+                this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
+            });
+        }
     }
 
     // ------------------------------------------------------------------------

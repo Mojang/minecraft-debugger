@@ -65,7 +65,9 @@ export class MinecraftDiagnosticsPanel {
                 if (stat.parent_id !== undefined) {
                     const message = {
                         type: 'statistic-updated',
+                        should_aggregate: stat.should_aggregate,
                         values: stat.values,
+                        children_string_values: stat.children_string_values,
                         id: stat.id,
                         name: stat.name,
                         group_name: stat.parent_name,

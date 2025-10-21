@@ -2,7 +2,9 @@
 
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
+    should_aggregate: boolean;
     values: number[];
+    children_string_values: string[][];
     id: string;
     name: string;
     group: string;
@@ -81,7 +83,7 @@ export class SimpleStatisticProvider extends StatisticProvider {
             return;
         }
 
-        if (event.values.length === 0) {
+        if (event.values.length === 0 && event.should_aggregate === false) {
             return;
         }
 

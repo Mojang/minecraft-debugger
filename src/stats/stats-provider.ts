@@ -7,14 +7,17 @@ export interface StatData {
     full_id: string;
     parent_id: string;
     parent_full_id: string;
-    values: number[];
+    values: (number | string)[];
+    children_string_values: string[][];
+    should_aggregate: boolean;
     tick: number;
 }
 
 export interface StatDataModel {
     name: string;
     children?: StatDataModel[];
-    values?: number[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
+    values?: (number | string)[]; // values[values.length - 1] is "this ticks data" and all ones before that are previous ticks
+    should_aggregate: boolean;
 }
 
 export interface StatMessageModel {
@@ -77,24 +80,60 @@ export class StatsProvider {
         this._statListeners = this._statListeners.filter((l: StatsListener) => l !== listener);
     }
 
+    static aggregateData(statId: string, stat: StatDataModel, tick: number, parent?: StatData): StatData | undefined {
+        const childStringValues: string[][] = [];
+
+        for (const child of stat.children ?? []) {
+            if (!(child.values && typeof child.values[0] === 'string' && child.values[0].length > 0)) {
+                continue;
+            }
+
+            childStringValues.push([child.name, child.values[0]]);
+        }
+
+        const childStatData: StatData = {
+            ...stat,
+            id: 'consolidated_data',
+            full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
+            parent_name: stat.name,
+            parent_id: statId,
+            parent_full_id: statId,
+            values: stat.values ?? [],
+            children_string_values: childStringValues,
+            should_aggregate: stat.should_aggregate,
+            tick: tick,
+        };
+
+        return childStatData;
+    }
+
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
+        const statId = stat.name.toLowerCase();
+
+        const statData: StatData = {
+            ...stat,
+            id: statId,
+            full_id: parent !== undefined ? parent.full_id + '_' + statId : statId,
+            parent_name: parent !== undefined ? parent.name : '',
+            parent_id: parent !== undefined ? parent.id : '',
+            parent_full_id: parent !== undefined ? parent.full_id : '',
+            values: stat.values ?? [],
+            children_string_values: [],
+            should_aggregate: stat.should_aggregate,
+            tick: tick,
+        };
+
+        let aggregateChildData = undefined;
+        if (stat.should_aggregate) {
+            aggregateChildData = StatsProvider.aggregateData(statId, stat, tick, parent);
+        }
+
         this._statListeners.forEach((listener: StatsListener) => {
-            const statId = stat.name.toLowerCase();
-
-            const statData: StatData = {
-                ...stat,
-                id: statId,
-                full_id: parent !== undefined ? parent.full_id + '_' + statId : statId,
-                parent_name: parent !== undefined ? parent.name : '',
-                parent_id: parent !== undefined ? parent.id : '',
-                parent_full_id: parent !== undefined ? parent.full_id : '',
-                values: stat.values ?? [],
-                tick: tick,
-            };
-
             listener.onStatUpdated?.(statData);
 
-            if (stat.children) {
+            if (aggregateChildData !== undefined) {
+                listener.onStatUpdated?.(aggregateChildData);
+            } else if (stat.children) {
                 stat.children.forEach((child: StatDataModel) => {
                     this._fireStatUpdated(child, tick, statData);
                 });

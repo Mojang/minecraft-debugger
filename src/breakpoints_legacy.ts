@@ -6,6 +6,7 @@ import { SourceMaps } from './source-maps';
 import { IDebuggeeMessageSender } from './debuggee-message-sender';
 import * as path from 'path';
 
+// respond to a setBreakPointsRequest from session, deprecated.
 export class BreakpointsLegacy implements IBreakpointsHandler {
     private _sourceMaps: SourceMaps;
     private _sourceBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();

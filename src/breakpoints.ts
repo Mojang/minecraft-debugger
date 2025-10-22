@@ -23,6 +23,12 @@ interface BreakpointsStatus {
     breakpoints: DebugProtocol.Breakpoint[];
 }
 
+// respond to a setBreakPointsRequest from session
+// - cache all breakpoints requests with a map of source to breakpoints array
+// - get generated breakpoints for the source file in the request
+// - then add any breakpoints from other sources that map to the same generated file
+// - send complete set of breakpoints for the generated file to debuggee
+// - return breakpoint status only for those from the source in the original request
 export class Breakpoints implements IBreakpointsHandler {
     private _sourceMaps: SourceMaps;
     private _cachedBreakpointsMap: Map<string, DebugProtocol.SourceBreakpoint[]> = new Map();

@@ -1,6 +1,12 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
+// Node.js built-ins
+import * as fs from 'fs';
+import * as path from 'path';
+import { EventEmitter } from 'events';
 import { createConnection, Server, Socket } from 'net';
+
+// Third-party packages
 import {
     DebugSession,
     InitializedEvent,
@@ -13,6 +19,8 @@ import {
     ThreadEvent,
     Variable,
 } from '@vscode/debugadapter';
+import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
+import { DebugProtocol } from '@vscode/debugprotocol';
 import {
     commands,
     FileSystemWatcher,
@@ -24,21 +32,18 @@ import {
     workspace,
     window,
 } from 'vscode';
-import { DebugProtocol } from '@vscode/debugprotocol';
-import { EventEmitter } from 'events';
-import { LogOutputEvent, LogLevel } from '@vscode/debugadapter/lib/logger';
-import { MessageStreamParser } from './message-stream-parser';
-import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
-import { SourceMaps } from './source-maps';
-import { IBreakpointsHandler } from './ibreakpoints-handler';
+
+// Local imports
 import { Breakpoints } from './breakpoints';
 import { BreakpointsLegacy } from './breakpoints_legacy';
-import { StatMessageModel, StatsProvider } from './stats/stats-provider';
+import { IDebuggeeMessageSender } from './debuggee-message-sender';
 import { HomeViewProvider } from './panels/home-view-provider';
+import { IBreakpointsHandler } from './ibreakpoints-handler';
+import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
 import { isUUID } from './utils';
-
-import * as path from 'path';
-import * as fs from 'fs';
+import { MessageStreamParser } from './message-stream-parser';
+import { SourceMaps } from './source-maps';
+import { StatMessageModel, StatsProvider } from './stats/stats-provider';
 
 interface PendingResponse {
     onSuccess?: (result: any) => void;

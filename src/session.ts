@@ -35,7 +35,7 @@ import {
 
 // Local imports
 import { Breakpoints } from './breakpoints';
-import { BreakpointsLegacy } from './breakpoints_legacy';
+import { BreakpointsLegacy } from './breakpoints-legacy';
 import { IDebuggeeMessageSender } from './debuggee-message-sender';
 import { HomeViewProvider } from './panels/home-view-provider';
 import { IBreakpointsHandler } from './ibreakpoints-handler';

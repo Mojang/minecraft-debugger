@@ -1,8 +1,11 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
-import { ConfigProvider } from './config-provider';
+import * as fs from 'fs';
+
 import { EventEmitter } from 'stream';
+
+import { ConfigProvider } from './config-provider';
 import { HomeViewProvider } from './panels/home-view-provider';
 import { MinecraftDiagnosticsPanel } from './panels/minecraft-diagnostics';
 import { ServerDebugAdapterFactory } from './server-debug-adapter-factory';
@@ -54,23 +57,25 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
         }
 
-        vscode.window.showInputBox({
-            placeHolder: 'Please enter the command to run.',
-            value: '',
-        }).then(command => {
-            if (!command) {
-                vscode.window.showErrorMessage('No command provided.');
-                return;
-            }
+        vscode.window
+            .showInputBox({
+                placeHolder: 'Please enter the command to run.',
+                value: '',
+            })
+            .then(command => {
+                if (!command) {
+                    vscode.window.showErrorMessage('No command provided.');
+                    return;
+                }
 
-            // Check for active session again in case the session closed while the prompt was open
-            if (!vscode.debug.activeDebugSession) {
-                vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
-                return;
-            }
+                // Check for active session again in case the session closed while the prompt was open
+                if (!vscode.debug.activeDebugSession) {
+                    vscode.window.showErrorMessage('Error running command: No active Minecraft Debugger session.');
+                    return;
+                }
 
-            eventEmitter.emit('run-minecraft-command', command);
-        });
+                eventEmitter.emit('run-minecraft-command', command);
+            });
     });
 
     const liveDiagnosticsCommand = vscode.commands.registerCommand('minecraft-debugger.liveDiagnostics', () => {
@@ -105,4 +110,47 @@ export function activate(context: vscode.ExtensionContext): void {
         liveDiagnosticsCommand,
         replayDiagnosticsCommand
     );
+
+    //
+    // Extension listeners
+    //
+    const breakpointsEvent = vscode.debug.onDidChangeBreakpoints(async e => {
+        handleBreakpointChanges(e);
+    });
+    context.subscriptions.push(breakpointsEvent);
+}
+
+// Special case handler for breakpoint removals due to file deletions, for
+// "reasons" VSCode does not call setBreakpointsRequest in this case.
+function handleBreakpointChanges(event: vscode.BreakpointsChangeEvent): void {
+    if (!vscode.debug.activeDebugSession || vscode.debug.activeDebugSession.type !== 'minecraft-js') {
+        return;
+    }
+
+    if (event.removed.length > 0) {
+        // collect only type SourceBreakpoint (the only kind we support) and group them by file
+        const removedBreakpointsByFile = new Map<string, vscode.Breakpoint[]>();
+        for (const bp of event.removed) {
+            if (bp instanceof vscode.SourceBreakpoint) {
+                const uriString = bp.location.uri.toString();
+                if (!removedBreakpointsByFile.has(uriString)) {
+                    removedBreakpointsByFile.set(uriString, []);
+                }
+                removedBreakpointsByFile.get(uriString)!.push(bp);
+            }
+        }
+
+        // For each file that had breakpoints removed, see if the file does NOT exist and
+        // if so trigger the custom handler to remove these breakpoints.
+        removedBreakpointsByFile.forEach((_breakpoints, uriString) => {
+            const uri = vscode.Uri.parse(uriString);
+            if (!fs.existsSync(uri.fsPath)) {
+                vscode.debug.activeDebugSession?.customRequest('breakpointsClearedFromFileDelete', {
+                    source: {
+                        path: uri.fsPath,
+                    },
+                });
+            }
+        });
+    }
 }

@@ -132,21 +132,19 @@ export class Breakpoints implements IBreakpointsHandler {
         );
 
         // for all breakpoint positions set on the source file, get generated/mapped positions
-        if (sourceBreakpoints.length) {
-            for (const originalBreakpoint of sourceBreakpoints) {
-                const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
-                    source: originalLocalAbsolutePath,
-                    column: originalBreakpoint.column ?? 0,
-                    line: originalBreakpoint.line,
-                });
-                generatedBreakpointsInfo.breakpoints.push({
-                    isPrimary: isPrimary,
-                    breakpoint: {
-                        line: generatedPosition.line ?? 0,
-                        column: 0,
-                    },
-                });
-            }
+        for (const originalBreakpoint of sourceBreakpoints) {
+            const generatedPosition = await this._sourceMaps.getGeneratedPositionFor({
+                source: originalLocalAbsolutePath,
+                column: originalBreakpoint.column ?? 0,
+                line: originalBreakpoint.line,
+            });
+            generatedBreakpointsInfo.breakpoints.push({
+                isPrimary: isPrimary,
+                breakpoint: {
+                    line: generatedPosition.line ?? 0,
+                    column: 0,
+                },
+            });
         }
 
         return generatedBreakpointsInfo;

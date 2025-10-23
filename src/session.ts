@@ -129,6 +129,7 @@ enum ProtocolVersion {
 export interface MinecraftCapabilities {
     supportsCommands: boolean;
     supportsProfiler: boolean;
+    supportsBreakpointsAsRequest: boolean;
 }
 
 // The Debug Adapter for 'minecraft-js'
@@ -155,7 +156,11 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private _moduleMaps?: Record<string, SourceMaps>;
     private _targetModuleUuid?: string;
     private _clientProtocolVersion: number = ProtocolVersion._Unknown; // determined after connection
-    private _minecraftCapabilities: MinecraftCapabilities = { supportsCommands: false, supportsProfiler: false };
+    private _minecraftCapabilities: MinecraftCapabilities = {
+        supportsCommands: false,
+        supportsProfiler: false,
+        supportsBreakpointsAsRequest: false,
+    };
     private _passcode?: string;
 
     // external communication
@@ -601,7 +606,10 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this.sendResponse(response);
     }
 
+    //
     // custom request handler (see extension.ts)
+    //
+    // eslint-disable-next-line
     protected async customRequest(command: string, response: DebugProtocol.Response, args: any): Promise<void> {
         switch (command) {
             // special case to handle breakpoints removed due to file deletions
@@ -744,11 +752,11 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
         this._moduleMaps = Session.createModuleMap(this._localRoot, this._moduleMapping);
 
-        // init breakpoints handler based on protocol version
-        if (this._clientProtocolVersion < ProtocolVersion.SupportBreakpointsAsRequest) {
-            this._breakpointsHandler = new BreakpointsLegacy(this._sourceMaps, this);
-        } else {
+        // init breakpoints handler based on MC's capabilities
+        if (this.getMinecraftCapabilities().supportsBreakpointsAsRequest) {
             this._breakpointsHandler = new Breakpoints(this._sourceMaps, this);
+        } else {
+            this._breakpointsHandler = new BreakpointsLegacy(this._sourceMaps, this);
         }
 
         // watch for source map changes
@@ -1217,6 +1225,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         return {
             supportsCommands: this._clientProtocolVersion >= ProtocolVersion.SupportPasscode,
             supportsProfiler: this._clientProtocolVersion >= ProtocolVersion.SupportProfilerCaptures,
+            supportsBreakpointsAsRequest: this._clientProtocolVersion >= ProtocolVersion.SupportBreakpointsAsRequest,
         };
     }
 

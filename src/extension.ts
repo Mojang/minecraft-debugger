@@ -114,10 +114,10 @@ export function activate(context: vscode.ExtensionContext): void {
     //
     // Extension listeners
     //
-    const breaksChangedEvent = vscode.debug.onDidChangeBreakpoints(async e => {
+    const breakpointsEvent = vscode.debug.onDidChangeBreakpoints(async e => {
         handleBreakpointChanges(e);
     });
-    context.subscriptions.push(breaksChangedEvent);
+    context.subscriptions.push(breakpointsEvent);
 }
 
 // Special case handler for breakpoint removals due to file deletions, for

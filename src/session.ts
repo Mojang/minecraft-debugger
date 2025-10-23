@@ -29,8 +29,8 @@ import {
     QuickPickOptions,
     RelativePattern,
     Uri,
-    workspace,
     window,
+    workspace,
 } from 'vscode';
 
 // Local imports
@@ -599,6 +599,45 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this.closeServer();
         this.closeSession();
         this.sendResponse(response);
+    }
+
+    // custom request handler (see extension.ts)
+    protected async customRequest(command: string, response: DebugProtocol.Response, args: any): Promise<void> {
+        switch (command) {
+            // special case to handle breakpoints removed due to file deletions
+            case 'breakpointsClearedFromFileDelete': {
+                if (this._breakpointsHandler && args.source?.path) {
+                    // create a SetBreakpointsResponse object to pass to the handler, which forwards it to MC.
+                    const setBreakpointsResponse: DebugProtocol.SetBreakpointsResponse = {
+                        type: 'response',
+                        request_seq: response.request_seq,
+                        success: true,
+                        command: 'setBreakpoints',
+                        seq: response.seq,
+                        body: {
+                            breakpoints: [],
+                        },
+                    };
+
+                    try {
+                        await this._breakpointsHandler.handleSetBreakpointsRequest(
+                            args.source.path,
+                            setBreakpointsResponse,
+                            args
+                        );
+                        // send original response, not the special one we created
+                        this.sendResponse(response);
+                    } catch (e) {
+                        this.log((e as Error).message, LogLevel.Error);
+                        this.sendErrorResponse(response, 1002, `Failed to clear breakpoints for ${args.source.path}.`);
+                    }
+                }
+                break;
+            }
+            default:
+                super.customRequest(command, response, args);
+                break;
+        }
     }
 
     // ------------------------------------------------------------------------

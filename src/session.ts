@@ -770,7 +770,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
         // If the user has set the configuration to show the diagnostic view on connect in settings.json, show it now.
         if (workspace.getConfiguration('minecraft-debugger').get('showDiagnosticViewOnConnect')) {
-            commands.executeCommand('minecraft-debugger.showMinecraftDiagnostics');
+            commands.executeCommand('minecraft-debugger.liveDiagnostics');
         }
     }
 

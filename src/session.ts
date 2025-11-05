@@ -1019,7 +1019,10 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 }
                 this.onConnectionComplete(protocolCapabilities.version, targetUuid, passcode);
             } else {
-                this.terminateSession('protocol unsupported. Update Debugger Extension.', LogLevel.Error);
+                this.terminateSession(
+                    `protocol unsupported. Downgrade Debugger Extension. Protocal Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
+                    LogLevel.Error
+                );
             }
         }
     }

@@ -967,7 +967,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         //
         if (this._debuggerProtocolVersion < protocolCapabilities.version) {
             this.terminateSession(
-                `protocol unsupported. Upgrade Debugger Extension. Protocal Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
+                `protocol unsupported. Upgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
                 LogLevel.Error
             );
         } else {
@@ -1023,7 +1023,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 this.onConnectionComplete(protocolCapabilities.version, targetUuid, passcode);
             } else {
                 this.terminateSession(
-                    `protocol unsupported. Downgrade Debugger Extension. Protocal Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
+                    `protocol unsupported. Downgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
                     LogLevel.Error
                 );
             }

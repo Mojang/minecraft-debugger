@@ -966,7 +966,10 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         // can fail connection on errors
         //
         if (this._debuggerProtocolVersion < protocolCapabilities.version) {
-            this.terminateSession('protocol mismatch. Update Debugger Extension.', LogLevel.Error);
+            this.terminateSession(
+                `protocol unsupported. Upgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
+                LogLevel.Error
+            );
         } else {
             if (protocolCapabilities.version === ProtocolVersion.SupportTargetModuleUuid) {
                 this.onConnectionComplete(protocolCapabilities.version, undefined);
@@ -1019,7 +1022,10 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 }
                 this.onConnectionComplete(protocolCapabilities.version, targetUuid, passcode);
             } else {
-                this.terminateSession('protocol unsupported. Update Debugger Extension.', LogLevel.Error);
+                this.terminateSession(
+                    `protocol unsupported. Downgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
+                    LogLevel.Error
+                );
             }
         }
     }

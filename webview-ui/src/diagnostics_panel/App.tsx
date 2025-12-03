@@ -9,7 +9,7 @@ import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticSta
 import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
 import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
 import ReplayControls from './controls/ReplayControls';
-import * as statPrefabs from './prefabs/StatisticPrefabs';
+import * as statPrefabs from './prefabs/StatisticPrefab';
 import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
 import { Icons } from './Icons';
 import './App.css';

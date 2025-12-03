@@ -4,6 +4,7 @@ import serverMemoryTab from './tabs/ServerMemory';
 import serverTimingTab from './tabs/ServerTiming';
 import serverPacketsTab from './tabs/ServerPackets';
 import serverBandwidthTab from './tabs/ServerBandwidth';
+import dynamicPropertyTab from './tabs/DynamicProperties';
 
 import serverScriptHandleCountsTab from './tabs/ServerScriptHandleCounts';
 import serverScriptSubscriberCountsTab from './tabs/ServerScriptSubscriberCounts';
@@ -21,4 +22,5 @@ export default [
     serverScriptSubscriberCountsTab,
     clientTimingTab,
     clientMemoryTab,
+    dynamicPropertyTab,
 ];

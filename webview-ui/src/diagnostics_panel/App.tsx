@@ -10,7 +10,6 @@ import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStac
 import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
 import ReplayControls from './controls/ReplayControls';
 import * as statPrefabs from './prefabs/StatisticPrefab';
-import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
 import { Icons } from './Icons';
 import './App.css';
 import tabPrefabs from './prefabs';

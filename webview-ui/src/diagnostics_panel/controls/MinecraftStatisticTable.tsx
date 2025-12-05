@@ -118,8 +118,8 @@ export default function MinecraftStatisticTable({
     return (
         <div>
             <h2>{title}</h2>
-            <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
-                <div className="sort-order-container" style={{ flexDirection: 'column', display: 'flex' }}>
+            <div className="minecraft-statistic-table-container">
+                <div className="minecraft-statistic-table-sort-container">
                     <label htmlFor="sort-order">Sort Order</label>
                     <VSCodeDropdown
                         id="sort-order"
@@ -132,7 +132,7 @@ export default function MinecraftStatisticTable({
                     </VSCodeDropdown>
                 </div>
                 <div style={{ width: '10px' }}></div>
-                <div className="sort-type-container" style={{ flexDirection: 'column', display: 'flex' }}>
+                <div className="minecraft-statistic-table-sort-container">
                     <label htmlFor="sort-type">Sort Type</label>
                     <VSCodeDropdown
                         id="sort-type"

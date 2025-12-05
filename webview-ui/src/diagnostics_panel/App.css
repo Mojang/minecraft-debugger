@@ -87,6 +87,17 @@ main {
   fill: var(--vscode-editor-background);
 }
 
+.minecraft-statistic-table-container {
+  flex-direction: row;
+  display: flex;
+  width: 100%;
+}
+
+.minecraft-statistic-table-sort-container {
+  flex-direction: column;
+  display: flex;
+}
+
 .line-chart-figure {
   max-width: initial;
 }

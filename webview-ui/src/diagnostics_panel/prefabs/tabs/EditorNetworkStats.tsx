@@ -23,7 +23,7 @@ const statsTab: TabPrefab = {
                         tickRange: 20 * 15, // About 15 seconds
                     })}
                     keyLabel="Packet Type"
-                    valueLabels={['Sent Count', 'Received Count']}
+                    valueLabels={['Sent Count', 'Received Count', 'Min Size', 'Max Size']}
                     prettifyNames={false} // Keep original packet name format
                     defaultSortColumn="value_0" // Sort by "Sent Count" column by default
                 />

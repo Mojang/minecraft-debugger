@@ -28,7 +28,7 @@ export enum MinecraftMultiColumnStatisticTableSortColumn {
 
 type MultiColumnTrackedStat = {
     category: string;
-    values: number[];
+    values: (string | number)[];
     time: number;
 };
 
@@ -115,11 +115,23 @@ export default function MinecraftMultiColumnStatisticTable({
                     event.children_string_values.length > 0
                 ) {
                     event.children_string_values.forEach(childRow => {
-                        if (childRow.length >= 3) {
-                            // Format: [packet_name, sent_count, received_count]
+                        if (childRow.length >= 2) {
+                            // Format: [packet_name, value1, value2, value3, value4, value5, ...]
                             const packetName = childRow[0];
-                            const sentCount = parseFloat(childRow[1]) || 0;
-                            const receivedCount = parseFloat(childRow[2]) || 0;
+
+                            // Parse values from the row, preserving original types
+                            const values: (string | number)[] = [];
+                            for (let i = 1; i < childRow.length; i++) {
+                                const rawValue = childRow[i];
+                                // Try to parse as number, but keep as string if it's not numeric
+                                const numValue = parseFloat(rawValue);
+                                values.push(isNaN(numValue) ? rawValue : numValue);
+                            }
+
+                            // Ensure we have at least as many values as valueLabels expects
+                            while (values.length < valueLabels.length) {
+                                values.push('');
+                            }
 
                             // Process packet name based on prettifyNames setting
                             const cleanPacketName = prettifyNames
@@ -133,7 +145,7 @@ export default function MinecraftMultiColumnStatisticTable({
 
                             categoryMap.set(cleanPacketName, {
                                 category: cleanPacketName,
-                                values: [sentCount, receivedCount],
+                                values: values,
                                 time: event.time || Date.now(),
                             });
                         }
@@ -173,11 +185,23 @@ export default function MinecraftMultiColumnStatisticTable({
                     // Handle multi-value events (children_string_values) for non-consolidated events
                     if (event.children_string_values && event.children_string_values.length > 0) {
                         event.children_string_values.forEach(childRow => {
-                            if (childRow.length >= 3) {
-                                // Format: [packet_name, sent_count, received_count]
+                            if (childRow.length >= 2) {
+                                // Format: [packet_name, value1, value2, value3, ...]
                                 const packetName = childRow[0];
-                                const sentCount = parseFloat(childRow[1]) || 0;
-                                const receivedCount = parseFloat(childRow[2]) || 0;
+
+                                // Parse values from the row, preserving original types
+                                const values: (string | number)[] = [];
+                                for (let i = 1; i < childRow.length; i++) {
+                                    const rawValue = childRow[i];
+                                    // Try to parse as number, but keep as string if it's not numeric
+                                    const numValue = parseFloat(rawValue);
+                                    values.push(isNaN(numValue) ? rawValue : numValue);
+                                }
+
+                                // Ensure we have at least as many values as valueLabels expects
+                                while (values.length < valueLabels.length) {
+                                    values.push('');
+                                }
 
                                 // Process packet name based on prettifyNames setting
                                 const cleanPacketName = prettifyNames
@@ -191,26 +215,7 @@ export default function MinecraftMultiColumnStatisticTable({
 
                                 categoryMap.set(cleanPacketName, {
                                     category: cleanPacketName,
-                                    values: [sentCount, receivedCount],
-                                    time: event.time,
-                                });
-                            } else if (childRow.length === 2) {
-                                // Fallback: handle key-value pairs
-                                const [childName, childValue] = childRow;
-                                const value = parseFloat(childValue);
-
-                                // Process name based on prettifyNames setting
-                                const cleanName = prettifyNames
-                                    ? childName
-                                          .split('::')
-                                          .pop()
-                                          ?.replace(/([a-z])([A-Z])/g, '$1 $2')
-                                          ?.replace(/^./, (str: string) => str.toUpperCase()) || childName
-                                    : childName.split('::').pop() || childName;
-
-                                categoryMap.set(cleanName, {
-                                    category: cleanName,
-                                    values: [value, 0], // Single value goes to first column
+                                    values: values,
                                     time: event.time,
                                 });
                             }
@@ -251,13 +256,25 @@ export default function MinecraftMultiColumnStatisticTable({
                         // Sort by specific value column
                         const columnIndex = parseInt(selectedSortColumn.replace('value_', ''));
                         if (columnIndex >= 0 && columnIndex < valueLabels.length) {
-                            const aValue = a.values[columnIndex] || 0;
-                            const bValue = b.values[columnIndex] || 0;
+                            const aValue = a.values[columnIndex] ?? '';
+                            const bValue = b.values[columnIndex] ?? '';
 
                             if (selectedSortType === MinecraftMultiColumnStatisticTableSortType.Alphabetical) {
-                                compareValue = aValue.toString().localeCompare(bValue.toString());
+                                compareValue = String(aValue).localeCompare(String(bValue));
                             } else {
-                                compareValue = aValue - bValue;
+                                // For numerical sort, convert to numbers if possible
+                                const aNum = typeof aValue === 'number' ? aValue : parseFloat(String(aValue));
+                                const bNum = typeof bValue === 'number' ? bValue : parseFloat(String(bValue));
+
+                                if (isNaN(aNum) && isNaN(bNum)) {
+                                    compareValue = String(aValue).localeCompare(String(bValue));
+                                } else if (isNaN(aNum)) {
+                                    compareValue = 1;
+                                } else if (isNaN(bNum)) {
+                                    compareValue = -1;
+                                } else {
+                                    compareValue = aNum - bNum;
+                                }
                             }
                         } else {
                             compareValue = a.category.localeCompare(b.category);
@@ -349,7 +366,7 @@ export default function MinecraftMultiColumnStatisticTable({
                         <VSCodeDataGridCell gridColumn="1">{dataPoint.category}</VSCodeDataGridCell>
                         {dataPoint.values.map((value, index) => (
                             <VSCodeDataGridCell key={index} gridColumn={`${index + 2}`}>
-                                {value.toFixed(1)}
+                                {typeof value === 'number' ? value.toFixed(1) : value}
                             </VSCodeDataGridCell>
                         ))}
                     </VSCodeDataGridRow>

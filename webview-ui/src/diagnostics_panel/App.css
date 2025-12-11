@@ -157,21 +157,47 @@ main {
   color: var(--vscode-button-foreground);
 }
 
-/* Multi-column table resizable columns */
+/* Multi-column table with enhanced column interaction */
 #multi-column-grid {
   width: 100%;
   overflow-x: auto;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
-/* Use CSS Grid for better column control */
-#multi-column-grid vscode-data-grid-row {
-  display: grid;
-  grid-template-columns: minmax(200px, 1fr) repeat(auto-fit, minmax(120px, 1fr));
-  gap: 4px;
+/* Enhanced column styling for better visual feedback */
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"] {
+  font-weight: bold;
+  background-color: var(--vscode-editor-background);
+  border-bottom: 2px solid var(--vscode-editorGroup-border);
+  border-right: 1px solid var(--vscode-editorGroup-border);
+  position: relative;
+  cursor: default;
+  user-select: none;
+  padding: 8px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-#multi-column-grid vscode-data-grid-cell {
+/* Add visual resize handle to column headers */
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"]:hover::after {
+  background: var(--vscode-focusBorder);
+  opacity: 0.5;
+}
+
+/* Regular cell styling */
+#multi-column-grid vscode-data-grid-cell:not([cell-type="columnheader"]) {
   padding: 8px 12px;
   border-right: 1px solid var(--vscode-editorGroup-border);
   overflow: hidden;
@@ -179,21 +205,54 @@ main {
   min-width: 0;
 }
 
-#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"] {
-  font-weight: bold;
-  background-color: var(--vscode-editor-background);
-  border-bottom: 2px solid var(--vscode-editorGroup-border);
+/* Set specific column widths using CSS custom properties */
+#multi-column-grid {
+  --col1-width: 250px;
+  --col2-width: 120px;
+  --col3-width: 120px;
+  --col4-width: 120px;
+  --col5-width: 120px;
+  --col6-width: 120px;
 }
 
-/* Make the packet name column wider */
+/* Apply column widths */
 #multi-column-grid vscode-data-grid-cell[grid-column="1"] {
-  min-width: 200px;
-  flex: 2;
+  width: var(--col1-width);
+  min-width: 180px;
+  flex: none;
 }
 
-/* Value columns */
-#multi-column-grid vscode-data-grid-cell:not([grid-column="1"]) {
-  min-width: 120px;
-  flex: 1;
+#multi-column-grid vscode-data-grid-cell[grid-column="2"] {
+  width: var(--col2-width);
+  min-width: 100px;
   text-align: right;
+  flex: none;
+}
+
+#multi-column-grid vscode-data-grid-cell[grid-column="3"] {
+  width: var(--col3-width);
+  min-width: 100px;
+  text-align: right;
+  flex: none;
+}
+
+#multi-column-grid vscode-data-grid-cell[grid-column="4"] {
+  width: var(--col4-width);
+  min-width: 100px;
+  text-align: right;
+  flex: none;
+}
+
+#multi-column-grid vscode-data-grid-cell[grid-column="5"] {
+  width: var(--col5-width);
+  min-width: 100px;
+  text-align: right;
+  flex: none;
+}
+
+#multi-column-grid vscode-data-grid-cell[grid-column="6"] {
+  width: var(--col6-width);
+  min-width: 100px;
+  text-align: right;
+  flex: none;
 }

@@ -205,54 +205,7 @@ main {
   min-width: 0;
 }
 
-/* Set specific column widths using CSS custom properties */
-#multi-column-grid {
-  --col1-width: 400px;
-  --col2-width: 80px;
-  --col3-width: 80px;
-  --col4-width: 80px;
-  --col5-width: 80px;
-  --col6-width: 80px;
-}
-
-/* Apply column widths */
-#multi-column-grid vscode-data-grid-cell[grid-column="1"] {
-  width: var(--col1-width);
-  min-width: 180px;
-  flex: none;
-}
-
-#multi-column-grid vscode-data-grid-cell[grid-column="2"] {
-  width: var(--col2-width);
-  min-width: 100px;
+/* Default styling for value columns when no columnWidths prop is provided */
+#multi-column-grid vscode-data-grid-cell:not([grid-column="1"]) {
   text-align: right;
-  flex: none;
-}
-
-#multi-column-grid vscode-data-grid-cell[grid-column="3"] {
-  width: var(--col3-width);
-  min-width: 100px;
-  text-align: right;
-  flex: none;
-}
-
-#multi-column-grid vscode-data-grid-cell[grid-column="4"] {
-  width: var(--col4-width);
-  min-width: 100px;
-  text-align: right;
-  flex: none;
-}
-
-#multi-column-grid vscode-data-grid-cell[grid-column="5"] {
-  width: var(--col5-width);
-  min-width: 100px;
-  text-align: right;
-  flex: none;
-}
-
-#multi-column-grid vscode-data-grid-cell[grid-column="6"] {
-  width: var(--col6-width);
-  min-width: 100px;
-  text-align: right;
-  flex: none;
 }

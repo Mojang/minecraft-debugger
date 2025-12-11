@@ -43,6 +43,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     keyLabel: string;
     valueLabels: string[]; // Array of labels for value columns
     prettifyNames?: boolean; // Whether to format packet names (camelCase -> Camel Case) or keep original format
+    columnWidths?: string[]; // Optional array of column widths (first is key column, rest are value columns)
 };
 
 const sortOrderOptions = [
@@ -111,6 +112,7 @@ export default function MinecraftMultiColumnStatisticTable({
     keyLabel,
     valueLabels,
     prettifyNames = true, // Default to prettifying names for backward compatibility
+    columnWidths,
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
     // states
     const [data, setData] = useState<MultiColumnTrackedStat[]>([]);
@@ -342,22 +344,55 @@ export default function MinecraftMultiColumnStatisticTable({
                     </VSCodeDropdown>
                 </div>
             </div>
-            <VSCodeDataGrid id="multi-column-grid" generate-header="sticky">
+            <VSCodeDataGrid
+                id="multi-column-grid"
+                generate-header="sticky"
+                style={
+                    columnWidths
+                        ? ({
+                              '--col1-width': columnWidths[0] || '250px',
+                              '--col2-width': columnWidths[1] || '120px',
+                              '--col3-width': columnWidths[2] || '120px',
+                              '--col4-width': columnWidths[3] || '120px',
+                              '--col5-width': columnWidths[4] || '120px',
+                              '--col6-width': columnWidths[5] || '120px',
+                          } as React.CSSProperties)
+                        : undefined
+                }
+            >
                 <VSCodeDataGridRow rowType="header">
-                    <VSCodeDataGridCell cellType="columnheader" gridColumn="1">
+                    <VSCodeDataGridCell
+                        cellType="columnheader"
+                        gridColumn="1"
+                        style={columnWidths ? { width: columnWidths[0] || '250px' } : undefined}
+                    >
                         {keyLabel}
                     </VSCodeDataGridCell>
                     {valueLabels.map((label, index) => (
-                        <VSCodeDataGridCell key={index} cellType="columnheader" gridColumn={`${index + 2}`}>
+                        <VSCodeDataGridCell
+                            key={index}
+                            cellType="columnheader"
+                            gridColumn={`${index + 2}`}
+                            style={columnWidths ? { width: columnWidths[index + 1] || '120px' } : undefined}
+                        >
                             {label}
                         </VSCodeDataGridCell>
                     ))}
                 </VSCodeDataGridRow>
                 {data.map(dataPoint => (
                     <VSCodeDataGridRow key={dataPoint.category}>
-                        <VSCodeDataGridCell gridColumn="1">{dataPoint.category}</VSCodeDataGridCell>
+                        <VSCodeDataGridCell
+                            gridColumn="1"
+                            style={columnWidths ? { width: columnWidths[0] || '250px' } : undefined}
+                        >
+                            {dataPoint.category}
+                        </VSCodeDataGridCell>
                         {dataPoint.values.map((value, index) => (
-                            <VSCodeDataGridCell key={index} gridColumn={`${index + 2}`}>
+                            <VSCodeDataGridCell
+                                key={index}
+                                gridColumn={`${index + 2}`}
+                                style={columnWidths ? { width: columnWidths[index + 1] || '120px' } : undefined}
+                            >
                                 {typeof value === 'number' ? value.toFixed(1) : value}
                             </VSCodeDataGridCell>
                         ))}

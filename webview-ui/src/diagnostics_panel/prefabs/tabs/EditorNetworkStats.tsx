@@ -26,6 +26,7 @@ const statsTab: TabPrefab = {
                     valueLabels={['Sent Count', 'Received Count', 'Min Size', 'Max Size']}
                     prettifyNames={false} // Keep original packet name format
                     defaultSortColumn="value_0" // Sort by "Sent Count" column by default
+                    columnWidths={['400px', '80px', '80px', '80px', '80px']} // Custom column widths
                 />
             </div>
         );

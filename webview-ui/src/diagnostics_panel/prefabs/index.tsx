@@ -12,6 +12,8 @@ import serverScriptSubscriberCountsTab from './tabs/ServerScriptSubscriberCounts
 import clientTimingTab from './tabs/ClientTiming';
 import clientMemoryTab from './tabs/ClientMemory';
 
+import editorNetworkStatsTab from './tabs/EditorNetworkStats';
+
 export default [
     worldTab,
     serverMemoryTab,
@@ -23,4 +25,5 @@ export default [
     clientTimingTab,
     clientMemoryTab,
     dynamicPropertyTab,
+    editorNetworkStatsTab,
 ];

@@ -84,11 +84,25 @@ export class StatsProvider {
         const childStringValues: string[][] = [];
 
         for (const child of stat.children ?? []) {
-            if (!(child.values && typeof child.values[0] === 'string' && child.values[0].length > 0)) {
+            if (!child.values || child.values.length === 0) {
                 continue;
             }
 
-            childStringValues.push([child.name, child.values[0]]);
+            // Handle different value types
+            if (typeof child.values[0] === 'string' && child.values[0].length > 0) {
+                // Original behavior: string values
+                childStringValues.push([child.name, child.values[0]]);
+            } else if (typeof child.values[0] === 'number') {
+                // New behavior: numeric values
+                if (child.values.length === 1) {
+                    // Single numeric value
+                    childStringValues.push([child.name, child.values[0].toString()]);
+                } else if (child.values.length >= 2) {
+                    // Multiple numeric values - create a row with all values
+                    const valueStrings = child.values.map(v => v.toString());
+                    childStringValues.push([child.name, ...valueStrings]);
+                }
+            }
         }
 
         const childStatData: StatData = {

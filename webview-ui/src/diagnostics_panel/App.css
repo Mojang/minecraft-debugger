@@ -156,3 +156,44 @@ main {
   background-color: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
 }
+
+/* Multi-column table resizable columns */
+#multi-column-grid {
+  width: 100%;
+  overflow-x: auto;
+  table-layout: auto;
+}
+
+/* Use CSS Grid for better column control */
+#multi-column-grid vscode-data-grid-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) repeat(auto-fit, minmax(120px, 1fr));
+  gap: 4px;
+}
+
+#multi-column-grid vscode-data-grid-cell {
+  padding: 8px 12px;
+  border-right: 1px solid var(--vscode-editorGroup-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"] {
+  font-weight: bold;
+  background-color: var(--vscode-editor-background);
+  border-bottom: 2px solid var(--vscode-editorGroup-border);
+}
+
+/* Make the packet name column wider */
+#multi-column-grid vscode-data-grid-cell[grid-column="1"] {
+  min-width: 200px;
+  flex: 2;
+}
+
+/* Value columns */
+#multi-column-grid vscode-data-grid-cell:not([grid-column="1"]) {
+  min-width: 120px;
+  flex: 1;
+  text-align: right;
+}

@@ -1,6 +1,7 @@
-import { MultipleStatisticProvider, SimpleStatisticProvider } from '../../StatisticProvider';
+import { MultipleStatisticProvider } from '../../StatisticProvider';
 import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
-import { MinecraftDynamicPropertiesTable } from '../../controls/MinecraftDynamicPropertiesTable';
+import MinecraftMultiColumnStatisticTable from '../../controls/MinecraftMultiColumnStatisticTable';
+import { createStatResolver, StatisticType, YAxisType } from '../../StatisticResolver';
 
 const statsTab: TabPrefab = {
     name: 'Editor Network Stats',
@@ -8,13 +9,23 @@ const statsTab: TabPrefab = {
     content: () => {
         return (
             <div>
-                <MinecraftDynamicPropertiesTable
-                    statisticDataProviders={
+                <MinecraftMultiColumnStatisticTable
+                    title="Editor Network Packet Statistics"
+                    statisticDataProvider={
                         new MultipleStatisticProvider({
                             statisticParentId: 'editor_network_stats',
-                            statisticIds: ['sent_count', 'received_count'],
+                            statisticIds: ['consolidated_data'],
                         })
                     }
+                    statisticResolver={createStatResolver({
+                        type: StatisticType.Absolute,
+                        yAxisType: YAxisType.Absolute,
+                        tickRange: 20 * 15, // About 15 seconds
+                    })}
+                    keyLabel="Packet Type"
+                    valueLabels={['Sent Count', 'Received Count']}
+                    prettifyNames={false} // Keep original packet name format
+                    defaultSortColumn="value_0" // Sort by "Sent Count" column by default
                 />
             </div>
         );

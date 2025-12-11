@@ -216,7 +216,7 @@ export default function MinecraftMultiColumnStatisticTable({
                                 categoryMap.set(cleanPacketName, {
                                     category: cleanPacketName,
                                     values: values,
-                                    time: event.time,
+                                    time: event.time || Date.now(),
                                 });
                             }
                         });

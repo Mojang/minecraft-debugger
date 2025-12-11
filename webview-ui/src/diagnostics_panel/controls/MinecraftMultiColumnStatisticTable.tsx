@@ -162,7 +162,7 @@ export default function MinecraftMultiColumnStatisticTable({
                         const existing = categoryMap.get(stat.category);
                         if (existing) {
                             // Add value to existing category (ensuring we have enough slots)
-                            while (existing.values.length <= valueLabels.length) {
+                            while (existing.values.length < valueLabels.length) {
                                 existing.values.push(0);
                             }
                             existing.values[existing.values.length - 1] = stat.absoluteValue;

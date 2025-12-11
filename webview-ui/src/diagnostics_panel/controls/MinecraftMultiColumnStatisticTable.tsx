@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
-import { StatisticResolver, TrackedStat, YAxisStyle } from '../StatisticResolver';
+import { StatisticResolver } from '../StatisticResolver';
 import {
     VSCodeDataGrid,
     VSCodeDataGridRow,

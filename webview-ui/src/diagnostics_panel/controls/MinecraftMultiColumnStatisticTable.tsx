@@ -1,6 +1,6 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver } from '../StatisticResolver';
 import {
@@ -55,6 +55,52 @@ const sortTypeOptions = [
     { id: MinecraftMultiColumnStatisticTableSortType.Numerical, label: 'Numerical' },
 ];
 
+// Helper function to process children_string_values and populate categoryMap
+function processChildrenStringValues(
+    children_string_values: string[][],
+    categoryMap: Map<string, MultiColumnTrackedStat>,
+    valueLabels: string[],
+    prettifyNames: boolean,
+    eventTime: number
+): void {
+    children_string_values.forEach(childRow => {
+        if (childRow.length >= 2) {
+            // Format: [packet_name, value1, value2, value3, value4, value5, ...]
+            const packetName = childRow[0];
+
+            // Parse values from the row, preserving original types
+            const values: (string | number)[] = [];
+            for (let i = 1; i < childRow.length; i++) {
+                const rawValue = childRow[i];
+                // Try to parse as number, but keep as string if it's not numeric
+                const numValue = parseFloat(rawValue);
+                values.push(isNaN(numValue) ? rawValue : numValue);
+            }
+
+            // Ensure we have at least as many values as valueLabels expects
+            while (values.length < valueLabels.length) {
+                values.push('');
+            }
+
+            // Process packet name based on prettifyNames setting
+            const cleanPacketName = prettifyNames
+                ? packetName
+                      .split('::')
+                      .pop()
+                      ?.replace(/([a-z])([A-Z])/g, '$1 $2') // Add spaces before capital letters
+                      ?.replace(/^./, (str: string) => str.toUpperCase()) || // Capitalize first letter
+                  packetName
+                : packetName.split('::').pop() || packetName;
+
+            categoryMap.set(cleanPacketName, {
+                category: cleanPacketName,
+                values: values,
+                time: eventTime,
+            });
+        }
+    });
+}
+
 export default function MinecraftMultiColumnStatisticTable({
     title,
     statisticDataProvider,
@@ -76,11 +122,14 @@ export default function MinecraftMultiColumnStatisticTable({
         defaultSortColumn || MinecraftMultiColumnStatisticTableSortColumn.Key
     );
 
-    // Create sort column options
-    const sortColumnOptions = [
-        { id: MinecraftMultiColumnStatisticTableSortColumn.Key, label: keyLabel },
-        ...valueLabels.map((label, index) => ({ id: `value_${index}`, label })),
-    ];
+    // Memoize sort column options to prevent unnecessary recreations
+    const sortColumnOptions = useMemo(
+        () => [
+            { id: MinecraftMultiColumnStatisticTableSortColumn.Key, label: keyLabel },
+            ...valueLabels.map((label, index) => ({ id: `value_${index}`, label })),
+        ],
+        [keyLabel, valueLabels]
+    );
 
     const _onSelectedSortOrderChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
         const target = e.target as HTMLSelectElement;
@@ -114,42 +163,13 @@ export default function MinecraftMultiColumnStatisticTable({
                     event.children_string_values &&
                     event.children_string_values.length > 0
                 ) {
-                    event.children_string_values.forEach(childRow => {
-                        if (childRow.length >= 2) {
-                            // Format: [packet_name, value1, value2, value3, value4, value5, ...]
-                            const packetName = childRow[0];
-
-                            // Parse values from the row, preserving original types
-                            const values: (string | number)[] = [];
-                            for (let i = 1; i < childRow.length; i++) {
-                                const rawValue = childRow[i];
-                                // Try to parse as number, but keep as string if it's not numeric
-                                const numValue = parseFloat(rawValue);
-                                values.push(isNaN(numValue) ? rawValue : numValue);
-                            }
-
-                            // Ensure we have at least as many values as valueLabels expects
-                            while (values.length < valueLabels.length) {
-                                values.push('');
-                            }
-
-                            // Process packet name based on prettifyNames setting
-                            const cleanPacketName = prettifyNames
-                                ? packetName
-                                      .split('::')
-                                      .pop()
-                                      ?.replace(/([a-z])([A-Z])/g, '$1 $2') // Add spaces before capital letters
-                                      ?.replace(/^./, (str: string) => str.toUpperCase()) || // Capitalize first letter
-                                  packetName
-                                : packetName.split('::').pop() || packetName;
-
-                            categoryMap.set(cleanPacketName, {
-                                category: cleanPacketName,
-                                values: values,
-                                time: event.time || Date.now(),
-                            });
-                        }
-                    });
+                    processChildrenStringValues(
+                        event.children_string_values,
+                        categoryMap,
+                        valueLabels,
+                        prettifyNames,
+                        event.time || Date.now()
+                    );
                 } else {
                     // Use the statisticResolver for other event types
                     const rawStats = statisticResolver(event, []);
@@ -184,42 +204,13 @@ export default function MinecraftMultiColumnStatisticTable({
 
                     // Handle multi-value events (children_string_values) for non-consolidated events
                     if (event.children_string_values && event.children_string_values.length > 0) {
-                        event.children_string_values.forEach(childRow => {
-                            if (childRow.length >= 2) {
-                                // Format: [packet_name, value1, value2, value3, ...]
-                                const packetName = childRow[0];
-
-                                // Parse values from the row, preserving original types
-                                const values: (string | number)[] = [];
-                                for (let i = 1; i < childRow.length; i++) {
-                                    const rawValue = childRow[i];
-                                    // Try to parse as number, but keep as string if it's not numeric
-                                    const numValue = parseFloat(rawValue);
-                                    values.push(isNaN(numValue) ? rawValue : numValue);
-                                }
-
-                                // Ensure we have at least as many values as valueLabels expects
-                                while (values.length < valueLabels.length) {
-                                    values.push('');
-                                }
-
-                                // Process packet name based on prettifyNames setting
-                                const cleanPacketName = prettifyNames
-                                    ? packetName
-                                          .split('::')
-                                          .pop()
-                                          ?.replace(/([a-z])([A-Z])/g, '$1 $2') // Add spaces before capital letters
-                                          ?.replace(/^./, (str: string) => str.toUpperCase()) || // Capitalize first letter
-                                      packetName
-                                    : packetName.split('::').pop() || packetName;
-
-                                categoryMap.set(cleanPacketName, {
-                                    category: cleanPacketName,
-                                    values: values,
-                                    time: event.time || Date.now(),
-                                });
-                            }
-                        });
+                        processChildrenStringValues(
+                            event.children_string_values,
+                            categoryMap,
+                            valueLabels,
+                            prettifyNames,
+                            event.time || Date.now()
+                        );
                     }
                 }
 

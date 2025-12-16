@@ -156,3 +156,56 @@ main {
   background-color: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
 }
+
+/* Multi-column table with enhanced column interaction */
+#multi-column-grid {
+  width: 100%;
+  overflow-x: auto;
+  table-layout: fixed;
+}
+
+/* Enhanced column styling for better visual feedback */
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"] {
+  font-weight: bold;
+  background-color: var(--vscode-editor-background);
+  border-bottom: 2px solid var(--vscode-editorGroup-border);
+  border-right: 1px solid var(--vscode-editorGroup-border);
+  position: relative;
+  cursor: default;
+  user-select: none;
+  padding: 8px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add visual resize handle to column headers */
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+#multi-column-grid vscode-data-grid-cell[cell-type="columnheader"]:hover::after {
+  background: var(--vscode-focusBorder);
+  opacity: 0.5;
+}
+
+/* Regular cell styling */
+#multi-column-grid vscode-data-grid-cell:not([cell-type="columnheader"]) {
+  padding: 8px 12px;
+  border-right: 1px solid var(--vscode-editorGroup-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Default styling for value columns when no columnWidths prop is provided */
+#multi-column-grid vscode-data-grid-cell:not([grid-column="1"]) {
+  text-align: right;
+}

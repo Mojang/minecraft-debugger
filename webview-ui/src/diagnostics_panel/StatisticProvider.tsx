@@ -118,7 +118,10 @@ export class MultipleStatisticProvider extends StatisticProvider {
         }
 
         if (event.values.length === 0) {
-            return;
+            // Allow events through if they have children_string_values even if values is empty
+            if (!event.children_string_values || event.children_string_values.length === 0) {
+                return;
+            }
         }
 
         if (this.options.valuesFilter && !this.options.valuesFilter(event)) {

@@ -241,7 +241,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         captureData: string,
         capturePath: string,
         basePath: string,
-        fileName: string
+        fileName: string,
     ): boolean {
         const data = Buffer.from(captureData, 'base64');
 
@@ -272,7 +272,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             profilerCapture.capture_data,
             captureFullPathJS,
             profilerCapture.capture_base_path,
-            newCaptureFileNameJS
+            newCaptureFileNameJS,
         );
 
         const newCaptureFileNameTS = `Capture_${formattedDate}_TS.cpuprofile`;
@@ -281,7 +281,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._moduleMapping,
             this._moduleMaps,
             this._sourceMaps,
-            profilerCapture.capture_data
+            profilerCapture.capture_data,
         );
 
         let tsFileCreated = false;
@@ -293,7 +293,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 dataTS,
                 captureFullPathTS,
                 profilerCapture.capture_base_path,
-                newCaptureFileNameTS
+                newCaptureFileNameTS,
             );
         }
 
@@ -341,7 +341,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     // VSCode wants to attach to a debugee (MC), create socket connection on specified port
     protected async attachRequest(
         response: DebugProtocol.AttachResponse,
-        args: IAttachRequestArguments
+        args: IAttachRequestArguments,
     ): Promise<void> {
         this.closeSession();
 
@@ -395,7 +395,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     protected async setBreakPointsRequest(
         response: DebugProtocol.SetBreakpointsResponse,
-        args: DebugProtocol.SetBreakpointsArguments
+        args: DebugProtocol.SetBreakpointsArguments,
     ): Promise<void> {
         if (!this._breakpointsHandler) {
             throw new Error('Breakpoints handler not initialized.');
@@ -414,7 +414,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             response.body = await this._breakpointsHandler.handleSetBreakpointsRequest(
                 args.source.path,
                 response,
-                args
+                args,
             );
         } catch (e) {
             this.log((e as Error).message, LogLevel.Error);
@@ -427,7 +427,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     protected setExceptionBreakPointsRequest(
         response: DebugProtocol.SetExceptionBreakpointsResponse,
-        args: DebugProtocol.SetExceptionBreakpointsArguments
+        args: DebugProtocol.SetExceptionBreakpointsArguments,
     ): void {
         this.sendDebuggeeMessage({
             type: 'stopOnException',
@@ -449,7 +449,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     protected threadsRequest(response: DebugProtocol.ThreadsResponse): void {
         response.body = {
             threads: Array.from(this._threads.keys()).map(
-                thread => new Thread(thread, `thread 0x${thread.toString(16)}`)
+                thread => new Thread(thread, `thread 0x${thread.toString(16)}`),
             ),
         };
         this.sendResponse(response);
@@ -457,7 +457,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     static createModuleMap(
         localRoot: string,
-        mapping: ModuleMapping | undefined
+        mapping: ModuleMapping | undefined,
     ): Record<string, SourceMaps> | undefined {
         if (!mapping) {
             return undefined;
@@ -473,7 +473,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         debuggerStackFrames: DebuggerStackFrame[],
         moduleMapping: ModuleMapping | undefined,
         moduleMaps: Record<string, SourceMaps> | undefined,
-        baseSourceMaps: SourceMaps
+        baseSourceMaps: SourceMaps,
     ): Promise<StackFrame[]> {
         const stackFrames: StackFrame[] = [];
         for (const { id, name, filename, line, column } of debuggerStackFrames) {
@@ -498,7 +498,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     // VSCode requesting stack trace for threads, follows threadsRequest
     protected async stackTraceRequest(
         response: DebugProtocol.StackTraceResponse,
-        args: DebugProtocol.StackTraceArguments
+        args: DebugProtocol.StackTraceArguments,
     ): Promise<void> {
         const stacksBody = (await this.sendDebugeeRequestAsync(response, args)) as DebuggerStackFrame[];
 
@@ -506,7 +506,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             stacksBody,
             this._moduleMapping,
             this._moduleMaps,
-            this._sourceMaps
+            this._sourceMaps,
         );
         const totalFrames = stacksBody.length;
 
@@ -534,7 +534,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     protected variablesRequest(
         response: DebugProtocol.VariablesResponse,
-        args: DebugProtocol.VariablesArguments
+        args: DebugProtocol.VariablesArguments,
     ): void {
         // get variables at this reference (all vars in scope or vars in object/array)
         this.sendDebugeeRequest(response, args, (body: any) => {
@@ -545,7 +545,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                     name,
                     value,
                     variablesReference,
-                    indexedVariables
+                    indexedVariables,
                 );
                 variable.type = type; // to show type when hovered
                 variables.push(variable);
@@ -631,7 +631,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                         await this._breakpointsHandler.handleSetBreakpointsRequest(
                             args.source.path,
                             setBreakpointsResponse,
-                            args
+                            args,
                         );
                         // send original response, not the special one we created
                         this.sendResponse(response);
@@ -737,7 +737,10 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         });
 
         // show notifications for source map issues
-        this.checkSourceFilePaths();
+        // only if we are actually trying to attach to a target
+        if (this._targetModuleUuid !== undefined) {
+            this.checkSourceFilePaths();
+        }
 
         // success
         this.showNotification('Success! Debugger is now connected.', LogLevel.Log);
@@ -747,7 +750,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._localRoot,
             this._sourceMapRoot,
             this._generatedSourceRoot,
-            this._inlineSourceMap
+            this._inlineSourceMap,
         );
 
         this._moduleMaps = Session.createModuleMap(this._localRoot, this._moduleMapping);
@@ -923,7 +926,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 if (generatedPosition) {
                     message = message.replace(
                         fullMatch,
-                        `(${generatedPositionSourceAsRelative}:${generatedPosition.line}) (${javaScriptFilePath}:${javaScriptLineNumber})`
+                        `(${generatedPositionSourceAsRelative}:${generatedPosition.line}) (${javaScriptFilePath}:${javaScriptLineNumber})`,
                     );
                 }
             } catch (e) {
@@ -968,7 +971,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         if (this._debuggerProtocolVersion < protocolCapabilities.version) {
             this.terminateSession(
                 `protocol unsupported. Upgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
-                LogLevel.Error
+                LogLevel.Error,
             );
         } else {
             if (protocolCapabilities.version === ProtocolVersion.SupportTargetModuleUuid) {
@@ -990,7 +993,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 // if a targetuuid was provided, make sure it's valid
                 if (this._targetModuleUuid) {
                     const isValidTarget = protocolCapabilities.plugins.some(
-                        plugin => plugin.module_uuid === this._targetModuleUuid
+                        plugin => plugin.module_uuid === this._targetModuleUuid,
                     );
                     if (isValidTarget) {
                         this.onConnectionComplete(protocolCapabilities.version, this._targetModuleUuid, passcode);
@@ -998,20 +1001,20 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                     } else {
                         this.showNotification(
                             `Minecraft Add-On script module not found with targetModuleUuid ${this._targetModuleUuid} specified in launch.json. Prompting for debug target.`,
-                            LogLevel.Warn
+                            LogLevel.Warn,
                         );
                     }
                 } else if (protocolCapabilities.plugins.length === 1) {
                     this.onConnectionComplete(
                         protocolCapabilities.version,
                         protocolCapabilities.plugins[0].module_uuid,
-                        passcode
+                        passcode,
                     );
                     return;
                 } else {
                     this.showNotification(
                         'The targetModuleUuid in launch.json is not set to a valid uuid. Set this to a script module uuid (manifest.json) to avoid the selection prompt.',
-                        LogLevel.Warn
+                        LogLevel.Warn,
                     );
                 }
 
@@ -1020,7 +1023,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 if (!targetUuid) {
                     this.terminateSession(
                         'could not determine target Minecraft Add-On. You must specify the targetModuleUuid.',
-                        LogLevel.Error
+                        LogLevel.Error,
                     );
                     return;
                 }
@@ -1028,7 +1031,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             } else {
                 this.terminateSession(
                     `protocol unsupported. Downgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
-                    LogLevel.Error
+                    LogLevel.Error,
                 );
             }
         }
@@ -1087,7 +1090,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 this._inlineSourceMap = true;
                 this.log(
                     `Source maps (.map files) not found. Enabling inline source maps from sourceMapRoot:[${this._sourceMapRoot}].`,
-                    LogLevel.Log
+                    LogLevel.Log,
                 );
             }
 
@@ -1100,7 +1103,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                     this.showNotification(
                         `Inline source maps not found, failed to find .js files at sourceMapRoot:[${this._sourceMapRoot}].`,
                         LogLevel.Warn,
-                        true
+                        true,
                     );
                 }
             }
@@ -1114,7 +1117,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                     this.showNotification(
                         `Failed to find .js files at generatedSourceRoot:[${this._generatedSourceRoot}].`,
                         LogLevel.Warn,
-                        true
+                        true,
                     );
                 }
             }
@@ -1128,7 +1131,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 this.showNotification(
                     "Failed to find .js files. Check that launch.json 'localRoot' cointains .js files.",
                     LogLevel.Warn,
-                    true
+                    true,
                 );
             }
 
@@ -1138,7 +1141,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 this.showNotification(
                     "Found .ts files at 'localRoot' but 'sourceMapRoot' is not defined.",
                     LogLevel.Warn,
-                    true
+                    true,
                 );
             }
         }
@@ -1191,7 +1194,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             if (workspaceFolders && workspaceFolders.length > 0) {
                 globPattern = new RelativePattern(
                     workspaceFolders[0].uri.fsPath ?? '',
-                    reloadOnSourceChangesGlobPattern
+                    reloadOnSourceChangesGlobPattern,
                 );
             }
         }

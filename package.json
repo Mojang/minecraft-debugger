@@ -89,7 +89,8 @@
                 "label": "Minecraft Debugger",
                 "runtime": "node",
                 "languages": [
-                    "javascript"
+                    "javascript",
+                    "typescript"
                 ],
                 "configurationAttributes": {
                     "attach": {

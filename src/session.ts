@@ -974,14 +974,18 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             if (protocolCapabilities.version === ProtocolVersion.SupportTargetModuleUuid) {
                 this.onConnectionComplete(protocolCapabilities.version, undefined);
             } else if (protocolCapabilities.version >= ProtocolVersion.SupportTargetSelection) {
-                // no add-ons found, nothing to do
-                if (!protocolCapabilities.plugins || protocolCapabilities.plugins.length === 0) {
-                    this.terminateSession('protocol error. No Minecraft Add-Ons found.', LogLevel.Error);
-                    return;
-                }
-
                 // if passcode is required, prompt user for it
                 const passcode = await this.promptForPasscode(protocolCapabilities.require_passcode);
+
+                // no scripting packs found, continue without a target for diagnostics-only mode
+                if (!protocolCapabilities.plugins || protocolCapabilities.plugins.length === 0) {
+                    this.showNotification(
+                        'No Minecraft behavior packs with scripts found. Debugging features are unavailable, but diagnostics are still available.',
+                        LogLevel.Warn,
+                    );
+                    this.onConnectionComplete(protocolCapabilities.version, undefined, passcode);
+                    return;
+                }
 
                 // if a targetuuid was provided, make sure it's valid
                 if (this._targetModuleUuid) {

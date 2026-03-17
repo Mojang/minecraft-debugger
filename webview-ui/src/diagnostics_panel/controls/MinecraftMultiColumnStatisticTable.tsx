@@ -9,6 +9,7 @@ import {
     VSCodeDataGridCell,
     VSCodeDropdown,
     VSCodeOption,
+    VSCodeButton,
 } from '@vscode/webview-ui-toolkit/react';
 
 export enum MinecraftMultiColumnStatisticTableSortOrder {
@@ -44,6 +45,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     valueLabels: string[]; // Array of labels for value columns
     prettifyNames?: boolean; // Whether to format packet names (camelCase -> Camel Case) or keep original format
     columnWidths?: string[]; // Optional array of column widths (first is key column, rest are value columns)
+    actions?: { label: string; onClick: () => void }[]; // Optional actions with labels and commands to run on click
 };
 
 const sortOrderOptions = [
@@ -113,6 +115,7 @@ export default function MinecraftMultiColumnStatisticTable({
     valueLabels,
     prettifyNames = true, // Default to prettifying names for backward compatibility
     columnWidths,
+    actions,
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
     // states
     const [data, setData] = useState<MultiColumnTrackedStat[]>([]);
@@ -304,6 +307,15 @@ export default function MinecraftMultiColumnStatisticTable({
     return (
         <div>
             <h2>{title}</h2>
+            {actions && (
+                <div className="minecraft-statistic-table-actions">
+                    {actions.map(action => (
+                        <VSCodeButton key={action.label} onClick={action.onClick}>
+                            {action.label}
+                        </VSCodeButton>
+                    ))}
+                </div>
+            )}
             <div className="minecraft-statistic-table-container">
                 <div className="minecraft-statistic-table-sort-container">
                     <label htmlFor="sort-order">Sort Order</label>

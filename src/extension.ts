@@ -79,7 +79,7 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
     const liveDiagnosticsCommand = vscode.commands.registerCommand('minecraft-debugger.liveDiagnostics', () => {
-        MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider);
+        MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider, eventEmitter);
     });
 
     const replayDiagnosticsCommand = vscode.commands.registerCommand(
@@ -98,8 +98,8 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             const replayStats = new ReplayStatsProvider(fileUri[0].fsPath);
-            MinecraftDiagnosticsPanel.render(context.extensionUri, replayStats);
-        }
+            MinecraftDiagnosticsPanel.render(context.extensionUri, replayStats, eventEmitter);
+        },
     );
 
     // Add commands to the extension context

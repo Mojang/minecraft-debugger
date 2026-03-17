@@ -307,7 +307,7 @@ export default function MinecraftMultiColumnStatisticTable({
     return (
         <div>
             <h2>{title}</h2>
-            {actions && (
+            {actions?.length && (
                 <div className="minecraft-statistic-table-actions">
                     {actions.map(action => (
                         <VSCodeButton key={action.label} onClick={action.onClick}>

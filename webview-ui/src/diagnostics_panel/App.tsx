@@ -3,17 +3,12 @@
 import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from '@vscode/webview-ui-toolkit/react';
 import { StatGroupSelectionBox } from './controls/StatGroupSelectionBox';
 import { useCallback, useEffect, useState } from 'react';
-import { StatisticType, YAxisStyle, YAxisType, createStatResolver } from './StatisticResolver';
-import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
-import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
-import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStackedBarChart';
-import { MultipleStatisticProvider, SimpleStatisticProvider, StatisticUpdatedMessage } from './StatisticProvider';
 import ReplayControls from './controls/ReplayControls';
-import * as statPrefabs from './prefabs/StatisticPrefab';
 import { Icons } from './Icons';
 import './App.css';
 import tabPrefabs from './prefabs';
 import { TabPrefabDataSource } from './prefabs/TabPrefab';
+import { useManagedRequests } from './utilities/useManagedRequests';
 
 declare global {
     interface Window {
@@ -57,6 +52,8 @@ function App() {
     const [currentTab, setCurrentTab] = useState<string>();
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
+    const { onManagedRequest, isManagedRequestInFlight, getManagedRequestResult, handleManagedRequestResult } =
+        useManagedRequests();
 
     const handlePluginSelection = useCallback((pluginSelectionId: string) => {
         setSelectedPlugin(() => pluginSelectionId);
@@ -80,13 +77,15 @@ function App() {
                 setSpeed(`${message.speed}hz`);
             } else if (message.type === 'pause-updated') {
                 setPaused(message.paused);
+            } else if (message.type === 'managed-request-result') {
+                handleManagedRequestResult(message);
             }
         };
         window.addEventListener('message', handleMessage);
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, []);
+    }, [handleManagedRequestResult]);
 
     return (
         <main>
@@ -126,7 +125,14 @@ function App() {
                         ) : (
                             <div />
                         )}
-                        {tabPrefab.content({ selectedClient, selectedPlugin, onRunCommand })}
+                        {tabPrefab.content({
+                            selectedClient,
+                            selectedPlugin,
+                            onRunCommand,
+                            onManagedRequest,
+                            isManagedRequestInFlight,
+                            getManagedRequestResult,
+                        })}
                     </VSCodePanelView>
                 ))}
             </VSCodePanels>

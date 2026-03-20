@@ -42,6 +42,8 @@ import { IBreakpointsHandler } from './ibreakpoints-handler';
 import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
 import { isUUID } from './utils';
 import { MessageStreamParser } from './message-stream-parser';
+import { ManagedRequestArguments, ManagedResponseEnvelope } from './requests/managed-request-schema';
+import { RequestManager } from './requests/request-manager';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
 
@@ -152,6 +154,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private _sourceMapRoot?: string;
     private _generatedSourceRoot?: string;
     private _inlineSourceMap = false;
+    private _requestManager: RequestManager;
     private _moduleMapping?: ModuleMapping;
     private _moduleMaps?: Record<string, SourceMaps>;
     private _targetModuleUuid?: string;
@@ -174,6 +177,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
+        this._requestManager = new RequestManager(this);
 
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
@@ -642,6 +646,23 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 }
                 break;
             }
+            case 'managed-request': {
+                try {
+                    const result = await this._requestManager.sendManagedRequest(
+                        response,
+                        args as ManagedRequestArguments,
+                    );
+
+                    // Send result back to the webview that made the request
+                    response.body = result;
+                    this.sendResponse(response);
+                } catch (error) {
+                    const message = (error as Error).message;
+                    this.sendErrorResponse(response, 1008, message);
+                }
+
+                break;
+            }
             default:
                 super.customRequest(command, response, args);
                 break;
@@ -791,6 +812,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._connectionSocket.destroy();
         }
         this._connectionSocket = undefined;
+        this._requestManager.rejectPendingRequests('Debugger session disconnected.');
     }
 
     // close and terminate session (could be from debugee request)
@@ -876,6 +898,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private receiveDebugeeMessage(envelope: any) {
         if (envelope.type === 'event') {
             this.handleDebugeeEvent(envelope.event);
+        } else if (envelope.type === 'managed-response') {
+            this._requestManager.handleManagedResponse(envelope as ManagedResponseEnvelope);
         } else if (envelope.type === 'response') {
             this.handleDebugeeResponse(envelope);
         }

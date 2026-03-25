@@ -33,6 +33,8 @@ type MultiColumnTrackedStat = {
     time: number;
 };
 
+type NonConsolidatedColumnResolver = (event: StatisticUpdatedMessage, valueLabels: string[]) => number | undefined;
+
 type MinecraftMultiColumnStatisticTableProps = {
     title: string;
     statisticDataProvider: MultipleStatisticProvider;
@@ -46,6 +48,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     prettifyNames?: boolean; // Whether to format packet names (camelCase -> Camel Case) or keep original format
     columnWidths?: string[]; // Optional array of column widths (first is key column, rest are value columns)
     actions?: { label: string; onClick: () => void }[]; // Optional actions with labels and commands to run on click
+    nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver; // Maps split events to target columns for non-consolidated streams
 };
 
 const sortOrderOptions = [
@@ -64,7 +67,8 @@ function processChildrenStringValues(
     categoryMap: Map<string, MultiColumnTrackedStat>,
     valueLabels: string[],
     prettifyNames: boolean,
-    eventTime: number
+    eventTime: number,
+    targetColumnIndex?: number,
 ): void {
     children_string_values.forEach(childRow => {
         if (childRow.length >= 2) {
@@ -91,9 +95,22 @@ function processChildrenStringValues(
                       .split('::')
                       .pop()
                       ?.replace(/([a-z])([A-Z])/g, '$1 $2') // Add spaces before capital letters
-                      ?.replace(/^./, (str: string) => str.toUpperCase()) || // Capitalize first letter
-                  packetName
+                      ?.replace(/^./, (str: string) => str.toUpperCase()) || packetName // Capitalize first letter
                 : packetName.split('::').pop() || packetName;
+
+            if (targetColumnIndex !== undefined && values.length === 1 && valueLabels.length > 1) {
+                const existingValues = categoryMap.get(cleanPacketName)?.values ?? Array(valueLabels.length).fill('');
+                const mergedValues = [...existingValues];
+                mergedValues[targetColumnIndex] = values[0];
+
+                categoryMap.set(cleanPacketName, {
+                    category: cleanPacketName,
+                    values: mergedValues,
+                    time: eventTime,
+                });
+
+                return;
+            }
 
             categoryMap.set(cleanPacketName, {
                 category: cleanPacketName,
@@ -116,7 +133,17 @@ export default function MinecraftMultiColumnStatisticTable({
     prettifyNames = true, // Default to prettifying names for backward compatibility
     columnWidths,
     actions,
+    nonConsolidatedColumnResolver,
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
+    // Memoize sort column options to prevent unnecessary recreations
+    const sortColumnOptions = useMemo(
+        () => [
+            { id: MinecraftMultiColumnStatisticTableSortColumn.Key, label: keyLabel },
+            ...valueLabels.map((label, index) => ({ id: `value_${index}`, label })),
+        ],
+        [keyLabel, valueLabels],
+    );
+
     // states
     const [data, setData] = useState<MultiColumnTrackedStat[]>([]);
     const [selectedSortOrder, setSelectedSortOrder] =
@@ -124,56 +151,83 @@ export default function MinecraftMultiColumnStatisticTable({
     const [selectedSortType, setSelectedSortType] =
         useState<MinecraftMultiColumnStatisticTableSortType>(defaultSortType);
     const [selectedSortColumn, setSelectedSortColumn] = useState<string>(
-        defaultSortColumn || MinecraftMultiColumnStatisticTableSortColumn.Key
-    );
-
-    // Memoize sort column options to prevent unnecessary recreations
-    const sortColumnOptions = useMemo(
-        () => [
-            { id: MinecraftMultiColumnStatisticTableSortColumn.Key, label: keyLabel },
-            ...valueLabels.map((label, index) => ({ id: `value_${index}`, label })),
-        ],
-        [keyLabel, valueLabels]
+        defaultSortColumn || MinecraftMultiColumnStatisticTableSortColumn.Key,
     );
 
     const _onSelectedSortOrderChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
         const target = e.target as HTMLSelectElement;
-        setSelectedSortOrder(sortOrderOptions[target.selectedIndex].id);
+        setSelectedSortOrder(Number(target.value));
     }, []);
 
     const _onSelectedSortTypeChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
         const target = e.target as HTMLSelectElement;
-        setSelectedSortType(sortTypeOptions[target.selectedIndex].id);
+        setSelectedSortType(Number(target.value));
     }, []);
 
-    const _onSelectedSortColumnChange = useCallback(
-        (e: Event | React.FormEvent<HTMLElement>): void => {
-            const target = e.target as HTMLSelectElement;
-            setSelectedSortColumn(sortColumnOptions[target.selectedIndex].id);
-        },
-        [sortColumnOptions]
-    );
+    const _onSelectedSortColumnChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
+        const target = e.target as HTMLSelectElement;
+        setSelectedSortColumn(target.value);
+    }, []);
+
+    useEffect(() => {
+        setSelectedSortOrder(defaultSortOrder);
+    }, [defaultSortOrder]);
+
+    useEffect(() => {
+        setSelectedSortType(defaultSortType);
+    }, [defaultSortType]);
+
+    useEffect(() => {
+        setSelectedSortColumn(defaultSortColumn || MinecraftMultiColumnStatisticTableSortColumn.Key);
+    }, [defaultSortColumn]);
 
     useEffect(() => {
         const eventHandler = (event: StatisticUpdatedMessage): void => {
             // Update data with new data point
-            setData((_prevState: MultiColumnTrackedStat[]): MultiColumnTrackedStat[] => {
-                // Group stats by category and collect values
+            setData((prevState: MultiColumnTrackedStat[]): MultiColumnTrackedStat[] => {
+                const isConsolidatedDataEvent =
+                    event.id === 'consolidated_data' &&
+                    event.children_string_values &&
+                    event.children_string_values.length > 0;
+
+                // Group stats by category and collect values. For split metric streams,
+                // preserve previous rows and merge in only the updated column.
                 const categoryMap = new Map<string, MultiColumnTrackedStat>();
+
+                if (!isConsolidatedDataEvent) {
+                    prevState.forEach(previousRow => {
+                        categoryMap.set(previousRow.category, {
+                            category: previousRow.category,
+                            values: [...previousRow.values],
+                            time: previousRow.time,
+                        });
+                    });
+                }
+
+                const valueColumnIndex = isConsolidatedDataEvent
+                    ? undefined
+                    : nonConsolidatedColumnResolver?.(event, valueLabels);
+
+                if (!isConsolidatedDataEvent && valueColumnIndex === undefined) {
+                    if (import.meta.env.DEV) {
+                        console.warn(
+                            `Skipping non-consolidated event with unmapped column id=${event.id} name=${event.name}`,
+                        );
+                    }
+
+                    return Array.from(categoryMap.values());
+                }
 
                 // For consolidated_data events with children_string_values, skip the statisticResolver
                 // and process the data directly since it's already in the correct format
-                if (
-                    event.id === 'consolidated_data' &&
-                    event.children_string_values &&
-                    event.children_string_values.length > 0
-                ) {
+                if (isConsolidatedDataEvent) {
                     processChildrenStringValues(
                         event.children_string_values,
                         categoryMap,
                         valueLabels,
                         prettifyNames,
-                        event.time || Date.now()
+                        event.time || Date.now(),
+                        valueColumnIndex,
                     );
                 } else {
                     // Use the statisticResolver for other event types
@@ -190,19 +244,18 @@ export default function MinecraftMultiColumnStatisticTable({
                             while (existing.values.length < valueLabels.length) {
                                 existing.values.push(0);
                             }
-                            existing.values[existing.values.length - 1] = stat.absoluteValue;
+                            const targetColumn = valueColumnIndex as number;
+                            existing.values[targetColumn] = stat.absoluteValue;
                             existing.time = Math.max(existing.time, stat.time);
                         } else {
                             // Create new entry
                             const newStat: MultiColumnTrackedStat = {
                                 category: stat.category,
-                                values: [stat.absoluteValue],
+                                values: Array(valueLabels.length).fill(0),
                                 time: stat.time,
                             };
-                            // Pad values array to match number of columns
-                            while (newStat.values.length < valueLabels.length) {
-                                newStat.values.push(0);
-                            }
+                            const targetColumn = valueColumnIndex as number;
+                            newStat.values[targetColumn] = stat.absoluteValue;
                             categoryMap.set(stat.category, newStat);
                         }
                     });
@@ -214,7 +267,8 @@ export default function MinecraftMultiColumnStatisticTable({
                             categoryMap,
                             valueLabels,
                             prettifyNames,
-                            event.time || Date.now()
+                            event.time || Date.now(),
+                            valueColumnIndex,
                         );
                     }
                 }
@@ -322,36 +376,34 @@ export default function MinecraftMultiColumnStatisticTable({
                     <VSCodeDropdown
                         id="sort-order"
                         onChange={_onSelectedSortOrderChange}
-                        defaultValue={sortOrderOptions.findIndex(elem => elem.id === selectedSortOrder)}
+                        value={`${selectedSortOrder}`}
                     >
                         {sortOrderOptions.map(sortOption => (
-                            <VSCodeOption key={sortOption.id}>{sortOption.label}</VSCodeOption>
+                            <VSCodeOption key={sortOption.id} value={`${sortOption.id}`}>
+                                {sortOption.label}
+                            </VSCodeOption>
                         ))}
                     </VSCodeDropdown>
                 </div>
                 <div style={{ width: '10px' }}></div>
                 <div className="minecraft-statistic-table-sort-container">
                     <label htmlFor="sort-type">Sort Type</label>
-                    <VSCodeDropdown
-                        id="sort-type"
-                        onChange={_onSelectedSortTypeChange}
-                        defaultValue={sortTypeOptions.findIndex(elem => elem.id === selectedSortType)}
-                    >
+                    <VSCodeDropdown id="sort-type" onChange={_onSelectedSortTypeChange} value={`${selectedSortType}`}>
                         {sortTypeOptions.map(sortOption => (
-                            <VSCodeOption key={sortOption.id}>{sortOption.label}</VSCodeOption>
+                            <VSCodeOption key={sortOption.id} value={`${sortOption.id}`}>
+                                {sortOption.label}
+                            </VSCodeOption>
                         ))}
                     </VSCodeDropdown>
                 </div>
                 <div style={{ width: '10px' }}></div>
                 <div className="minecraft-statistic-table-sort-container">
                     <label htmlFor="sort-column">Sort Column</label>
-                    <VSCodeDropdown
-                        id="sort-column"
-                        onChange={_onSelectedSortColumnChange}
-                        defaultValue={sortColumnOptions.findIndex(elem => elem.id === selectedSortColumn)}
-                    >
+                    <VSCodeDropdown id="sort-column" onChange={_onSelectedSortColumnChange} value={selectedSortColumn}>
                         {sortColumnOptions.map(sortOption => (
-                            <VSCodeOption key={sortOption.id}>{sortOption.label}</VSCodeOption>
+                            <VSCodeOption key={sortOption.id} value={sortOption.id}>
+                                {sortOption.label}
+                            </VSCodeOption>
                         ))}
                     </VSCodeDropdown>
                 </div>

@@ -1,5 +1,3 @@
-import { StatisticPrefab } from './StatisticPrefab';
-
 export type TabPrefabParams = {
     selectedClient: string;
     selectedPlugin: string;

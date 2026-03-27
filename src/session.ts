@@ -897,6 +897,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this.handleProtocolEvent(eventMessage as ProtocolCapabilities);
         } else if (eventMessage.type === 'StatEvent2') {
             this._statsProvider.setStats(eventMessage as StatMessageModel);
+        } else if (eventMessage.type === 'SchemaEvent') {
+            this._statsProvider.setSchema(eventMessage.descriptors);
         } else if (eventMessage.type === 'ProfilerCapture') {
             this.handleProfilerCapture(eventMessage as ProfilerCapture);
         }

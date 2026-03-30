@@ -1,6 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from 'vscode';
+import { EventEmitter } from 'stream';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
 import { StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
@@ -12,10 +13,17 @@ export class MinecraftDiagnosticsPanel {
     private _disposables: Disposable[] = [];
     private _statsTracker: StatsProvider;
     private _statsCallback: StatsListener | undefined = undefined;
+    private _eventEmitter: EventEmitter;
 
-    private constructor(panel: WebviewPanel, extensionUri: Uri, statsTracker: StatsProvider) {
+    private constructor(
+        panel: WebviewPanel,
+        extensionUri: Uri,
+        statsTracker: StatsProvider,
+        eventEmitter: EventEmitter,
+    ) {
         this._panel = panel;
         this._statsTracker = statsTracker;
+        this._eventEmitter = eventEmitter;
 
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
@@ -53,6 +61,11 @@ export class MinecraftDiagnosticsPanel {
                     break;
                 case 'speed':
                     this._statsTracker.setSpeed(message.speed);
+                    break;
+                case 'run-minecraft-command':
+                    if (message.command && message.command.trim() !== '') {
+                        this._eventEmitter.emit('run-minecraft-command', message.command);
+                    }
                     break;
                 default:
                     console.error('Unknown message type:', message.type);
@@ -101,7 +114,7 @@ export class MinecraftDiagnosticsPanel {
         this._statsTracker.addStatListener(this._statsCallback);
     }
 
-    public static render(extensionUri: Uri, statsTracker: StatsProvider): void {
+    public static render(extensionUri: Uri, statsTracker: StatsProvider, eventEmitter: EventEmitter): void {
         const statsTrackerId = statsTracker.uniqueId;
         const existingPanel = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.find(
             panel => panel._statsTracker.uniqueId === statsTrackerId
@@ -123,7 +136,7 @@ export class MinecraftDiagnosticsPanel {
                 }
             );
             MinecraftDiagnosticsPanel.activeDiagnosticsPanels.push(
-                new MinecraftDiagnosticsPanel(panel, extensionUri, statsTracker)
+                new MinecraftDiagnosticsPanel(panel, extensionUri, statsTracker, eventEmitter),
             );
         }
     }

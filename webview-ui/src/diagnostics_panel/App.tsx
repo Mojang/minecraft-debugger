@@ -47,6 +47,10 @@ const onResume = () => {
     vscode.postMessage({ type: 'resume' });
 };
 
+const onRunCommand = (command: string) => {
+    vscode.postMessage({ type: 'run-minecraft-command', command: command });
+};
+
 function App() {
     const [selectedPlugin, setSelectedPlugin] = useState<string>('');
     const [selectedClient, setSelectedClient] = useState<string>('');
@@ -122,7 +126,7 @@ function App() {
                         ) : (
                             <div />
                         )}
-                        {tabPrefab.content({ selectedClient, selectedPlugin })}
+                        {tabPrefab.content({ selectedClient, selectedPlugin, onRunCommand })}
                     </VSCodePanelView>
                 ))}
             </VSCodePanels>

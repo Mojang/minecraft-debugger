@@ -217,3 +217,116 @@ main {
 #multi-column-grid vscode-data-grid-cell:not([grid-column="1"]) {
   text-align: right;
 }
+
+.minecraft-profiler-flame-stream-root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.minecraft-profiler-flame-stream-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 360px;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group-scale {
+  min-width: 280px;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group-unit {
+  min-width: 220px;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group-lane-display {
+  min-width: 260px;
+}
+
+.minecraft-profiler-flame-stream-range-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.minecraft-profiler-flame-stream-range-row input[type="range"] {
+  flex: 1;
+}
+
+.minecraft-profiler-flame-stream-select {
+  min-width: 180px;
+  height: 28px;
+  padding: 2px 8px;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
+}
+
+.minecraft-profiler-flame-stream-toolbar-caption {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.minecraft-profiler-flame-stream-surface {
+  width: 100%;
+  border: 1px solid var(--vscode-editorGroup-border);
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 8px minmax(0, 1fr);
+  overflow: visible;
+  min-height: 260px;
+}
+
+.minecraft-profiler-flame-stream-label-pane {
+  overflow: visible;
+  max-height: none;
+}
+
+.minecraft-profiler-flame-stream-pane-resizer {
+  cursor: col-resize;
+  background: color-mix(in srgb, var(--vscode-editorGroup-border) 72%, transparent);
+  border-left: 1px solid var(--vscode-editorGroup-border);
+  border-right: 1px solid var(--vscode-editorGroup-border);
+}
+
+.minecraft-profiler-flame-stream-pane-resizer:hover {
+  background: color-mix(in srgb, var(--vscode-focusBorder) 55%, transparent);
+}
+
+.minecraft-profiler-flame-stream-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--vscode-editorGroup-border);
+  font-size: 12px;
+}
+
+.minecraft-profiler-flame-stream-label-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.minecraft-profiler-flame-stream-chart-pane {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  max-height: none;
+}
+
+.minecraft-profiler-flame-stream-empty {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+}

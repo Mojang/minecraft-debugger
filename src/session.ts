@@ -117,6 +117,7 @@ interface DebuggerStackFrame {
 // 4 - mc can require a passcode to connect
 // 5 - debugger can take mc script profiler captures
 // 6 - breakpoints as request, MC can reject
+// 7 - support for managed requests, MC can reject or respond with args
 enum ProtocolVersion {
     _Unknown = 0,
     Initial = 1,
@@ -125,6 +126,7 @@ enum ProtocolVersion {
     SupportPasscode = 4,
     SupportProfilerCaptures = 5,
     SupportBreakpointsAsRequest = 6,
+    SupportManagedRequests = 7,
 }
 
 // capabilites based on protocol version
@@ -132,12 +134,13 @@ export interface MinecraftCapabilities {
     supportsCommands: boolean;
     supportsProfiler: boolean;
     supportsBreakpointsAsRequest: boolean;
+    supportsManagedRequests: boolean;
 }
 
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession implements IDebuggeeMessageSender {
-    private readonly _debuggerProtocolVersion = ProtocolVersion.SupportBreakpointsAsRequest;
+    private readonly _debuggerProtocolVersion = ProtocolVersion.SupportManagedRequests;
     private readonly _connectionRetryAttempts = 3;
     private readonly _connectionRetryWaitMs = 500;
 
@@ -163,6 +166,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         supportsCommands: false,
         supportsProfiler: false,
         supportsBreakpointsAsRequest: false,
+        supportsManagedRequests: false,
     };
     private _passcode?: string;
 
@@ -647,6 +651,15 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 break;
             }
             case 'managed-request': {
+                if (!this._minecraftCapabilities.supportsManagedRequests) {
+                    this.sendErrorResponse(
+                        response,
+                        1003,
+                        'Managed requests are not supported by the connected Minecraft instance.',
+                    );
+                    break;
+                }
+
                 try {
                     const result = await this._requestManager.sendManagedRequest(
                         response,
@@ -658,7 +671,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                     this.sendResponse(response);
                 } catch (error) {
                     const message = (error as Error).message;
-                    this.sendErrorResponse(response, 1008, message);
+                    this.sendErrorResponse(response, 1003, message);
                 }
 
                 break;
@@ -899,6 +912,14 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         if (envelope.type === 'event') {
             this.handleDebugeeEvent(envelope.event);
         } else if (envelope.type === 'managed-response') {
+            if (!this._minecraftCapabilities.supportsManagedRequests) {
+                this.log(
+                    'Received managed-response from a Minecraft instance that should not support it.',
+                    LogLevel.Warn,
+                );
+                return;
+            }
+
             this._requestManager.handleManagedResponse(envelope as ManagedResponseEnvelope);
         } else if (envelope.type === 'response') {
             this.handleDebugeeResponse(envelope);
@@ -1263,6 +1284,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             supportsCommands: this._clientProtocolVersion >= ProtocolVersion.SupportPasscode,
             supportsProfiler: this._clientProtocolVersion >= ProtocolVersion.SupportProfilerCaptures,
             supportsBreakpointsAsRequest: this._clientProtocolVersion >= ProtocolVersion.SupportBreakpointsAsRequest,
+            supportsManagedRequests: this._clientProtocolVersion >= ProtocolVersion.SupportManagedRequests,
         };
     }
 

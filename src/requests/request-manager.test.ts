@@ -60,9 +60,9 @@ describe('RequestManager', () => {
                 request: 'test-managed-request',
             });
             const rejection = expect(promise).rejects.toThrow(
-                "Managed request 'test-managed-request' timed out after 5000ms.",
+                "Managed request 'test-managed-request' timed out after 10000ms.",
             );
-            await vi.advanceTimersByTimeAsync(5000);
+            await vi.advanceTimersByTimeAsync(10000);
 
             await rejection;
             vi.useRealTimers();

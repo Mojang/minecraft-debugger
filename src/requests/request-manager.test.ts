@@ -16,18 +16,18 @@ describe('RequestManager', () => {
         } as unknown as IDebuggeeMessageSender;
     });
 
-    describe('sendManagedRequest', () => {
+    describe('sendDebuggerRequest', () => {
         it('should send request envelope and resolve on successful response', async () => {
             manager = new RequestManager(mockSender);
             const response = { request_seq: 42 } as DebugProtocol.Response;
 
-            const promise = manager.sendManagedRequest(response, {
-                request: 'test-managed-request',
+            const promise = manager.sendDebuggerRequest(response, {
+                request: 'test-debugger-request',
                 args: { foo: 'bar' },
             });
 
-            const handled = manager.handleManagedResponse({
-                type: 'managed-response',
+            const handled = manager.handleDebuggeeResponse({
+                type: 'debuggee-response',
                 request_seq: 42,
                 success: true,
                 args: { ok: true },
@@ -35,16 +35,16 @@ describe('RequestManager', () => {
 
             expect(mockSender.sendDebuggeeMessage as Mock).toHaveBeenCalledTimes(1);
             expect(mockSender.sendDebuggeeMessage as Mock).toHaveBeenNthCalledWith(1, {
-                type: 'managed-request',
+                type: 'debugger-request',
                 request: {
                     request_seq: 42,
-                    request: 'test-managed-request',
+                    request: 'test-debugger-request',
                     args: { foo: 'bar' },
                 },
             });
             expect(handled).toBe(true);
             await expect(promise).resolves.toEqual({
-                type: 'managed-response',
+                type: 'debuggee-response',
                 request_seq: 42,
                 success: true,
                 args: { ok: true },
@@ -56,11 +56,11 @@ describe('RequestManager', () => {
             manager = new RequestManager(mockSender);
             const response = { request_seq: 123 } as DebugProtocol.Response;
 
-            const promise = manager.sendManagedRequest(response, {
-                request: 'test-managed-request',
+            const promise = manager.sendDebuggerRequest(response, {
+                request: 'test-debugger-request',
             });
             const rejection = expect(promise).rejects.toThrow(
-                "Managed request 'test-managed-request' timed out after 10000ms.",
+                "Debugger request 'test-debugger-request' timed out after 10000ms.",
             );
             await vi.advanceTimersByTimeAsync(10000);
 
@@ -69,16 +69,16 @@ describe('RequestManager', () => {
         });
     });
 
-    describe('handleManagedResponse', () => {
+    describe('handleDebuggeeResponse', () => {
         it('should reject request on failed response', async () => {
             manager = new RequestManager(mockSender);
             const response = { request_seq: 7 } as DebugProtocol.Response;
-            const promise = manager.sendManagedRequest(response, {
-                request: 'test-managed-request',
+            const promise = manager.sendDebuggerRequest(response, {
+                request: 'test-debugger-request',
             });
 
-            manager.handleManagedResponse({
-                type: 'managed-response',
+            manager.handleDebuggeeResponse({
+                type: 'debuggee-response',
                 request_seq: 7,
                 success: false,
                 response_message: 'Denied',
@@ -90,8 +90,8 @@ describe('RequestManager', () => {
         it('should return false for unknown response sequence', () => {
             manager = new RequestManager(mockSender);
 
-            const handled = manager.handleManagedResponse({
-                type: 'managed-response',
+            const handled = manager.handleDebuggeeResponse({
+                type: 'debuggee-response',
                 request_seq: -1,
                 success: true,
             });
@@ -106,8 +106,8 @@ describe('RequestManager', () => {
             const responseA = { request_seq: 1 } as DebugProtocol.Response;
             const responseB = { request_seq: 2 } as DebugProtocol.Response;
 
-            const promiseA = manager.sendManagedRequest(responseA, { request: 'A' });
-            const promiseB = manager.sendManagedRequest(responseB, { request: 'B' });
+            const promiseA = manager.sendDebuggerRequest(responseA, { request: 'A' });
+            const promiseB = manager.sendDebuggerRequest(responseB, { request: 'B' });
 
             manager.rejectPendingRequests('Disconnected');
 

@@ -1,29 +1,21 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
-import { ManagedRequestArguments } from './managed-request-schema';
-
-export interface ManagedRequestResultMessage {
-    type: 'managed-request-result';
-    request: string;
-    status: 'ok' | 'error';
-    response?: unknown;
-    error?: string;
-}
+import { DebuggerRequestArguments } from './debugger-request-schema';
 
 // Sends requests to the debug session and posts results back to the webview.
-export class ManagedRequestHandler {
+export class DebuggerRequestHandler {
     private readonly _webview: vscode.Webview;
 
     public constructor(webview: vscode.Webview) {
         this._webview = webview;
     }
     
-    public async handleManagedRequest(request: string, args?: unknown): Promise<void> {
+    public async handleDebuggerRequest(request: string, args?: unknown): Promise<void> {
         const session = vscode.debug.activeDebugSession;
         if (!session) {
             this._webview.postMessage({
-                type: 'managed-request-result',
+                type: 'debugger-request-result',
                 request,
                 status: 'error',
                 error: 'No active debug session',
@@ -31,25 +23,25 @@ export class ManagedRequestHandler {
             return;
         }
 
-        const requestArgs: ManagedRequestArguments = {
+        const requestArgs: DebuggerRequestArguments = {
             request,
             args,
         };
 
-        await this.sendManagedRequestResult(session, request, requestArgs);
+        await this.sendDebuggerRequestResult(session, request, requestArgs);
     }
 
-    public async sendManagedRequestResult(
+    public async sendDebuggerRequestResult(
         session: vscode.DebugSession,
         request: string,
-        requestArgs: ManagedRequestArguments,
+        requestArgs: DebuggerRequestArguments,
     ): Promise<void> {
         try {
             // Send the request to the debug session and wait for a response
-            const responsePayload = await session.customRequest('managed-request', requestArgs);
+            const responsePayload = await session.customRequest('debugger-request', requestArgs);
             
             this._webview.postMessage({
-                type: 'managed-request-result',
+                type: 'debugger-request-result',
                 request,
                 status: 'ok',
                 response: responsePayload,
@@ -58,7 +50,7 @@ export class ManagedRequestHandler {
             const errorMessage = error instanceof Error ? error.message : String(error);
 
             this._webview.postMessage({
-                type: 'managed-request-result',
+                type: 'debugger-request-result',
                 request,
                 status: 'error',
                 error: errorMessage,

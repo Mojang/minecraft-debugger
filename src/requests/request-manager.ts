@@ -1,30 +1,30 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { ManagedRequestArguments, ManagedRequestEnvelope, ManagedResponseEnvelope } from './managed-request-schema';
+import { DebuggerRequestArguments, DebuggerRequestEnvelope, DebuggeeResponseEnvelope } from './debugger-request-schema';
 import { IDebuggeeMessageSender } from '../debuggee-message-sender';
 
-interface PendingManagedRequest {
+interface PendingDebuggerRequest {
     resolve: (value: unknown) => void;
     reject: (reason?: unknown) => void;
     timeout?: ReturnType<typeof setTimeout>;
 }
 
 export class RequestManager {
-    private readonly _defaultManagedRequestTimeoutMs = 10000;
-    private readonly _pendingRequests = new Map<number, PendingManagedRequest>();
+    private readonly _defaultDebuggerRequestTimeoutMs = 10000;
+    private readonly _pendingRequests = new Map<number, PendingDebuggerRequest>();
     private readonly _sender: IDebuggeeMessageSender;
 
     public constructor(sender: IDebuggeeMessageSender) {
         this._sender = sender;
     }
 
-    public sendManagedRequest(
+    public sendDebuggerRequest(
         response: DebugProtocol.Response,
-        managedRequestArgs: ManagedRequestArguments,
-        timeoutMs: number = this._defaultManagedRequestTimeoutMs,
+        debuggerRequestArgs: DebuggerRequestArguments,
+        timeoutMs: number = this._defaultDebuggerRequestTimeoutMs,
     ): Promise<unknown> {
-        const { request, args } = managedRequestArgs;
+        const { request, args } = debuggerRequestArgs;
         const seq = response.request_seq;
 
         return new Promise((resolve, reject) => {
@@ -35,7 +35,7 @@ export class RequestManager {
                 }
 
                 this._pendingRequests.delete(seq);
-                reject(new Error(`Managed request '${request}' timed out after ${timeoutMs}ms.`));
+                reject(new Error(`Debugger request '${request}' timed out after ${timeoutMs}ms.`));
             }, timeoutMs);
 
             this._pendingRequests.set(seq, {
@@ -45,8 +45,8 @@ export class RequestManager {
             });
 
             // Create an envelope to hold the request, and send it to the debuggee
-            const envelope: ManagedRequestEnvelope = {
-                type: 'managed-request',
+            const envelope: DebuggerRequestEnvelope = {
+                type: 'debugger-request',
                 request: {
                     request_seq: seq,
                     request,
@@ -58,7 +58,7 @@ export class RequestManager {
         });
     }
 
-    public handleManagedResponse(envelope: ManagedResponseEnvelope): boolean {
+    public handleDebuggeeResponse(envelope: DebuggeeResponseEnvelope): boolean {
         const pending = this._pendingRequests.get(envelope.request_seq);
         if (!pending) {
             // Can happen if the request times out before a response is received

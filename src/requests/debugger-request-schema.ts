@@ -1,14 +1,14 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 // Sent from the webview to the debug session
-export interface ManagedRequestArguments {
+export interface DebuggerRequestArguments {
     request: string;
     args?: unknown;
 }
 
 // Sent from the debug session to the debuggee (MC)
-export interface ManagedRequestEnvelope {
-    type: 'managed-request';
+export interface DebuggerRequestEnvelope {
+    type: 'debugger-request';
     request: {
         request_seq: number;
         request: string;
@@ -16,9 +16,9 @@ export interface ManagedRequestEnvelope {
     };
 }
 
-// Received from the debuggee (MC) in response to a ManagedRequestEnvelope
-export interface ManagedResponseEnvelope {
-    type: 'managed-response';
+// Received from the debuggee (MC) in response to a DebuggerRequestEnvelope
+export interface DebuggeeResponseEnvelope {
+    type: 'debuggee-response';
     request_seq: number;
     args?: unknown;
     success?: boolean;

@@ -8,7 +8,7 @@ import { Icons } from './Icons';
 import './App.css';
 import tabPrefabs from './prefabs';
 import { TabPrefabDataSource } from './prefabs/TabPrefab';
-import { useManagedRequests } from './utilities/useManagedRequests';
+import { useDebuggerRequests } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
 
 declare global {
@@ -51,8 +51,8 @@ function App() {
     const [currentTab, setCurrentTab] = useState<string>();
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
-    const { onManagedRequest, isManagedRequestInFlight, getManagedRequestResult, handleManagedRequestResult } =
-        useManagedRequests();
+    const { onDebuggerRequest, isDebuggerRequestInFlight, getDebuggerRequestResult, handleDebuggerRequestResult } =
+        useDebuggerRequests();
 
     const handlePluginSelection = useCallback((pluginSelectionId: string) => {
         setSelectedPlugin(() => pluginSelectionId);
@@ -76,15 +76,15 @@ function App() {
                 setSpeed(`${message.speed}hz`);
             } else if (message.type === 'pause-updated') {
                 setPaused(message.paused);
-            } else if (message.type === 'managed-request-result') {
-                handleManagedRequestResult(message);
+            } else if (message.type === 'debugger-request-result') {
+                handleDebuggerRequestResult(message);
             }
         };
         window.addEventListener('message', handleMessage);
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, [handleManagedRequestResult]);
+    }, [handleDebuggerRequestResult]);
 
     return (
         <main>
@@ -128,9 +128,9 @@ function App() {
                             selectedClient,
                             selectedPlugin,
                             onRunCommand,
-                            onManagedRequest,
-                            isManagedRequestInFlight,
-                            getManagedRequestResult,
+                            onDebuggerRequest,
+                            isDebuggerRequestInFlight,
+                            getDebuggerRequestResult,
                         })}
                     </VSCodePanelView>
                 ))}

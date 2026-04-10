@@ -4,7 +4,7 @@ import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from 'vsco
 import { EventEmitter } from 'stream';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
-import { ManagedRequestHandler } from '../requests/managed-request-handler';
+import { DebuggerRequestHandler } from '../requests/debugger-request-handler';
 import { StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
 
 export class MinecraftDiagnosticsPanel {
@@ -15,7 +15,7 @@ export class MinecraftDiagnosticsPanel {
     private _statsTracker: StatsProvider;
     private _statsCallback: StatsListener | undefined = undefined;
     private _eventEmitter: EventEmitter;
-    private readonly _managedRequestHandler: ManagedRequestHandler;
+    private readonly _debuggerRequestHandler: DebuggerRequestHandler;
 
     private constructor(
         panel: WebviewPanel,
@@ -26,7 +26,7 @@ export class MinecraftDiagnosticsPanel {
         this._panel = panel;
         this._statsTracker = statsTracker;
         this._eventEmitter = eventEmitter;
-        this._managedRequestHandler = new ManagedRequestHandler(this._panel.webview);
+        this._debuggerRequestHandler = new DebuggerRequestHandler(this._panel.webview);
 
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
@@ -70,8 +70,8 @@ export class MinecraftDiagnosticsPanel {
                         this._eventEmitter.emit('run-minecraft-command', message.command);
                     }
                     break;
-                case 'managed-request':
-                    this._managedRequestHandler.handleManagedRequest(message.request, message.args);
+                case 'debugger-request':
+                    this._debuggerRequestHandler.handleDebuggerRequest(message.request, message.args);
                     break;
                 default:
                     console.error('Unknown message type:', message.type);

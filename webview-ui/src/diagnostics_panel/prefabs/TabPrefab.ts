@@ -4,9 +4,9 @@ export type TabPrefabParams = {
     selectedClient: string;
     selectedPlugin: string;
     onRunCommand: (command: string) => void;
-    onManagedRequest: (request: string, args?: unknown) => void;
-    isManagedRequestInFlight: (request: string) => boolean;
-    getManagedRequestResult: (request: string) => unknown;
+    onDebuggerRequest: (request: string, args?: unknown) => void;
+    isDebuggerRequestInFlight: (request: string) => boolean;
+    getDebuggerRequestResult: (request: string) => unknown;
 };
 
 export enum TabPrefabDataSource {

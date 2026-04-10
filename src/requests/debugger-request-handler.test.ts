@@ -9,28 +9,28 @@ vi.mock('vscode', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ManagedRequestHandler } from './managed-request-handler';
+import { DebuggerRequestHandler } from './debugger-request-handler';
 
-describe('ManagedRequestHandler', () => {
-    let handler: ManagedRequestHandler;
+describe('DebuggerRequestHandler', () => {
+    let handler: DebuggerRequestHandler;
     let postMessage: Mock;
 
     beforeEach(() => {
         postMessage = vi.fn();
         const webview = { postMessage } as unknown as vscode.Webview;
-        handler = new ManagedRequestHandler(webview);
+        handler = new DebuggerRequestHandler(webview);
         (vscode.debug as { activeDebugSession?: vscode.DebugSession }).activeDebugSession = undefined;
     });
 
-    describe('handleManagedRequest', () => {
+    describe('handleDebuggerRequest', () => {
         it('should post error result when no active debug session exists', async () => {
             const request = 'test-request';
 
-            await handler.handleManagedRequest(request);
+            await handler.handleDebuggerRequest(request);
 
             expect(postMessage).toHaveBeenCalledTimes(1);
             expect(postMessage).toHaveBeenNthCalledWith(1, {
-                type: 'managed-request-result',
+                type: 'debugger-request-result',
                 request,
                 status: 'error',
                 error: 'No active debug session',
@@ -46,16 +46,16 @@ describe('ManagedRequestHandler', () => {
                 customRequest,
             } as unknown as vscode.DebugSession;
 
-            await handler.handleManagedRequest(request, args);
+            await handler.handleDebuggerRequest(request, args);
 
             expect(customRequest).toHaveBeenCalledTimes(1);
-            expect(customRequest).toHaveBeenNthCalledWith(1, 'managed-request', {
+            expect(customRequest).toHaveBeenNthCalledWith(1, 'debugger-request', {
                 request,
                 args,
             });
             expect(postMessage).toHaveBeenCalledTimes(1);
             expect(postMessage).toHaveBeenNthCalledWith(1, {
-                type: 'managed-request-result',
+                type: 'debugger-request-result',
                 request,
                 status: 'ok',
                 response: responsePayload,
@@ -70,12 +70,12 @@ describe('ManagedRequestHandler', () => {
                 customRequest,
             } as unknown as vscode.DebugSession;
 
-            await handler.handleManagedRequest(request, { value: 2 });
+            await handler.handleDebuggerRequest(request, { value: 2 });
 
             expect(customRequest).toHaveBeenCalledTimes(1);
             expect(postMessage).toHaveBeenCalledTimes(1);
             expect(postMessage).toHaveBeenNthCalledWith(1, {
-                type: 'managed-request-result',
+                type: 'debugger-request-result',
                 request,
                 status: 'error',
                 error: 'Denied',

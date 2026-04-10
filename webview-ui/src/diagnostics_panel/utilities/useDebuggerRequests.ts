@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import { vscode } from './vscode';
 
-type DebuggerRequestResultMessage = {
+// Result payload posted back from the extension host after a debugger request completes.
+export type DebuggerRequestResultMessage = {
     type: 'debugger-request-result';
     request: string;
     status: 'ok' | 'error';
@@ -11,13 +12,27 @@ type DebuggerRequestResultMessage = {
     error?: string;
 };
 
-type UseDebuggerRequestsResult = {
+export type UseDebuggerRequestsResult = {
+     // Sends a debugger request to the extension host.
+     // Duplicate requests with the same `request` string are ignored while one is in-flight.
     onDebuggerRequest: (request: string, args?: unknown) => void;
+
+    // Returns true if a request with the given request key is currently in progress.
     isDebuggerRequestInFlight: (request: string) => boolean;
+
+    // Returns the latest result message for a given request key.
     getDebuggerRequestResult: (request: string) => unknown;
+
+    // Accepts an incoming result message of type `debugger-request-result` and updates results.
     handleDebuggerRequestResult: (message: DebuggerRequestResultMessage) => void;
 };
 
+// Custom hook to manage sending requests to the debug session and tracking their results.
+//
+// Expected usage:
+//   1. Call `onDebuggerRequest` to send a request to the extension host.
+//   2. Pass incoming messages of type `debugger-request-result` to `handleDebuggerRequestResult` to update the request results and in-flight status.
+//   3. Use `isDebuggerRequestInFlight` and `getDebuggerRequestResult` to access the status and result of requests.
 export function useDebuggerRequests(): UseDebuggerRequestsResult {
     // Track the status of ongoing debugger requests
     const [inFlightDebuggerRequests, setInFlightDebuggerRequests] = useState<Set<string>>(new Set());

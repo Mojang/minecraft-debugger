@@ -9,14 +9,13 @@ import './App.css';
 import tabPrefabs from './prefabs';
 import { TabPrefabDataSource } from './prefabs/TabPrefab';
 import { useManagedRequests } from './utilities/useManagedRequests';
+import { vscode } from './utilities/vscode';
 
 declare global {
     interface Window {
         initialParams: any;
     }
 }
-
-const vscode = acquireVsCodeApi();
 
 interface VSCodePanelsChangeEvent extends Event {
     target: EventTarget & { activeid: string };

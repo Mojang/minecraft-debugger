@@ -44,6 +44,7 @@ import { isUUID } from './utils';
 import { MessageStreamParser } from './message-stream-parser';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
+import { PacketLogger } from './packet-logger';
 
 interface PendingResponse {
     onSuccess?: (result: any) => void;
@@ -167,13 +168,15 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private _homeViewProvider: HomeViewProvider;
     private _statsProvider: StatsProvider;
     private _eventEmitter: EventEmitter;
+    private _packetLogger?: PacketLogger;
 
-    public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider, eventEmitter: EventEmitter) {
+    public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider, eventEmitter: EventEmitter, packetLogger?: PacketLogger) {
         super();
 
         this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
+        this._packetLogger = packetLogger;
 
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
@@ -194,6 +197,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._sourceFileWatcher.dispose();
             this._sourceFileWatcher = undefined;
         }
+
+        this._packetLogger?.dispose();
     }
 
     // ------------------------------------------------------------------------
@@ -306,6 +311,25 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 this.showNotification(`Failed to open CPU profile: ${error.message}`, LogLevel.Error);
             });
         }
+    }
+
+    // ------------------------------------------------------------------------
+    // Packet logging hooks for VS Code DAP channel
+    // ------------------------------------------------------------------------
+
+    protected dispatchRequest(request: DebugProtocol.Request): void {
+        this._packetLogger?.logVSCodeInbound(request);
+        super.dispatchRequest(request);
+    }
+
+    public sendResponse(response: DebugProtocol.Response): void {
+        this._packetLogger?.logVSCodeOutbound(response);
+        super.sendResponse(response);
+    }
+
+    public sendEvent(event: DebugProtocol.Event): void {
+        this._packetLogger?.logVSCodeOutbound(event);
+        super.sendEvent(event);
     }
 
     // ------------------------------------------------------------------------
@@ -858,6 +882,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             return;
         }
 
+        this._packetLogger?.logMcOutbound(envelope);
+
         const json = JSON.stringify(envelope);
         const jsonBuffer = Buffer.from(json);
         // length prefix is 8 hex followed by newline = 012345678\n
@@ -874,6 +900,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     }
 
     private receiveDebugeeMessage(envelope: any) {
+        this._packetLogger?.logMcInbound(envelope);
+
         if (envelope.type === 'event') {
             this.handleDebugeeEvent(envelope.event);
         } else if (envelope.type === 'response') {

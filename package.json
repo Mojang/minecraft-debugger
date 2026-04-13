@@ -197,6 +197,16 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Open the diagnostics view on connection to Minecraft."
+                },
+                "minecraft-debugger.packetLogging.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Write all packets exchanged between the debugger, Minecraft, and VS Code to log files."
+                },
+                "minecraft-debugger.packetLogging.logDirectory": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Directory where packet log files are written. Defaults to the extension storage folder when empty."
                 }
             }
         }

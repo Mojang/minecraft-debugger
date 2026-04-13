@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('minecraft-js', configProvider));
 
     // register a debug adapter descriptor factory for 'minecraft-js', this factory creates the DebugSession
-    const descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, liveStatsProvider, eventEmitter);
+    const descriptorFactory = new ServerDebugAdapterFactory(homeViewProvider, liveStatsProvider, eventEmitter, context);
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('minecraft-js', descriptorFactory));
     if ('dispose' in descriptorFactory) {
         context.subscriptions.push(descriptorFactory);

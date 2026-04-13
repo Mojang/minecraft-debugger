@@ -8,7 +8,7 @@ import { Icons } from './Icons';
 import './App.css';
 import tabPrefabs from './prefabs';
 import { TabPrefabDataSource } from './prefabs/TabPrefab';
-import { useDebuggerRequests } from './utilities/useDebuggerRequests';
+import { handleDebuggerRequestResult } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
 
 declare global {
@@ -51,8 +51,6 @@ function App() {
     const [currentTab, setCurrentTab] = useState<string>();
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
-    const { onDebuggerRequest, isDebuggerRequestInFlight, getDebuggerRequestResult, handleDebuggerRequestResult } =
-        useDebuggerRequests();
 
     const handlePluginSelection = useCallback((pluginSelectionId: string) => {
         setSelectedPlugin(() => pluginSelectionId);
@@ -128,9 +126,6 @@ function App() {
                             selectedClient,
                             selectedPlugin,
                             onRunCommand,
-                            onDebuggerRequest,
-                            isDebuggerRequestInFlight,
-                            getDebuggerRequestResult,
                         })}
                     </VSCodePanelView>
                 ))}

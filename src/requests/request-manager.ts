@@ -5,7 +5,7 @@ import { DebuggerRequestArguments, DebuggerRequestEnvelope, DebuggeeResponseEnve
 import { IDebuggeeMessageSender } from '../debuggee-message-sender';
 
 interface PendingDebuggerRequest {
-    resolve: (value: unknown) => void;
+    resolve: (value: DebuggeeResponseEnvelope) => void;
     reject: (reason?: unknown) => void;
     timeout?: ReturnType<typeof setTimeout>;
 }
@@ -23,7 +23,7 @@ export class RequestManager {
         response: DebugProtocol.Response,
         debuggerRequestArgs: DebuggerRequestArguments,
         timeoutMs: number = this._defaultDebuggerRequestTimeoutMs,
-    ): Promise<unknown> {
+    ): Promise<DebuggeeResponseEnvelope> {
         const { request, args } = debuggerRequestArgs;
         const seq = response.request_seq;
 

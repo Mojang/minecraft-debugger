@@ -157,7 +157,6 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private _sourceMapRoot?: string;
     private _generatedSourceRoot?: string;
     private _inlineSourceMap = false;
-    private _requestManager: RequestManager;
     private _moduleMapping?: ModuleMapping;
     private _moduleMaps?: Record<string, SourceMaps>;
     private _targetModuleUuid?: string;
@@ -174,6 +173,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private _homeViewProvider: HomeViewProvider;
     private _statsProvider: StatsProvider;
     private _eventEmitter: EventEmitter;
+    private _requestManager?: RequestManager;
 
     public constructor(homeViewProvider: HomeViewProvider, statsProvider: StatsProvider, eventEmitter: EventEmitter) {
         super();
@@ -181,7 +181,6 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this._homeViewProvider = homeViewProvider;
         this._statsProvider = statsProvider;
         this._eventEmitter = eventEmitter;
-        this._requestManager = new RequestManager(this);
 
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
@@ -651,7 +650,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 break;
             }
             case 'debugger-request': {
-                if (!this._minecraftCapabilities.supportsDebuggerRequests) {
+                if (!this._minecraftCapabilities.supportsDebuggerRequests || !this._requestManager) {
                     this.sendErrorResponse(
                         response,
                         1003,
@@ -661,7 +660,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 }
 
                 try {
-                    const result = await this._requestManager.sendDebuggerRequest(
+                    const result = await this._requestManager?.sendDebuggerRequest(
                         response,
                         args as DebuggerRequestArguments,
                     );
@@ -796,6 +795,11 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._breakpointsHandler = new BreakpointsLegacy(this._sourceMaps, this);
         }
 
+        // init request manager if supported, which handles sending debugger-requests to the debuggee and awaiting responses
+        if (this.getMinecraftCapabilities().supportsDebuggerRequests) {
+            this._requestManager = new RequestManager(this);
+        }
+
         // watch for source map changes
         this.createSourceMapFileWatcher(this._localRoot, this._sourceMapRoot);
 
@@ -825,7 +829,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._connectionSocket.destroy();
         }
         this._connectionSocket = undefined;
-        this._requestManager.rejectPendingRequests('Debugger session disconnected.');
+        this._requestManager?.rejectPendingRequests('Debugger session disconnected.');
     }
 
     // close and terminate session (could be from debugee request)
@@ -920,7 +924,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 return;
             }
 
-            this._requestManager.handleDebuggeeResponse(envelope as DebuggeeResponseEnvelope);
+            this._requestManager?.handleDebuggeeResponse(envelope as DebuggeeResponseEnvelope);
         } else if (envelope.type === 'response') {
             this.handleDebugeeResponse(envelope);
         }

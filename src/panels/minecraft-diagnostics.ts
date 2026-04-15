@@ -15,18 +15,19 @@ export class MinecraftDiagnosticsPanel {
     private _statsTracker: StatsProvider;
     private _statsCallback: StatsListener | undefined = undefined;
     private _eventEmitter: EventEmitter;
-    private readonly _debuggerRequestHandler: DebuggerRequestHandler;
+    private _debuggerRequestHandler: DebuggerRequestHandler;
 
     private constructor(
         panel: WebviewPanel,
         extensionUri: Uri,
         statsTracker: StatsProvider,
         eventEmitter: EventEmitter,
+        debuggerRequestHandler: DebuggerRequestHandler,
     ) {
         this._panel = panel;
         this._statsTracker = statsTracker;
         this._eventEmitter = eventEmitter;
-        this._debuggerRequestHandler = new DebuggerRequestHandler(this._panel.webview);
+        this._debuggerRequestHandler = debuggerRequestHandler;
 
         // Set an event listener to listen for when the panel is disposed (i.e. when the user closes
         // the panel or when the panel is closed programmatically)
@@ -142,7 +143,7 @@ export class MinecraftDiagnosticsPanel {
                 }
             );
             MinecraftDiagnosticsPanel.activeDiagnosticsPanels.push(
-                new MinecraftDiagnosticsPanel(panel, extensionUri, statsTracker, eventEmitter),
+                new MinecraftDiagnosticsPanel(panel, extensionUri, statsTracker, eventEmitter, new DebuggerRequestHandler(panel.webview)),
             );
         }
     }

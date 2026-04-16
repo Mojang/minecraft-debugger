@@ -13,13 +13,49 @@ import {
     useDebuggerRequestUpdates,
 } from '../../utilities/useDebuggerRequests';
 import { useState } from 'react';
-import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
+import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 
 const DEBUGGER_REQUEST_COMMANDS = [
     { command: 'Start Entity System Profiler', label: 'Start' },
     { command: 'Stop Entity System Profiler', label: 'Stop' },
     { command: 'Clear Entity System Profiler', label: 'Clear' },
 ];
+
+type TimingUnit = 'ns' | 'us' | 'ms';
+
+function ceilToThreeDecimalPlaces(value: number): number {
+    return Math.ceil(value * 1000) / 1000;
+}
+
+function getTimingColumnLabel(unit: TimingUnit): string {
+    if (unit === 'ms') {
+        return 'Time In Milliseconds';
+    }
+
+    if (unit === 'us') {
+        return 'Time In Microseconds';
+    }
+
+    return 'Time In Nanoseconds';
+}
+
+function formatTimingValue(value: string | number, unit: TimingUnit): string {
+    const numericValue = typeof value === 'number' ? value : Number(value);
+
+    if (!Number.isFinite(numericValue)) {
+        return unit === 'ns' ? '0' : '0.000';
+    }
+
+    if (unit === 'ms') {
+        return ceilToThreeDecimalPlaces(numericValue / 1_000_000).toFixed(3);
+    }
+
+    if (unit === 'us') {
+        return ceilToThreeDecimalPlaces(numericValue / 1_000).toFixed(3);
+    }
+
+    return `${Math.ceil(numericValue)}`;
+}
 
 function resolveEcsColumn(eventId: string): number | undefined {
     switch (eventId) {
@@ -53,6 +89,7 @@ const statsTab: TabPrefab = {
         useDebuggerRequestUpdates();
         const [lastRequestedCommand, setLastRequestedCommand] = useState<string>('');
         const [clearResetEpoch, setClearResetEpoch] = useState(0);
+        const [timingUnit, setTimingUnit] = useState<TimingUnit>('ns');
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
@@ -83,6 +120,23 @@ const statsTab: TabPrefab = {
                                 </VSCodeButton>
                             );
                         })}
+                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column' }}>
+                            <label htmlFor="ecs-timing-unit" style={{ marginBottom: '5px' }}>
+                                Timing Unit
+                            </label>
+                            <VSCodeDropdown
+                                id="ecs-timing-unit"
+                                value={timingUnit}
+                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                    const target = event.target as HTMLSelectElement;
+                                    setTimingUnit(target.value as TimingUnit);
+                                }}
+                            >
+                                <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
+                                <VSCodeOption value="us">Microseconds</VSCodeOption>
+                                <VSCodeOption value="ms">Milliseconds</VSCodeOption>
+                            </VSCodeDropdown>
+                        </div>
                         <div style={{ marginTop: '20px' }}>
                             <text style={{ fontStyle: 'italic' }}>
                                 {lastResult
@@ -98,7 +152,7 @@ const statsTab: TabPrefab = {
                             key={`entity-timings-${selectedClient}-${clearResetEpoch}`}
                             title="Entity Timings"
                             keyLabel="Entity"
-                            valueLabels={['Time In Nanoseconds', 'Percent Of Total']}
+                            valueLabels={[getTimingColumnLabel(timingUnit), 'Percent Of Total']}
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
@@ -119,6 +173,13 @@ const statsTab: TabPrefab = {
                             columnWidths={['auto', 'auto']}
                             prettifyNames={false}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
+                            valueFormatter={(value, columnIndex) => {
+                                if (columnIndex === 0) {
+                                    return formatTimingValue(value, timingUnit);
+                                }
+
+                                return typeof value === 'number' ? value.toFixed(1) : String(value);
+                            }}
                         />
                     </div>
                     <div style={{ flex: 1, marginRight: '5px' }}>
@@ -126,7 +187,7 @@ const statsTab: TabPrefab = {
                             key={`system-timings-${selectedClient}-${clearResetEpoch}`}
                             title="System Timings"
                             keyLabel="System"
-                            valueLabels={['Time In Nanoseconds', 'Percent Of Total']}
+                            valueLabels={[getTimingColumnLabel(timingUnit), 'Percent Of Total']}
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
@@ -147,6 +208,13 @@ const statsTab: TabPrefab = {
                             columnWidths={['auto', 'auto']}
                             prettifyNames={false}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
+                            valueFormatter={(value, columnIndex) => {
+                                if (columnIndex === 0) {
+                                    return formatTimingValue(value, timingUnit);
+                                }
+
+                                return typeof value === 'number' ? value.toFixed(1) : String(value);
+                            }}
                         />
                     </div>
                 </div>

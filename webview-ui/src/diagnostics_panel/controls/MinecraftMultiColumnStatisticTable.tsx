@@ -49,6 +49,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     columnWidths?: string[]; // Optional array of column widths (first is key column, rest are value columns)
     actions?: { label: string; onClick: () => void }[]; // Optional actions with labels and commands to run on click
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver; // Maps split events to target columns for non-consolidated streams
+    valueFormatter?: (value: string | number, columnIndex: number) => string; // Optional custom display formatter for cell values
 };
 
 const sortOrderOptions = [
@@ -134,6 +135,7 @@ export default function MinecraftMultiColumnStatisticTable({
     columnWidths,
     actions,
     nonConsolidatedColumnResolver,
+    valueFormatter,
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
     // Memoize sort column options to prevent unnecessary recreations
     const sortColumnOptions = useMemo(
@@ -457,7 +459,11 @@ export default function MinecraftMultiColumnStatisticTable({
                                 gridColumn={`${index + 2}`}
                                 style={columnWidths ? { width: columnWidths[index + 1] || '120px' } : undefined}
                             >
-                                {typeof value === 'number' ? value.toFixed(1) : value}
+                                {valueFormatter
+                                    ? valueFormatter(value, index)
+                                    : typeof value === 'number'
+                                      ? value.toFixed(1)
+                                      : value}
                             </VSCodeDataGridCell>
                         ))}
                     </VSCodeDataGridRow>

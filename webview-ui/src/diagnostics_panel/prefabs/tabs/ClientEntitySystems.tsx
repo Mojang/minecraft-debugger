@@ -52,6 +52,7 @@ const statsTab: TabPrefab = {
     content: ({ selectedClient }: TabPrefabParams) => {
         useDebuggerRequestUpdates();
         const [lastRequestedCommand, setLastRequestedCommand] = useState<string>('');
+        const [clearResetEpoch, setClearResetEpoch] = useState(0);
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
@@ -69,6 +70,10 @@ const statsTab: TabPrefab = {
                                     key={command.command}
                                     disabled={inFlight}
                                     onClick={() => {
+                                        if (command.command === 'Clear Entity System Profiler') {
+                                            setClearResetEpoch(prev => prev + 1);
+                                        }
+
                                         setLastRequestedCommand(command.command);
                                         sendDebuggerRequest(command.command);
                                     }}
@@ -90,6 +95,7 @@ const statsTab: TabPrefab = {
                 <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, marginRight: '5px' }}>
                         <MinecraftMultiColumnStatisticTable
+                            key={`entity-timings-${selectedClient}-${clearResetEpoch}`}
                             title="Entity Timings"
                             keyLabel="Entity"
                             valueLabels={['Time In Nanoseconds', 'Percent Of Total']}
@@ -117,6 +123,7 @@ const statsTab: TabPrefab = {
                     </div>
                     <div style={{ flex: 1, marginRight: '5px' }}>
                         <MinecraftMultiColumnStatisticTable
+                            key={`system-timings-${selectedClient}-${clearResetEpoch}`}
                             title="System Timings"
                             keyLabel="System"
                             valueLabels={['Time In Nanoseconds', 'Percent Of Total']}

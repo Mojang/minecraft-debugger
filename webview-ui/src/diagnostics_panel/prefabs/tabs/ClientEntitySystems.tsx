@@ -120,6 +120,13 @@ const statsTab: TabPrefab = {
                                 </VSCodeButton>
                             );
                         })}
+                        <div style={{ marginTop: '20px' }}>
+                            <text style={{ fontStyle: 'italic' }}>
+                                {lastResult
+                                    ? lastResultToUserFriendlyString(lastResult)
+                                    : 'Press Start to Begin Profiling'}
+                            </text>
+                        </div>
                         <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column' }}>
                             <label htmlFor="ecs-timing-unit" style={{ marginBottom: '5px' }}>
                                 Timing Unit
@@ -136,13 +143,6 @@ const statsTab: TabPrefab = {
                                 <VSCodeOption value="us">Microseconds</VSCodeOption>
                                 <VSCodeOption value="ms">Milliseconds</VSCodeOption>
                             </VSCodeDropdown>
-                        </div>
-                        <div style={{ marginTop: '20px' }}>
-                            <text style={{ fontStyle: 'italic' }}>
-                                {lastResult
-                                    ? lastResultToUserFriendlyString(lastResult)
-                                    : 'Press Start to Begin Profiling'}
-                            </text>
                         </div>
                     </div>
                 </div>

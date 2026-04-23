@@ -15,8 +15,10 @@ import {
 import { useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 
+const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
+
 const DEBUGGER_REQUEST_COMMANDS = [
-    { command: 'Start Entity System Profiler', label: 'Start' },
+    { command: START_ENTITY_SYSTEM_PROFILER_REQUEST, label: 'Start' },
     { command: 'Stop Entity System Profiler', label: 'Stop' },
     { command: 'Clear Entity System Profiler', label: 'Clear' },
 ];
@@ -170,8 +172,30 @@ const statsTab: TabPrefab = {
                             defaultSortColumn="value_1"
                             defaultSortOrder={MinecraftMultiColumnStatisticTableSortOrder.Descending}
                             defaultSortType={MinecraftMultiColumnStatisticTableSortType.Numerical}
-                            columnWidths={['auto', 'auto']}
+                            columnWidths={['auto', 'auto', 'auto', '70px']}
                             prettifyNames={false}
+                            rowAction={{
+                                label: '🔍',
+                                headerLabel: 'Focus',
+                                width: '70px',
+                                disabled: () => isDebuggerRequestInFlight(START_ENTITY_SYSTEM_PROFILER_REQUEST),
+                                onClick: async row => {
+                                    setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
+
+                                    // given an entity name like: minecraft:arrow<> (2#262231)
+                                    // we want to extract the numeric id at the end (262231 in this case) to send to the profiler
+                                    const args = {
+                                        entityId: row.category.split('#')[1]?.replace(')', ''),
+                                    };
+                                    sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, args);
+
+                                    // Wait for isDebuggerRequestInFlight to become false and then clear
+                                    while (isDebuggerRequestInFlight(START_ENTITY_SYSTEM_PROFILER_REQUEST)) {
+                                        await new Promise(resolve => setTimeout(resolve, 100));
+                                    }
+                                    setClearResetEpoch(prev => prev + 1);
+                                },
+                            }}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                             valueFormatter={(value, columnIndex) => {
                                 if (columnIndex === 0) {
@@ -205,7 +229,7 @@ const statsTab: TabPrefab = {
                             defaultSortColumn="value_1"
                             defaultSortOrder={MinecraftMultiColumnStatisticTableSortOrder.Descending}
                             defaultSortType={MinecraftMultiColumnStatisticTableSortType.Numerical}
-                            columnWidths={['auto', 'auto']}
+                            columnWidths={['auto', 'auto', 'auto']}
                             prettifyNames={false}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                             valueFormatter={(value, columnIndex) => {

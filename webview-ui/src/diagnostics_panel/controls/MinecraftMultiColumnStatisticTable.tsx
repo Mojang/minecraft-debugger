@@ -33,6 +33,14 @@ type MultiColumnTrackedStat = {
     time: number;
 };
 
+type MinecraftMultiColumnStatisticTableRowAction = {
+    label: string;
+    onClick: (row: MultiColumnTrackedStat) => void;
+    disabled?: (row: MultiColumnTrackedStat) => boolean;
+    headerLabel?: string;
+    width?: string;
+};
+
 type NonConsolidatedColumnResolver = (event: StatisticUpdatedMessage, valueLabels: string[]) => number | undefined;
 
 type MinecraftMultiColumnStatisticTableProps = {
@@ -48,6 +56,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     prettifyNames?: boolean; // Whether to format packet names (camelCase -> Camel Case) or keep original format
     columnWidths?: string[]; // Optional array of column widths (first is key column, rest are value columns)
     actions?: { label: string; onClick: () => void }[]; // Optional actions with labels and commands to run on click
+    rowAction?: MinecraftMultiColumnStatisticTableRowAction; // Optional per-row action button
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver; // Maps split events to target columns for non-consolidated streams
     valueFormatter?: (value: string | number, columnIndex: number) => string; // Optional custom display formatter for cell values
 };
@@ -134,6 +143,7 @@ export default function MinecraftMultiColumnStatisticTable({
     prettifyNames = true, // Default to prettifying names for backward compatibility
     columnWidths,
     actions,
+    rowAction,
     nonConsolidatedColumnResolver,
     valueFormatter,
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
@@ -444,6 +454,15 @@ export default function MinecraftMultiColumnStatisticTable({
                             {label}
                         </VSCodeDataGridCell>
                     ))}
+                    {rowAction && (
+                        <VSCodeDataGridCell
+                            cellType="columnheader"
+                            gridColumn={`${valueLabels.length + 2}`}
+                            style={{ width: rowAction.width || '140px' }}
+                        >
+                            {rowAction.headerLabel || 'Action'}
+                        </VSCodeDataGridCell>
+                    )}
                 </VSCodeDataGridRow>
                 {data.map(dataPoint => (
                     <VSCodeDataGridRow key={dataPoint.category}>
@@ -466,6 +485,19 @@ export default function MinecraftMultiColumnStatisticTable({
                                       : value}
                             </VSCodeDataGridCell>
                         ))}
+                        {rowAction && (
+                            <VSCodeDataGridCell
+                                gridColumn={`${valueLabels.length + 2}`}
+                                style={{ width: rowAction.width || '140px' }}
+                            >
+                                <VSCodeButton
+                                    onClick={() => rowAction.onClick(dataPoint)}
+                                    disabled={rowAction.disabled?.(dataPoint) ?? false}
+                                >
+                                    {rowAction.label}
+                                </VSCodeButton>
+                            </VSCodeDataGridCell>
+                        )}
                     </VSCodeDataGridRow>
                 ))}
             </VSCodeDataGrid>

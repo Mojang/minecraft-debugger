@@ -235,7 +235,7 @@
         "esbuild": "^0.25.0",
         "esbuild-plugin-copy": "^2.1.1",
         "eslint": "^7.19.0",
-        "semantic-release": "^24.1.1",
+        "semantic-release": "^25.0.3",
         "semantic-release-vsce": "github:JakeShirley/semantic-release-vsce",
         "source-map": "^0.7.4",
         "stream-parser": "^0.3.1",

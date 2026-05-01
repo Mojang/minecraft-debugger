@@ -46,16 +46,12 @@ type FlameChartPoint = {
     label: string;
     displayPath: string;
     depth: number;
-    low: number;
-    mid: number;
-    high: number;
     yLow: number;
     yMid: number;
     yHigh: number;
     depthBand: string;
     laneFill: string;
     midStroke: string;
-    midNormalized: number;
     laneRelativeRatio: number;
 };
 
@@ -915,16 +911,12 @@ function minecraftProfilerFlameStreamChart({
                     label: scope.label,
                     displayPath: scope.displayPath,
                     depth: scope.depth,
-                    low: sortedLow,
-                    mid: sortedMid,
-                    high: sortedHigh,
                     yLow: rowBase + (sortedLow - laneScaleMin) * valueScale,
                     yMid: rowBase + (sortedMid - laneScaleMin) * valueScale,
                     yHigh: rowBase + (sortedHigh - laneScaleMin) * valueScale,
                     depthBand: `Depth ${scope.depth}`,
                     laneFill,
                     midStroke,
-                    midNormalized: sortedMid / normalizedMaxValue,
                     laneRelativeRatio,
                 });
             });
@@ -933,12 +925,9 @@ function minecraftProfilerFlameStreamChart({
         return {
             points,
             rowsHeight,
-            rowCount,
             range: resolvedRange,
             rowGuides: Array.from({ length: rowCount + 1 }, (_, index) => index * ROW_HEIGHT),
-            normalizedMaxValue,
             rowTicks,
-            laneMetricsByPath,
             yAxisLabel: isAbsoluteScale
                 ? `Lane timings (absolute global scale, ${yAxisTimingBands}, ${timeUnit})`
                 : `Lane timings (normalized per lane, ${yAxisTimingBands}, ${timeUnit})`,

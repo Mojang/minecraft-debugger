@@ -36,7 +36,6 @@ type TimeRange = {
     end: number;
 };
 
-type ValueScaleMode = 'normalized' | 'absolute';
 type TimeUnit = 'ms' | 'us' | 'ns';
 type LaneDisplayMode = 'range-and-midline' | 'midline-only';
 

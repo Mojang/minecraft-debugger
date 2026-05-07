@@ -112,6 +112,10 @@ const INITIAL_STATE: ProfilerState = {
     indentCursor: 0,
 };
 
+function scopeLabelWithDepthInformation(scope: ScopeDescriptor): string {
+    return `${'  •  '.repeat(scope.depth)}${scope.label}`;
+}
+
 function parseIndentDepth(rawIndent: string): number {
     const normalizedIndent = rawIndent.replace(/\t/g, '    ');
     const trimmedIndent = normalizedIndent.trim();
@@ -1263,12 +1267,22 @@ function minecraftProfilerFlameStreamChart({
                             key={scope.pathKey}
                             className="minecraft-profiler-flame-stream-label-row"
                             style={{
-                                paddingLeft: `${scope.depth * 16 + 8}px`,
                                 height: `${ROW_HEIGHT}px`,
                             }}
                             title={scope.displayPath}
                         >
-                            <span className="minecraft-profiler-flame-stream-label-text">{scope.label}</span>
+                            <span className="minecraft-profiler-flame-stream-label-text">
+                                {scopeLabelWithDepthInformation(scope)}
+                            </span>
+
+                            <span
+                                className="minecraft-profiler-flame-stream-label-depth-badge"
+                                style={{
+                                    backgroundColor: getDepthPaletteColor(scope.depth, DEPTH_FILL_PALETTE),
+                                }}
+                            >
+                                {scope.depth}
+                            </span>
                         </div>
                     ))}
                 </div>

@@ -639,8 +639,8 @@ function minecraftProfilerFlameStreamChart({
     const [selectedRange, setSelectedRange] = useState<TimeRange | undefined>(undefined);
     const [chartWidth, setChartWidth] = useState<number>(900);
     const [valueScaleMode, setValueScaleMode] = useState<ValueScaleMode>('normalized');
-    const [timeUnit, setTimeUnit] = useState<TimeUnit>('us');
     const [laneDisplayMode, setLaneDisplayMode] = useState<LaneDisplayMode>('midline-only');
+    const [timeUnit, setTimeUnit] = useState<TimeUnit>('ms');
     const [labelPaneWidth, setLabelPaneWidth] = useState<number>(DEFAULT_LABEL_PANE_WIDTH);
 
     const chartHostRef = useRef<HTMLDivElement>(null);

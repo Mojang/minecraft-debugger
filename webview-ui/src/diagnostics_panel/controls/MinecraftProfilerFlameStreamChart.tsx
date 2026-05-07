@@ -962,8 +962,8 @@ function minecraftProfilerFlameStreamChart({
             height: Math.max(220, plotModel.rowsHeight + 48),
             marginTop: 8,
             marginBottom: 40,
-            marginLeft: plotModel.yAxisWidth,
-            marginRight: 12,
+            marginLeft: 0,
+            marginRight: plotModel.yAxisWidth,
             x: {
                 label: 'Time',
                 domain: [plotModel.range.start, plotModel.range.end],
@@ -971,7 +971,7 @@ function minecraftProfilerFlameStreamChart({
                 tickFormat: (tickValue: number) => formatTickDifference(tickValue, state.latestTick),
             },
             y: {
-                axis: 'left',
+                axis: 'right',
                 domain: [0, plotModel.rowsHeight],
                 ticks: plotModel.rowTicks.map(tick => tick.y),
                 tickSize: 0,

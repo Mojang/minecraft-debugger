@@ -75,7 +75,7 @@ type MinecraftProfilerFlameStreamChartProps = {
 };
 
 const DEFAULT_TICK_RANGE = 20 * 60;
-const DEFAULT_WINDOW_TICKS = 20 * 15;
+const DEFAULT_WINDOW_TICKS = 20 * 20;
 const ROW_HEIGHT = 72;
 const ROW_PADDING = 10;
 const MAX_DEPTH_ALL = Number.MAX_SAFE_INTEGER;

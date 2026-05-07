@@ -554,8 +554,8 @@ function formatTickDifference(tick: number, latestTick: number): string {
     return `${Math.floor(tickDifference / 20)}s`;
 }
 
-function ceilToThreeDecimalPlaces(value: number): number {
-    return Math.ceil(value * 1000) / 1000;
+function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
+    return (Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces)).toFixed(decimalPlaces);
 }
 
 function clampRatio(value: number): number {
@@ -573,15 +573,15 @@ function getParentPath(pathKey: string): string | undefined {
 
 function formatTimingValue(value: number, unit: TimeUnit): string {
     if (!Number.isFinite(value)) {
-        return unit === 'ns' ? '0 ns' : `0.000 ${unit}`;
+        return `0 ${unit}`;
     }
 
     if (unit === 'ms') {
-        return `${ceilToThreeDecimalPlaces(value / 1_000_000).toFixed(3)} ms`;
+        return `${ceilToDecimalPlace(value / 1_000_000, 3)} ms`;
     }
 
     if (unit === 'us') {
-        return `${ceilToThreeDecimalPlaces(value / 1_000).toFixed(3)} us`;
+        return `${ceilToDecimalPlace(value / 1_000, 1)} us`;
     }
 
     return `${value} ns`;

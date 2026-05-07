@@ -642,7 +642,6 @@ function minecraftProfilerFlameStreamChart({
     const [followLatest, setFollowLatest] = useState<boolean>(true);
     const [selectedRange, setSelectedRange] = useState<TimeRange | undefined>(undefined);
     const [chartWidth, setChartWidth] = useState<number>(900);
-    const [valueScaleMode, setValueScaleMode] = useState<ValueScaleMode>('normalized');
     const [timeUnit, setTimeUnit] = useState<TimeUnit>('ms');
     const [laneDisplayMode, setLaneDisplayMode] = useState<LaneDisplayMode>('range-and-midline');
     const [labelPaneWidth, setLabelPaneWidth] = useState<number>(DEFAULT_LABEL_PANE_WIDTH);
@@ -767,7 +766,7 @@ function minecraftProfilerFlameStreamChart({
         const laneNormalizedSpanByPath: Record<string, number> = {};
         const latestValuesByPath: Record<string, { low: number; mid: number; high: number }> = {};
         const laneLabelByPath: Record<string, string> = {};
-        const useMidlineOnlyNormalization = laneDisplayMode === 'midline-only' && valueScaleMode === 'normalized';
+        const useMidlineOnlyNormalization = laneDisplayMode === 'midline-only';
         let globalLaneMaxValue = 0;
 
         visibleScopes.forEach(scope => {
@@ -814,7 +813,6 @@ function minecraftProfilerFlameStreamChart({
         });
 
         const normalizedMaxValue = globalLaneMaxValue > 0 ? globalLaneMaxValue : 1;
-        const isAbsoluteScale = valueScaleMode === 'absolute';
         const rowUsableHeight = ROW_HEIGHT - ROW_PADDING * 2;
         const rowCount = visibleScopes.length;
         const rowsHeight = rowCount * ROW_HEIGHT;
@@ -868,10 +866,8 @@ function minecraftProfilerFlameStreamChart({
             const series = filteredSeriesByPath[scope.pathKey] ?? [];
             const rowLowerEdge = (rowCount - rowIndex - 1) * ROW_HEIGHT;
             const rowBase = rowLowerEdge + ROW_PADDING;
-            const laneScaleMin = isAbsoluteScale ? 0 : (laneMinByPath[scope.pathKey] ?? 0);
-            const laneScaleSpan = isAbsoluteScale
-                ? normalizedMaxValue
-                : (laneNormalizedSpanByPath[scope.pathKey] ?? MIN_NORMALIZED_LANE_SPAN);
+            const laneScaleMin = laneMinByPath[scope.pathKey] ?? 0;
+            const laneScaleSpan = laneNormalizedSpanByPath[scope.pathKey] ?? MIN_NORMALIZED_LANE_SPAN;
             const valueScale = rowUsableHeight / laneScaleSpan;
             const laneBottom = rowBase;
             const laneTop = rowBase + rowUsableHeight;
@@ -929,9 +925,7 @@ function minecraftProfilerFlameStreamChart({
             range: resolvedRange,
             rowGuides: Array.from({ length: rowCount + 1 }, (_, index) => index * ROW_HEIGHT),
             rowTicks,
-            yAxisLabel: isAbsoluteScale
-                ? `Lane timings (absolute global scale) ${timeUnit})`
-                : `Lane timings (normalized per lane) ${timeUnit})`,
+            yAxisLabel: `Lane timings (normalized per lane) ${timeUnit})`,
             yAxisWidth: Math.min(
                 220,
                 Math.max(
@@ -940,7 +934,7 @@ function minecraftProfilerFlameStreamChart({
                 ),
             ),
         };
-    }, [selectedRange, state.historyByPath, timeDomain, timeUnit, valueScaleMode, laneDisplayMode, visibleScopes]);
+    }, [selectedRange, state.historyByPath, timeDomain, timeUnit, laneDisplayMode, visibleScopes]);
 
     useEffect(() => {
         const plotContainer = plotContainerRef.current;
@@ -1090,14 +1084,6 @@ function minecraftProfilerFlameStreamChart({
         setMaxTreeDepth(0);
     }, []);
 
-    const onNormalizedScaleClicked = useCallback(() => {
-        setValueScaleMode('normalized');
-    }, []);
-
-    const onAbsoluteScaleClicked = useCallback(() => {
-        setValueScaleMode('absolute');
-    }, []);
-
     const onTimeUnitChanged = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
         const nextUnit = event.currentTarget.value;
         if (nextUnit === 'ms' || nextUnit === 'us' || nextUnit === 'ns') {
@@ -1204,23 +1190,6 @@ function minecraftProfilerFlameStreamChart({
                     </div>
                     <span className="minecraft-profiler-flame-stream-toolbar-caption">
                         {`Depth 0 - ${effectiveDepthLimit} of ${maxDepth}`}
-                    </span>
-                </div>
-
-                <div className="minecraft-profiler-flame-stream-toolbar-group minecraft-profiler-flame-stream-toolbar-group-scale">
-                    <label>Scale Mode</label>
-                    <div className="minecraft-profiler-flame-stream-range-row">
-                        <VSCodeButton disabled={valueScaleMode === 'normalized'} onClick={onNormalizedScaleClicked}>
-                            Normalized
-                        </VSCodeButton>
-                        <VSCodeButton disabled={valueScaleMode === 'absolute'} onClick={onAbsoluteScaleClicked}>
-                            Absolute
-                        </VSCodeButton>
-                    </div>
-                    <span className="minecraft-profiler-flame-stream-toolbar-caption">
-                        {valueScaleMode === 'normalized'
-                            ? 'Each lane scales to its visible min-max window.'
-                            : 'All lanes share one global vertical scale.'}
                     </span>
                 </div>
 

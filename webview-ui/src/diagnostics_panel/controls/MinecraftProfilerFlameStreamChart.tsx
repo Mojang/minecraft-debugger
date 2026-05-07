@@ -86,20 +86,20 @@ const MIN_CHART_PANE_WIDTH = 460;
 
 const DEPTH_FILL_PALETTE = [
     'var(--vscode-charts-blue)',
+    'var(--vscode-charts-yellow)',
     'var(--vscode-charts-green)',
-    'var(--vscode-charts-orange)',
-    'var(--vscode-charts-purple)',
     'var(--vscode-charts-red)',
+    'var(--vscode-charts-purple)',
 ];
 
 // Using a lighter variant of the base color for the midline to ensure visibility
 // when the low and high values are close together
 const DEPTH_MIDLINE_PALETTE = [
     'color-mix(in srgb, var(--vscode-charts-blue) 50%, white)',
+    'color-mix(in srgb, var(--vscode-charts-yellow) 50%, white)',
     'color-mix(in srgb, var(--vscode-charts-green) 50%, white)',
-    'color-mix(in srgb, var(--vscode-charts-orange) 50%, white)',
-    'color-mix(in srgb, var(--vscode-charts-purple) 50%, white)',
     'color-mix(in srgb, var(--vscode-charts-red) 50%, white)',
+    'color-mix(in srgb, var(--vscode-charts-purple) 50%, white)',
 ];
 
 const INITIAL_STATE: ProfilerState = {
@@ -995,7 +995,7 @@ function minecraftProfilerFlameStreamChart({
                               y1: 'yLow',
                               z: 'pathKey',
                               fill: (point: FlameChartPoint) => point.laneFill,
-                              fillOpacity: (point: FlameChartPoint) => 0.1 + Math.sqrt(point.laneRelativeRatio) * 0.5,
+                              fillOpacity: (point: FlameChartPoint) => 0.3 + Math.sqrt(point.laneRelativeRatio) * 0.5,
                           }),
                       ]
                     : []),

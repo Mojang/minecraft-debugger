@@ -634,7 +634,7 @@ function minecraftProfilerFlameStreamChart({
     defaultWindowTicks = DEFAULT_WINDOW_TICKS,
 }: MinecraftProfilerFlameStreamChartProps): JSX.Element {
     const [state, setState] = useState<ProfilerState>(INITIAL_STATE);
-    const [maxVisibleDepth, setMaxVisibleDepth] = useState<number>(MAX_DEPTH_ALL);
+    const [maxTreeDepth, setMaxTreeDepth] = useState<number>(MAX_DEPTH_ALL);
     const [followLatest, setFollowLatest] = useState<boolean>(true);
     const [selectedRange, setSelectedRange] = useState<TimeRange | undefined>(undefined);
     const [chartWidth, setChartWidth] = useState<number>(900);
@@ -697,12 +697,12 @@ function minecraftProfilerFlameStreamChart({
     }, [allScopesInOrder]);
 
     const effectiveDepthLimit = useMemo(() => {
-        if (maxVisibleDepth === MAX_DEPTH_ALL) {
+        if (maxTreeDepth === MAX_DEPTH_ALL) {
             return maxDepth;
         }
 
-        return Math.min(maxVisibleDepth, maxDepth);
-    }, [maxDepth, maxVisibleDepth]);
+        return Math.min(maxTreeDepth, maxDepth);
+    }, [maxDepth, maxTreeDepth]);
 
     const visibleScopes = useMemo(() => {
         return allScopesInOrder.filter(scope => scope.depth <= effectiveDepthLimit);
@@ -1034,7 +1034,7 @@ function minecraftProfilerFlameStreamChart({
 
     const onDepthSliderChanged = useCallback((event: React.FormEvent<HTMLInputElement>) => {
         const depthValue = Number.parseInt(event.currentTarget.value, 10);
-        setMaxVisibleDepth(Number.isFinite(depthValue) ? depthValue : MAX_DEPTH_ALL);
+        setMaxTreeDepth(Number.isFinite(depthValue) ? depthValue : MAX_DEPTH_ALL);
     }, []);
 
     const onRangeStartChanged = useCallback(
@@ -1082,11 +1082,11 @@ function minecraftProfilerFlameStreamChart({
     }, []);
 
     const onShowAllDepthsClicked = useCallback(() => {
-        setMaxVisibleDepth(MAX_DEPTH_ALL);
+        setMaxTreeDepth(MAX_DEPTH_ALL);
     }, []);
 
     const onShowRootDepthClicked = useCallback(() => {
-        setMaxVisibleDepth(0);
+        setMaxTreeDepth(0);
     }, []);
 
     const onNormalizedScaleClicked = useCallback(() => {
@@ -1188,7 +1188,7 @@ function minecraftProfilerFlameStreamChart({
                 </div>
 
                 <div className="minecraft-profiler-flame-stream-toolbar-group">
-                    <label htmlFor="flame-stream-depth">Visible Depth</label>
+                    <label htmlFor="flame-stream-depth">Tree Depth</label>
                     <div className="minecraft-profiler-flame-stream-range-row">
                         <input
                             id="flame-stream-depth"

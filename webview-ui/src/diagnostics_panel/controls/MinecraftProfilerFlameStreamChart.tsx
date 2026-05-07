@@ -811,7 +811,6 @@ function minecraftProfilerFlameStreamChart({
 
         const normalizedMaxValue = globalLaneMaxValue > 0 ? globalLaneMaxValue : 1;
         const isAbsoluteScale = valueScaleMode === 'absolute';
-        const yAxisTimingBands = laneDisplayMode === 'midline-only' ? 'M' : 'L/M/H';
         const rowUsableHeight = ROW_HEIGHT - ROW_PADDING * 2;
         const rowCount = visibleScopes.length;
         const rowsHeight = rowCount * ROW_HEIGHT;
@@ -892,11 +891,9 @@ function minecraftProfilerFlameStreamChart({
                 laneTop,
             );
 
-            if (laneDisplayMode === 'range-and-midline') {
-                rowTicks.push({ y: orderedTickPositions.low, label: `L ${formatTimingValue(latestLow, timeUnit)}` });
-                rowTicks.push({ y: orderedTickPositions.high, label: `H ${formatTimingValue(latestHigh, timeUnit)}` });
-            }
+            rowTicks.push({ y: orderedTickPositions.low, label: `L ${formatTimingValue(latestLow, timeUnit)}` });
             rowTicks.push({ y: orderedTickPositions.mid, label: `M ${formatTimingValue(latestMid, timeUnit)}` });
+            rowTicks.push({ y: orderedTickPositions.high, label: `H ${formatTimingValue(latestHigh, timeUnit)}` });
 
             const laneRelativeRatio = laneMetricsByPath[scope.pathKey]?.relativeRatio ?? 0;
 
@@ -929,8 +926,8 @@ function minecraftProfilerFlameStreamChart({
             rowGuides: Array.from({ length: rowCount + 1 }, (_, index) => index * ROW_HEIGHT),
             rowTicks,
             yAxisLabel: isAbsoluteScale
-                ? `Lane timings (absolute global scale, ${yAxisTimingBands}, ${timeUnit})`
-                : `Lane timings (normalized per lane, ${yAxisTimingBands}, ${timeUnit})`,
+                ? `Lane timings (absolute global scale) ${timeUnit})`
+                : `Lane timings (normalized per lane) ${timeUnit})`,
             yAxisWidth: Math.min(
                 220,
                 Math.max(

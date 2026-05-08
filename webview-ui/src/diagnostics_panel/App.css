@@ -226,24 +226,32 @@ main {
 }
 
 .minecraft-profiler-flame-stream-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  --flame-stream-control-height: 30px;
+  --flame-stream-control-padding-x: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 60px;
+  align-items: start;
 }
 
 .minecraft-profiler-flame-stream-toolbar-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 360px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .minecraft-profiler-flame-stream-toolbar-group-unit {
-  min-width: 220px;
+  min-width: 0;
 }
 
 .minecraft-profiler-flame-stream-toolbar-group-lane-display {
-  min-width: 260px;
+  min-width: 0;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group > label {
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .minecraft-profiler-flame-stream-range-row {
@@ -251,16 +259,26 @@ main {
   flex-direction: row;
   align-items: center;
   gap: 8px;
+  min-height: var(--flame-stream-control-height);
 }
 
 .minecraft-profiler-flame-stream-range-row input[type="range"] {
   flex: 1;
+  margin: 0;
+  height: var(--flame-stream-control-height);
+}
+
+.minecraft-profiler-flame-stream-range-row vscode-button {
+  height: var(--flame-stream-control-height);
+  min-width: 68px;
 }
 
 .minecraft-profiler-flame-stream-select {
-  min-width: 180px;
-  height: 28px;
-  padding: 2px 8px;
+  width: 100%;
+  min-width: 0;
+  height: var(--flame-stream-control-height);
+  padding: 0 var(--flame-stream-control-padding-x);
+  box-sizing: border-box;
   color: var(--vscode-input-foreground);
   background: var(--vscode-dropdown-background);
   border: 1px solid var(--vscode-dropdown-border);
@@ -268,6 +286,8 @@ main {
 
 .minecraft-profiler-flame-stream-toolbar-caption {
   font-size: 11px;
+  line-height: 14px;
+  min-height: 14px;
   color: var(--vscode-descriptionForeground);
 }
 

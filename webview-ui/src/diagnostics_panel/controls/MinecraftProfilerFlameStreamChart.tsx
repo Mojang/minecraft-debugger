@@ -73,8 +73,10 @@ type MinecraftProfilerFlameStreamChartProps = {
     defaultWindowTicks?: number;
 };
 
-const DEFAULT_TICK_RANGE = 20 * 60;
-const DEFAULT_WINDOW_TICKS = 20 * 20;
+const TICKS_PER_SECOND = 20;
+const MAX_WINDOW_TICKS = TICKS_PER_SECOND * 60 * 10;
+const DEFAULT_TICK_RANGE = MAX_WINDOW_TICKS;
+const DEFAULT_WINDOW_TICKS = TICKS_PER_SECOND * 30;
 const ROW_HEIGHT = 72;
 const ROW_PADDING = 10;
 const MAX_DEPTH_ALL = Number.MAX_SAFE_INTEGER;
@@ -110,6 +112,15 @@ const INITIAL_STATE: ProfilerState = {
     lastIndentTick: -1,
     indentCursor: 0,
 };
+
+const CAPTURE_WINDOW_OPTIONS: ReadonlyArray<{ label: string; ticks: number }> = [
+    { label: '5 seconds', ticks: TICKS_PER_SECOND * 5 },
+    { label: '10 seconds', ticks: TICKS_PER_SECOND * 10 },
+    { label: '30 seconds', ticks: TICKS_PER_SECOND * 30 },
+    { label: '1 minute', ticks: TICKS_PER_SECOND * 60 },
+    { label: '5 minutes', ticks: TICKS_PER_SECOND * 60 * 5 },
+    { label: '10 minutes', ticks: TICKS_PER_SECOND * 60 * 10 },
+];
 
 function scopeLabelWithDepthInformation(scope: ScopeDescriptor): string {
     return `${'  •  '.repeat(scope.depth)}${scope.label}`;
@@ -550,11 +561,11 @@ function applyEvent(previousState: ProfilerState, event: StatisticUpdatedMessage
 
 function formatTickDifference(tick: number, latestTick: number): string {
     const tickDifference = latestTick - tick;
-    if (tickDifference < 20) {
+    if (tickDifference < TICKS_PER_SECOND) {
         return 'now';
     }
 
-    return `${Math.floor(tickDifference / 20)}s`;
+    return `${Math.floor(tickDifference / TICKS_PER_SECOND)}s`;
 }
 
 function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
@@ -638,8 +649,14 @@ function minecraftProfilerFlameStreamChart({
 }: MinecraftProfilerFlameStreamChartProps): JSX.Element {
     const [state, setState] = useState<ProfilerState>(INITIAL_STATE);
     const [maxTreeDepth, setMaxTreeDepth] = useState<number>(MAX_DEPTH_ALL);
-    const [followLatest, setFollowLatest] = useState<boolean>(true);
-    const [selectedRange, setSelectedRange] = useState<TimeRange | undefined>(undefined);
+    const [windowDurationTicks, setWindowDurationTicks] = useState<number>(() => {
+        const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === defaultWindowTicks);
+        return matchingWindow?.ticks ?? DEFAULT_WINDOW_TICKS;
+    });
+    const [windowDurationLabel, setWindowDurationLabel] = useState<string>(() => {
+        const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === defaultWindowTicks);
+        return matchingWindow?.label ?? '';
+    });
     const [chartWidth, setChartWidth] = useState<number>(900);
     const [timeUnit, setTimeUnit] = useState<TimeUnit>('ms');
     const [laneDisplayMode, setLaneDisplayMode] = useState<LaneDisplayMode>('range-and-midline');
@@ -732,32 +749,19 @@ function minecraftProfilerFlameStreamChart({
         };
     }, [state.historyByPath, visibleScopes]);
 
-    useEffect(() => {
-        if (timeDomain === undefined) {
-            setSelectedRange(undefined);
-            return;
-        }
-
-        const defaultRange: TimeRange = {
-            start: Math.max(timeDomain.min, timeDomain.max - defaultWindowTicks),
-            end: timeDomain.max,
-        };
-
-        setSelectedRange(previousRange => {
-            if (previousRange === undefined || followLatest) {
-                return defaultRange;
-            }
-
-            return clampTimeRange(previousRange, timeDomain.min, timeDomain.max);
-        });
-    }, [defaultWindowTicks, followLatest, timeDomain]);
-
     const plotModel = useMemo(() => {
-        if (selectedRange === undefined || timeDomain === undefined || visibleScopes.length === 0) {
+        if (timeDomain === undefined || visibleScopes.length === 0) {
             return undefined;
         }
 
-        const resolvedRange = clampTimeRange(selectedRange, timeDomain.min, timeDomain.max);
+        const resolvedRange = clampTimeRange(
+            {
+                start: Math.max(timeDomain.min, timeDomain.max - windowDurationTicks),
+                end: timeDomain.max,
+            },
+            timeDomain.min,
+            timeDomain.max,
+        );
 
         const filteredSeriesByPath: Record<string, ScopeSample[]> = {};
         const laneMinByPath: Record<string, number> = {};
@@ -933,7 +937,7 @@ function minecraftProfilerFlameStreamChart({
                 ),
             ),
         };
-    }, [selectedRange, state.historyByPath, timeDomain, timeUnit, laneDisplayMode, visibleScopes]);
+    }, [state.historyByPath, timeDomain, timeUnit, laneDisplayMode, visibleScopes, windowDurationTicks]);
 
     useEffect(() => {
         const plotContainer = plotContainerRef.current;
@@ -1031,48 +1035,17 @@ function minecraftProfilerFlameStreamChart({
         setMaxTreeDepth(Number.isFinite(depthValue) ? depthValue : MAX_DEPTH_ALL);
     }, []);
 
-    const onRangeStartChanged = useCallback(
-        (event: React.FormEvent<HTMLInputElement>) => {
-            if (timeDomain === undefined) {
-                return;
-            }
+    const onCaptureWindowDurationChanged = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedWindowTicks = Number.parseInt(event.currentTarget.value, 10);
+        if (!Number.isFinite(selectedWindowTicks)) {
+            return;
+        }
 
-            const startValue = Number.parseInt(event.currentTarget.value, 10);
-            if (!Number.isFinite(startValue)) {
-                return;
-            }
-
-            setFollowLatest(false);
-            setSelectedRange(previousRange => {
-                const baseline = previousRange ?? { start: timeDomain.min, end: timeDomain.max };
-                return clampTimeRange({ start: startValue, end: baseline.end }, timeDomain.min, timeDomain.max);
-            });
-        },
-        [timeDomain],
-    );
-
-    const onRangeEndChanged = useCallback(
-        (event: React.FormEvent<HTMLInputElement>) => {
-            if (timeDomain === undefined) {
-                return;
-            }
-
-            const endValue = Number.parseInt(event.currentTarget.value, 10);
-            if (!Number.isFinite(endValue)) {
-                return;
-            }
-
-            setFollowLatest(false);
-            setSelectedRange(previousRange => {
-                const baseline = previousRange ?? { start: timeDomain.min, end: timeDomain.max };
-                return clampTimeRange({ start: baseline.start, end: endValue }, timeDomain.min, timeDomain.max);
-            });
-        },
-        [timeDomain],
-    );
-
-    const onFollowLatestClicked = useCallback(() => {
-        setFollowLatest(true);
+        const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === selectedWindowTicks);
+        if (matchingWindow !== undefined) {
+            setWindowDurationTicks(matchingWindow.ticks);
+            setWindowDurationLabel(matchingWindow.label);
+        }
     }, []);
 
     const onShowAllDepthsClicked = useCallback(() => {
@@ -1144,32 +1117,25 @@ function minecraftProfilerFlameStreamChart({
             <h2>{title}</h2>
             <div className="minecraft-profiler-flame-stream-toolbar">
                 <div className="minecraft-profiler-flame-stream-toolbar-group">
-                    <label htmlFor="flame-stream-range-start">Time Window</label>
+                    <label htmlFor="flame-stream-window-duration">Capture Window</label>
                     <div className="minecraft-profiler-flame-stream-range-row">
-                        <input
-                            id="flame-stream-range-start"
-                            type="range"
-                            disabled={timeDomain === undefined}
-                            min={timeDomain?.min ?? 0}
-                            max={timeDomain?.max ?? 1}
-                            value={selectedRange?.start ?? timeDomain?.min ?? 0}
-                            onInput={onRangeStartChanged}
-                        />
-                        <input
-                            id="flame-stream-range-end"
-                            type="range"
-                            disabled={timeDomain === undefined}
-                            min={timeDomain?.min ?? 0}
-                            max={timeDomain?.max ?? 1}
-                            value={selectedRange?.end ?? timeDomain?.max ?? 1}
-                            onInput={onRangeEndChanged}
-                        />
-                        <VSCodeButton onClick={onFollowLatestClicked}>Follow Latest</VSCodeButton>
+                        <select
+                            id="flame-stream-window-duration"
+                            className="minecraft-profiler-flame-stream-select"
+                            value={windowDurationTicks}
+                            onChange={onCaptureWindowDurationChanged}
+                        >
+                            {CAPTURE_WINDOW_OPTIONS.map(option => (
+                                <option key={option.ticks} value={option.ticks}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <span className="minecraft-profiler-flame-stream-toolbar-caption">
-                        {selectedRange === undefined
+                        {timeDomain === undefined
                             ? 'Waiting for profiler scope data'
-                            : `Ticks ${selectedRange.start} - ${selectedRange.end}${followLatest ? ' (auto)' : ''}`}
+                            : `Showing latest ${windowDurationLabel}`}
                     </span>
                 </div>
 

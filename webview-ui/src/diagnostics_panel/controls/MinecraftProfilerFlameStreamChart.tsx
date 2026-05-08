@@ -36,7 +36,6 @@ type TimeRange = {
     end: number;
 };
 
-type ValueScaleMode = 'normalized' | 'absolute';
 type TimeUnit = 'ms' | 'us' | 'ns';
 type LaneDisplayMode = 'range-and-midline' | 'midline-only';
 
@@ -75,32 +74,32 @@ type MinecraftProfilerFlameStreamChartProps = {
 };
 
 const DEFAULT_TICK_RANGE = 20 * 60;
-const DEFAULT_WINDOW_TICKS = 20 * 15;
+const DEFAULT_WINDOW_TICKS = 20 * 20;
 const ROW_HEIGHT = 72;
 const ROW_PADDING = 10;
 const MAX_DEPTH_ALL = Number.MAX_SAFE_INTEGER;
 const LANE_TICK_MIN_GAP = 12;
 const MIN_NORMALIZED_LANE_SPAN = 1;
-const DEFAULT_LABEL_PANE_WIDTH = 300;
+const DEFAULT_LABEL_PANE_WIDTH = 450;
 const MIN_LABEL_PANE_WIDTH = 220;
 const MIN_CHART_PANE_WIDTH = 460;
 
 const DEPTH_FILL_PALETTE = [
     'var(--vscode-charts-blue)',
+    'var(--vscode-charts-yellow)',
     'var(--vscode-charts-green)',
-    'var(--vscode-charts-orange)',
-    'var(--vscode-charts-purple)',
     'var(--vscode-charts-red)',
+    'var(--vscode-charts-purple)',
 ];
 
 // Using a lighter variant of the base color for the midline to ensure visibility
 // when the low and high values are close together
 const DEPTH_MIDLINE_PALETTE = [
     'color-mix(in srgb, var(--vscode-charts-blue) 50%, white)',
+    'color-mix(in srgb, var(--vscode-charts-yellow) 50%, white)',
     'color-mix(in srgb, var(--vscode-charts-green) 50%, white)',
-    'color-mix(in srgb, var(--vscode-charts-orange) 50%, white)',
-    'color-mix(in srgb, var(--vscode-charts-purple) 50%, white)',
     'color-mix(in srgb, var(--vscode-charts-red) 50%, white)',
+    'color-mix(in srgb, var(--vscode-charts-purple) 50%, white)',
 ];
 
 const INITIAL_STATE: ProfilerState = {
@@ -111,6 +110,10 @@ const INITIAL_STATE: ProfilerState = {
     lastIndentTick: -1,
     indentCursor: 0,
 };
+
+function scopeLabelWithDepthInformation(scope: ScopeDescriptor): string {
+    return `${'  •  '.repeat(scope.depth)}${scope.label}`;
+}
 
 function parseIndentDepth(rawIndent: string): number {
     const normalizedIndent = rawIndent.replace(/\t/g, '    ');
@@ -554,8 +557,8 @@ function formatTickDifference(tick: number, latestTick: number): string {
     return `${Math.floor(tickDifference / 20)}s`;
 }
 
-function ceilToThreeDecimalPlaces(value: number): number {
-    return Math.ceil(value * 1000) / 1000;
+function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
+    return (Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces)).toFixed(decimalPlaces);
 }
 
 function clampRatio(value: number): number {
@@ -573,15 +576,15 @@ function getParentPath(pathKey: string): string | undefined {
 
 function formatTimingValue(value: number, unit: TimeUnit): string {
     if (!Number.isFinite(value)) {
-        return unit === 'ns' ? '0 ns' : `0.000 ${unit}`;
+        return `0 ${unit}`;
     }
 
     if (unit === 'ms') {
-        return `${ceilToThreeDecimalPlaces(value / 1_000_000).toFixed(3)} ms`;
+        return `${ceilToDecimalPlace(value / 1_000_000, 3)} ms`;
     }
 
     if (unit === 'us') {
-        return `${ceilToThreeDecimalPlaces(value / 1_000).toFixed(3)} us`;
+        return `${ceilToDecimalPlace(value / 1_000, 1)} us`;
     }
 
     return `${value} ns`;
@@ -634,13 +637,12 @@ function minecraftProfilerFlameStreamChart({
     defaultWindowTicks = DEFAULT_WINDOW_TICKS,
 }: MinecraftProfilerFlameStreamChartProps): JSX.Element {
     const [state, setState] = useState<ProfilerState>(INITIAL_STATE);
-    const [maxVisibleDepth, setMaxVisibleDepth] = useState<number>(MAX_DEPTH_ALL);
+    const [maxTreeDepth, setMaxTreeDepth] = useState<number>(MAX_DEPTH_ALL);
     const [followLatest, setFollowLatest] = useState<boolean>(true);
     const [selectedRange, setSelectedRange] = useState<TimeRange | undefined>(undefined);
     const [chartWidth, setChartWidth] = useState<number>(900);
-    const [valueScaleMode, setValueScaleMode] = useState<ValueScaleMode>('normalized');
-    const [timeUnit, setTimeUnit] = useState<TimeUnit>('us');
-    const [laneDisplayMode, setLaneDisplayMode] = useState<LaneDisplayMode>('midline-only');
+    const [timeUnit, setTimeUnit] = useState<TimeUnit>('ms');
+    const [laneDisplayMode, setLaneDisplayMode] = useState<LaneDisplayMode>('range-and-midline');
     const [labelPaneWidth, setLabelPaneWidth] = useState<number>(DEFAULT_LABEL_PANE_WIDTH);
 
     const chartHostRef = useRef<HTMLDivElement>(null);
@@ -697,12 +699,12 @@ function minecraftProfilerFlameStreamChart({
     }, [allScopesInOrder]);
 
     const effectiveDepthLimit = useMemo(() => {
-        if (maxVisibleDepth === MAX_DEPTH_ALL) {
+        if (maxTreeDepth === MAX_DEPTH_ALL) {
             return maxDepth;
         }
 
-        return Math.min(maxVisibleDepth, maxDepth);
-    }, [maxDepth, maxVisibleDepth]);
+        return Math.min(maxTreeDepth, maxDepth);
+    }, [maxDepth, maxTreeDepth]);
 
     const visibleScopes = useMemo(() => {
         return allScopesInOrder.filter(scope => scope.depth <= effectiveDepthLimit);
@@ -763,7 +765,7 @@ function minecraftProfilerFlameStreamChart({
         const laneNormalizedSpanByPath: Record<string, number> = {};
         const latestValuesByPath: Record<string, { low: number; mid: number; high: number }> = {};
         const laneLabelByPath: Record<string, string> = {};
-        const useMidlineOnlyNormalization = laneDisplayMode === 'midline-only' && valueScaleMode === 'normalized';
+        const useMidlineOnlyNormalization = laneDisplayMode === 'midline-only';
         let globalLaneMaxValue = 0;
 
         visibleScopes.forEach(scope => {
@@ -810,8 +812,6 @@ function minecraftProfilerFlameStreamChart({
         });
 
         const normalizedMaxValue = globalLaneMaxValue > 0 ? globalLaneMaxValue : 1;
-        const isAbsoluteScale = valueScaleMode === 'absolute';
-        const yAxisTimingBands = laneDisplayMode === 'midline-only' ? 'M' : 'L/M/H';
         const rowUsableHeight = ROW_HEIGHT - ROW_PADDING * 2;
         const rowCount = visibleScopes.length;
         const rowsHeight = rowCount * ROW_HEIGHT;
@@ -865,10 +865,8 @@ function minecraftProfilerFlameStreamChart({
             const series = filteredSeriesByPath[scope.pathKey] ?? [];
             const rowLowerEdge = (rowCount - rowIndex - 1) * ROW_HEIGHT;
             const rowBase = rowLowerEdge + ROW_PADDING;
-            const laneScaleMin = isAbsoluteScale ? 0 : (laneMinByPath[scope.pathKey] ?? 0);
-            const laneScaleSpan = isAbsoluteScale
-                ? normalizedMaxValue
-                : (laneNormalizedSpanByPath[scope.pathKey] ?? MIN_NORMALIZED_LANE_SPAN);
+            const laneScaleMin = laneMinByPath[scope.pathKey] ?? 0;
+            const laneScaleSpan = laneNormalizedSpanByPath[scope.pathKey] ?? MIN_NORMALIZED_LANE_SPAN;
             const valueScale = rowUsableHeight / laneScaleSpan;
             const laneBottom = rowBase;
             const laneTop = rowBase + rowUsableHeight;
@@ -892,11 +890,9 @@ function minecraftProfilerFlameStreamChart({
                 laneTop,
             );
 
-            if (laneDisplayMode === 'range-and-midline') {
-                rowTicks.push({ y: orderedTickPositions.low, label: `L ${formatTimingValue(latestLow, timeUnit)}` });
-                rowTicks.push({ y: orderedTickPositions.high, label: `H ${formatTimingValue(latestHigh, timeUnit)}` });
-            }
+            rowTicks.push({ y: orderedTickPositions.low, label: `L ${formatTimingValue(latestLow, timeUnit)}` });
             rowTicks.push({ y: orderedTickPositions.mid, label: `M ${formatTimingValue(latestMid, timeUnit)}` });
+            rowTicks.push({ y: orderedTickPositions.high, label: `H ${formatTimingValue(latestHigh, timeUnit)}` });
 
             const laneRelativeRatio = laneMetricsByPath[scope.pathKey]?.relativeRatio ?? 0;
 
@@ -928,9 +924,7 @@ function minecraftProfilerFlameStreamChart({
             range: resolvedRange,
             rowGuides: Array.from({ length: rowCount + 1 }, (_, index) => index * ROW_HEIGHT),
             rowTicks,
-            yAxisLabel: isAbsoluteScale
-                ? `Lane timings (absolute global scale, ${yAxisTimingBands}, ${timeUnit})`
-                : `Lane timings (normalized per lane, ${yAxisTimingBands}, ${timeUnit})`,
+            yAxisLabel: `Lane timings (normalized per lane) ${timeUnit})`,
             yAxisWidth: Math.min(
                 220,
                 Math.max(
@@ -939,7 +933,7 @@ function minecraftProfilerFlameStreamChart({
                 ),
             ),
         };
-    }, [selectedRange, state.historyByPath, timeDomain, timeUnit, valueScaleMode, laneDisplayMode, visibleScopes]);
+    }, [selectedRange, state.historyByPath, timeDomain, timeUnit, laneDisplayMode, visibleScopes]);
 
     useEffect(() => {
         const plotContainer = plotContainerRef.current;
@@ -968,8 +962,8 @@ function minecraftProfilerFlameStreamChart({
             height: Math.max(220, plotModel.rowsHeight + 48),
             marginTop: 8,
             marginBottom: 40,
-            marginLeft: plotModel.yAxisWidth,
-            marginRight: 12,
+            marginLeft: 0,
+            marginRight: plotModel.yAxisWidth,
             x: {
                 label: 'Time',
                 domain: [plotModel.range.start, plotModel.range.end],
@@ -977,7 +971,7 @@ function minecraftProfilerFlameStreamChart({
                 tickFormat: (tickValue: number) => formatTickDifference(tickValue, state.latestTick),
             },
             y: {
-                axis: 'left',
+                axis: 'right',
                 domain: [0, plotModel.rowsHeight],
                 ticks: plotModel.rowTicks.map(tick => tick.y),
                 tickSize: 0,
@@ -1001,7 +995,7 @@ function minecraftProfilerFlameStreamChart({
                               y1: 'yLow',
                               z: 'pathKey',
                               fill: (point: FlameChartPoint) => point.laneFill,
-                              fillOpacity: (point: FlameChartPoint) => 0.1 + Math.sqrt(point.laneRelativeRatio) * 0.5,
+                              fillOpacity: (point: FlameChartPoint) => 0.3 + Math.sqrt(point.laneRelativeRatio) * 0.5,
                           }),
                       ]
                     : []),
@@ -1034,7 +1028,7 @@ function minecraftProfilerFlameStreamChart({
 
     const onDepthSliderChanged = useCallback((event: React.FormEvent<HTMLInputElement>) => {
         const depthValue = Number.parseInt(event.currentTarget.value, 10);
-        setMaxVisibleDepth(Number.isFinite(depthValue) ? depthValue : MAX_DEPTH_ALL);
+        setMaxTreeDepth(Number.isFinite(depthValue) ? depthValue : MAX_DEPTH_ALL);
     }, []);
 
     const onRangeStartChanged = useCallback(
@@ -1082,19 +1076,11 @@ function minecraftProfilerFlameStreamChart({
     }, []);
 
     const onShowAllDepthsClicked = useCallback(() => {
-        setMaxVisibleDepth(MAX_DEPTH_ALL);
+        setMaxTreeDepth(MAX_DEPTH_ALL);
     }, []);
 
     const onShowRootDepthClicked = useCallback(() => {
-        setMaxVisibleDepth(0);
-    }, []);
-
-    const onNormalizedScaleClicked = useCallback(() => {
-        setValueScaleMode('normalized');
-    }, []);
-
-    const onAbsoluteScaleClicked = useCallback(() => {
-        setValueScaleMode('absolute');
+        setMaxTreeDepth(0);
     }, []);
 
     const onTimeUnitChanged = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -1188,7 +1174,7 @@ function minecraftProfilerFlameStreamChart({
                 </div>
 
                 <div className="minecraft-profiler-flame-stream-toolbar-group">
-                    <label htmlFor="flame-stream-depth">Visible Depth</label>
+                    <label htmlFor="flame-stream-depth">Tree Depth</label>
                     <div className="minecraft-profiler-flame-stream-range-row">
                         <input
                             id="flame-stream-depth"
@@ -1203,23 +1189,6 @@ function minecraftProfilerFlameStreamChart({
                     </div>
                     <span className="minecraft-profiler-flame-stream-toolbar-caption">
                         {`Depth 0 - ${effectiveDepthLimit} of ${maxDepth}`}
-                    </span>
-                </div>
-
-                <div className="minecraft-profiler-flame-stream-toolbar-group minecraft-profiler-flame-stream-toolbar-group-scale">
-                    <label>Scale Mode</label>
-                    <div className="minecraft-profiler-flame-stream-range-row">
-                        <VSCodeButton disabled={valueScaleMode === 'normalized'} onClick={onNormalizedScaleClicked}>
-                            Normalized
-                        </VSCodeButton>
-                        <VSCodeButton disabled={valueScaleMode === 'absolute'} onClick={onAbsoluteScaleClicked}>
-                            Absolute
-                        </VSCodeButton>
-                    </div>
-                    <span className="minecraft-profiler-flame-stream-toolbar-caption">
-                        {valueScaleMode === 'normalized'
-                            ? 'Each lane scales to its visible min-max window.'
-                            : 'All lanes share one global vertical scale.'}
                     </span>
                 </div>
 
@@ -1266,12 +1235,22 @@ function minecraftProfilerFlameStreamChart({
                             key={scope.pathKey}
                             className="minecraft-profiler-flame-stream-label-row"
                             style={{
-                                paddingLeft: `${scope.depth * 16 + 8}px`,
                                 height: `${ROW_HEIGHT}px`,
                             }}
                             title={scope.displayPath}
                         >
-                            <span className="minecraft-profiler-flame-stream-label-text">{scope.label}</span>
+                            <span className="minecraft-profiler-flame-stream-label-text">
+                                {scopeLabelWithDepthInformation(scope)}
+                            </span>
+
+                            <span
+                                className="minecraft-profiler-flame-stream-label-depth-badge"
+                                style={{
+                                    backgroundColor: getDepthPaletteColor(scope.depth, DEPTH_FILL_PALETTE),
+                                }}
+                            >
+                                {scope.depth}
+                            </span>
                         </div>
                     ))}
                 </div>

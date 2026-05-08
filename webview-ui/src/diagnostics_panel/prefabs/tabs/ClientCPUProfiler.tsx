@@ -84,12 +84,10 @@ const StatsTab: TabPrefab = {
                         </div>
                     </div>
                 </div>
-                <div style={{ flexDirection: 'row', display: 'flex', width: '75%' }}>
+                <div style={{ flexDirection: 'row', display: 'flex', width: '85%' }}>
                     <MinecraftProfilerFlameStreamChart
                         title="Profiler Scopes"
                         statisticDataProvider={statisticDataProvider}
-                        tickRange={20 * 60}
-                        defaultWindowTicks={20 * 20}
                     />
                 </div>
             </div>

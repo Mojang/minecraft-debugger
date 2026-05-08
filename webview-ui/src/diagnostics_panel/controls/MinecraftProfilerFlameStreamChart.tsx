@@ -568,21 +568,6 @@ function formatTickDifference(tick: number, latestTick: number): string {
     return `${Math.floor(tickDifference / TICKS_PER_SECOND)}s`;
 }
 
-function getWindowLabel(windowTicks: number): string {
-    const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === windowTicks);
-    if (matchingWindow !== undefined) {
-        return matchingWindow.label;
-    }
-
-    const seconds = Math.max(1, Math.floor(windowTicks / TICKS_PER_SECOND));
-    if (seconds < 60) {
-        return `${seconds} seconds`;
-    }
-
-    const minutes = Math.floor(seconds / 60);
-    return minutes === 1 ? '1 minute' : `${minutes} minutes`;
-}
-
 function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
     return (Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces)).toFixed(decimalPlaces);
 }
@@ -667,6 +652,10 @@ function minecraftProfilerFlameStreamChart({
     const [windowDurationTicks, setWindowDurationTicks] = useState<number>(() => {
         const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === defaultWindowTicks);
         return matchingWindow?.ticks ?? DEFAULT_WINDOW_TICKS;
+    });
+    const [windowDurationLabel, setWindowDurationLabel] = useState<string>(() => {
+        const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === defaultWindowTicks);
+        return matchingWindow?.label ?? '';
     });
     const [chartWidth, setChartWidth] = useState<number>(900);
     const [timeUnit, setTimeUnit] = useState<TimeUnit>('ms');
@@ -1055,6 +1044,7 @@ function minecraftProfilerFlameStreamChart({
         const matchingWindow = CAPTURE_WINDOW_OPTIONS.find(option => option.ticks === selectedWindowTicks);
         if (matchingWindow !== undefined) {
             setWindowDurationTicks(matchingWindow.ticks);
+            setWindowDurationLabel(matchingWindow.label);
         }
     }, []);
 
@@ -1145,7 +1135,7 @@ function minecraftProfilerFlameStreamChart({
                     <span className="minecraft-profiler-flame-stream-toolbar-caption">
                         {timeDomain === undefined
                             ? 'Waiting for profiler scope data'
-                            : `Showing latest ${getWindowLabel(windowDurationTicks)}`}
+                            : `Showing latest ${windowDurationLabel}`}
                     </span>
                 </div>
 

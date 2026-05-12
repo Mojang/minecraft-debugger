@@ -170,9 +170,11 @@ function processChildrenStringValues(
     valueLabels: string[],
     prettifyNames: boolean,
     eventTime: number,
-    targetColumnIndex?: number,
 ): void {
     childrenStringValues.forEach(childRow => {
+        // The first childRow value is the rowName,
+        // followed by values,
+        // only process rows that have at least a value
         if (childRow.length < 2) {
             return;
         }
@@ -197,20 +199,6 @@ function processChildrenStringValues(
                   ?.replace(/([a-z])([A-Z])/g, '$1 $2')
                   ?.replace(/^./, (character: string) => character.toUpperCase()) || rowName
             : rowName.split('::').pop() || rowName;
-
-        if (targetColumnIndex !== undefined && values.length === 1 && valueLabels.length > 1) {
-            const existingValues = categoryMap.get(cleanRowName)?.values ?? Array(valueLabels.length).fill('');
-            const mergedValues = [...existingValues];
-            mergedValues[targetColumnIndex] = values[0];
-
-            categoryMap.set(cleanRowName, {
-                category: cleanRowName,
-                values: mergedValues,
-                time: eventTime,
-            });
-
-            return;
-        }
 
         categoryMap.set(cleanRowName, {
             category: cleanRowName,
@@ -343,7 +331,6 @@ export default function MinecraftGroupedStatisticTable({
                         valueLabels,
                         prettifyNames,
                         event.time || Date.now(),
-                        valueColumnIndex,
                     );
                 } else {
                     const rawStats = statisticResolver(event, []);
@@ -382,7 +369,6 @@ export default function MinecraftGroupedStatisticTable({
                             valueLabels,
                             prettifyNames,
                             event.time || Date.now(),
-                            valueColumnIndex,
                         );
                     }
                 }

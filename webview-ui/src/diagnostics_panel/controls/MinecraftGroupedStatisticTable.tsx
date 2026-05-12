@@ -374,21 +374,8 @@ export default function MinecraftGroupedStatisticTable({
                 }
 
                 const newestData = Array.from(categoryMap.values());
-                const latestTicks = new Map<string, number>();
 
-                newestData.forEach(dataPoint => {
-                    const currentTick = latestTicks.get(dataPoint.category) ?? 0;
-                    if (dataPoint.time > currentTick) {
-                        latestTicks.set(dataPoint.category, dataPoint.time);
-                    }
-                });
-
-                const filteredData = newestData.filter(dataPoint => {
-                    const latestTick = latestTicks.get(dataPoint.category);
-                    return latestTick !== undefined && latestTick === dataPoint.time;
-                });
-
-                filteredData.sort((left, right) => {
+                newestData.sort((left, right) => {
                     const compareValue = compareRows(
                         left,
                         right,
@@ -402,7 +389,7 @@ export default function MinecraftGroupedStatisticTable({
                         : -compareValue;
                 });
 
-                return filteredData;
+                return newestData;
             });
         };
 

@@ -91,7 +91,8 @@ const statsTab: TabPrefab = {
         useDebuggerRequestUpdates();
         const [lastRequestedCommand, setLastRequestedCommand] = useState<string>('');
         const [clearResetEpoch, setClearResetEpoch] = useState(0);
-        const [timingUnit, setTimingUnit] = useState<TimingUnit>('ns');
+        const [entityTimingUnit, setEntityTimingUnit] = useState<TimingUnit>('ms');
+        const [systemTimingUnit, setSystemTimingUnit] = useState<TimingUnit>('us');
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
@@ -129,16 +130,26 @@ const statsTab: TabPrefab = {
                                     : 'Press Start to Begin Profiling'}
                             </text>
                         </div>
-                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column' }}>
-                            <label htmlFor="ecs-timing-unit" style={{ marginBottom: '5px' }}>
-                                Timing Unit
+                    </div>
+                </div>
+                <div style={{ flexDirection: 'row', display: 'flex', width: '75%' }}>
+                    <div style={{ flex: 1, marginRight: '5px' }}>
+                        <div
+                            style={{
+                                marginTop: '10px',
+                                marginBottom: '10px',
+                                width: `150px`,
+                            }}
+                        >
+                            <label htmlFor="ecs-entity-timing-unit" style={{ marginBottom: '5px' }}>
+                                Entity Timing Unit
                             </label>
                             <VSCodeDropdown
-                                id="ecs-timing-unit"
-                                value={timingUnit}
+                                id="ecs-entity-timing-unit"
+                                value={entityTimingUnit}
                                 onChange={(event: Event | React.FormEvent<HTMLElement>) => {
                                     const target = event.target as HTMLSelectElement;
-                                    setTimingUnit(target.value as TimingUnit);
+                                    setEntityTimingUnit(target.value as TimingUnit);
                                 }}
                             >
                                 <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
@@ -146,15 +157,11 @@ const statsTab: TabPrefab = {
                                 <VSCodeOption value="ms">Milliseconds</VSCodeOption>
                             </VSCodeDropdown>
                         </div>
-                    </div>
-                </div>
-                <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
-                    <div style={{ flex: 1, marginRight: '5px' }}>
                         <MinecraftMultiColumnStatisticTable
                             key={`entity-timings-${selectedClient}-${clearResetEpoch}`}
                             title="Entity Timings"
                             keyLabel="Entity"
-                            valueLabels={[getTimingColumnLabel(timingUnit), 'Percent Of Total']}
+                            valueLabels={[getTimingColumnLabel(entityTimingUnit), 'Percent Of Total']}
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
@@ -199,7 +206,7 @@ const statsTab: TabPrefab = {
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                             valueFormatter={(value, columnIndex) => {
                                 if (columnIndex === 0) {
-                                    return formatTimingValue(value, timingUnit);
+                                    return formatTimingValue(value, entityTimingUnit);
                                 }
 
                                 return typeof value === 'number' ? value.toFixed(1) : String(value);
@@ -207,11 +214,34 @@ const statsTab: TabPrefab = {
                         />
                     </div>
                     <div style={{ flex: 1, marginRight: '5px' }}>
+                        <div
+                            style={{
+                                marginTop: '10px',
+                                marginBottom: '10px',
+                                width: `150px`,
+                            }}
+                        >
+                            <label htmlFor="ecs-system-timing-unit" style={{ marginBottom: '5px' }}>
+                                System Timing Unit
+                            </label>
+                            <VSCodeDropdown
+                                id="ecs-system-timing-unit"
+                                value={systemTimingUnit}
+                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                    const target = event.target as HTMLSelectElement;
+                                    setSystemTimingUnit(target.value as TimingUnit);
+                                }}
+                            >
+                                <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
+                                <VSCodeOption value="us">Microseconds</VSCodeOption>
+                                <VSCodeOption value="ms">Milliseconds</VSCodeOption>
+                            </VSCodeDropdown>
+                        </div>
                         <MinecraftMultiColumnStatisticTable
                             key={`system-timings-${selectedClient}-${clearResetEpoch}`}
                             title="System Timings"
                             keyLabel="System"
-                            valueLabels={[getTimingColumnLabel(timingUnit), 'Percent Of Total']}
+                            valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
@@ -234,7 +264,7 @@ const statsTab: TabPrefab = {
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                             valueFormatter={(value, columnIndex) => {
                                 if (columnIndex === 0) {
-                                    return formatTimingValue(value, timingUnit);
+                                    return formatTimingValue(value, systemTimingUnit);
                                 }
 
                                 return typeof value === 'number' ? value.toFixed(1) : String(value);

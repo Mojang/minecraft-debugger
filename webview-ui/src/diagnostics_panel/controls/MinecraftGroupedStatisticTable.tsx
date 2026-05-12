@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver } from '../StatisticResolver';

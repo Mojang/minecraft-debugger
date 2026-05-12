@@ -96,12 +96,6 @@ export class MinecraftDiagnosticsPanel {
             onNotification: (message: string) => {
                 window.showInformationMessage(message);
             },
-            onSchemaReceived: (schema) => {
-                this._panel.webview.postMessage({
-                    type: 'diagnostics-schema',
-                    schema,
-                });
-            },
         };
 
         this._statsTracker.addStatListener(this._statsCallback);

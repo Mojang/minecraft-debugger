@@ -4,6 +4,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { IBreakpointsHandler } from './ibreakpoints-handler';
 import { SourceMaps } from './source-maps';
 import { IDebuggeeMessageSender } from './debuggee-message-sender';
+import { BreakpointsMessage, OutgoingEventType } from './protocol-events';
 import * as path from 'path';
 
 // respond to a setBreakPointsRequest from session, deprecated.
@@ -67,8 +68,8 @@ export class BreakpointsLegacy implements IBreakpointsHandler {
 
         // send full set of breakpoints for each generated file, a message per file
         for (const [generatedRemoteLocalPath, generatedBreakpoints] of generatedBreakpointsMap) {
-            const envelope = {
-                type: 'breakpoints',
+            const envelope: BreakpointsMessage = {
+                type: OutgoingEventType.breakpoints,
                 breakpoints: {
                     path: generatedRemoteLocalPath,
                     breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined,

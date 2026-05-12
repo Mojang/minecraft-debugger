@@ -13,8 +13,17 @@ Some examples of this are:
 
 To see the current list of supported types, see [CI.yml](./.github/workflows/ci.yml#L13)'s 'Lint PR Title' task.
 
-# Tests
 
+# Build
+To build and use this extension locally, run the following commands:
+ ```
+cd webview-ui
+npm install
+```
+Go to the Run and Debug panel (Ctrl-Shift-D) and select "Run Extension". This was automatically build and run the extension.
+You can now use the extension as normal (in the new VS Code instance) by attaching to Minecraft to debug.
+
+# Tests
 Create tests using vitest.
 Follow the convention `sourcefilename.test.ts` when adding new files.
 

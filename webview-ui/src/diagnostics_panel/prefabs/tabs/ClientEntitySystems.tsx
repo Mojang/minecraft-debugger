@@ -1,10 +1,12 @@
 import { MultipleStatisticProvider } from '../../StatisticProvider';
 import { ParentNameStatResolver, StatisticType, YAxisType, createStatResolver } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from '../TabPrefab';
-import MinecraftMultiColumnStatisticTable, {
-    MinecraftMultiColumnStatisticTableSortOrder,
-    MinecraftMultiColumnStatisticTableSortType,
-} from '../../controls/MinecraftMultiColumnStatisticTable';
+import MinecraftGroupedStatisticTable, {
+    MinecraftGroupedStatisticTableColumnAggregation,
+    MinecraftGroupedStatisticTableDisplayMode,
+    MinecraftGroupedStatisticTableSortOrder,
+    MinecraftGroupedStatisticTableSortType,
+} from '../../controls/MinecraftGroupedStatisticTable';
 import {
     DebuggerRequestResultMessage,
     getDebuggerRequestResult,
@@ -24,9 +26,10 @@ const DEBUGGER_REQUEST_COMMANDS = [
 ];
 
 type TimingUnit = 'ns' | 'us' | 'ms';
+type EntityViewMode = 'flat' | 'grouped';
 
-function ceilToThreeDecimalPlaces(value: number): number {
-    return Math.ceil(value * 1000) / 1000;
+function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
+    return (Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces)).toFixed(decimalPlaces);
 }
 
 function getTimingColumnLabel(unit: TimingUnit): string {
@@ -41,22 +44,28 @@ function getTimingColumnLabel(unit: TimingUnit): string {
     return 'Time In Nanoseconds';
 }
 
-function formatTimingValue(value: string | number, unit: TimingUnit): string {
-    const numericValue = typeof value === 'number' ? value : Number(value);
-
-    if (!Number.isFinite(numericValue)) {
-        return unit === 'ns' ? '0' : '0.000';
+function formatTimingValue(value: number, unit: TimingUnit): string {
+    if (!Number.isFinite(value)) {
+        return `0 ${unit}`;
     }
 
     if (unit === 'ms') {
-        return ceilToThreeDecimalPlaces(numericValue / 1_000_000).toFixed(3);
+        return `${ceilToDecimalPlace(value / 1_000_000, 3)} ms`;
     }
 
     if (unit === 'us') {
-        return ceilToThreeDecimalPlaces(numericValue / 1_000).toFixed(3);
+        return `${ceilToDecimalPlace(value / 1_000, 1)} us`;
     }
 
-    return `${Math.ceil(numericValue)}`;
+    return `${value} ns`;
+}
+
+function formatPercentageValue(value: number): string {
+    if (!Number.isFinite(value)) {
+        return '0 %';
+    }
+
+    return `${ceilToDecimalPlace(value, 0)} %`;
 }
 
 function resolveEcsColumn(eventId: string): number | undefined {
@@ -68,6 +77,20 @@ function resolveEcsColumn(eventId: string): number | undefined {
         default:
             return undefined;
     }
+}
+
+function resolveEntityTypeGroupKey(fullName: string): string {
+    // Example fullName: "minecraft:entity_name<> (2:12345)"
+    // First remove anything after the first '<'
+    let groupName = fullName ? fullName.split('<')[0] : 'NULL';
+    // Then account for the case we don't have the '<>' and remove anything after the first '('
+    groupName = groupName ? groupName.split('(')[0] : 'NULL';
+    return groupName;
+}
+
+function extractEntityId(entityCategory: string): string | undefined {
+    const match = entityCategory.match(/[#:](\d+)\)\s*$/);
+    return match?.[1];
 }
 
 function lastResultToUserFriendlyString(lastResult: DebuggerRequestResultMessage): string {
@@ -93,6 +116,9 @@ const statsTab: TabPrefab = {
         const [clearResetEpoch, setClearResetEpoch] = useState(0);
         const [entityTimingUnit, setEntityTimingUnit] = useState<TimingUnit>('ms');
         const [systemTimingUnit, setSystemTimingUnit] = useState<TimingUnit>('us');
+        const [entityViewMode, setEntityViewMode] = useState<EntityViewMode>('grouped');
+
+        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), 'Percent Of Total'];
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
@@ -132,36 +158,68 @@ const statsTab: TabPrefab = {
                         </div>
                     </div>
                 </div>
-                <div style={{ flexDirection: 'row', display: 'flex', width: '75%' }}>
+                <div style={{ flexDirection: 'row', display: 'flex', width: '90%' }}>
                     <div style={{ flex: 1, marginRight: '5px' }}>
-                        <div
-                            style={{
-                                marginTop: '10px',
-                                marginBottom: '10px',
-                                width: `150px`,
-                            }}
-                        >
-                            <label htmlFor="ecs-entity-timing-unit" style={{ marginBottom: '5px' }}>
-                                Entity Timing Unit
-                            </label>
-                            <VSCodeDropdown
-                                id="ecs-entity-timing-unit"
-                                value={entityTimingUnit}
-                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                    const target = event.target as HTMLSelectElement;
-                                    setEntityTimingUnit(target.value as TimingUnit);
-                                }}
-                            >
-                                <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
-                                <VSCodeOption value="us">Microseconds</VSCodeOption>
-                                <VSCodeOption value="ms">Milliseconds</VSCodeOption>
-                            </VSCodeDropdown>
+                        <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                            <h2>Entity Timings</h2>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                <div className="dropdown-container">
+                                    <label htmlFor="ecs-entity-timing-unit" style={{ marginBottom: '5px' }}>
+                                        Entity Timing Unit
+                                    </label>
+                                    <VSCodeDropdown
+                                        id="ecs-entity-timing-unit"
+                                        value={entityTimingUnit}
+                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                            const target = event.target as HTMLSelectElement;
+                                            setEntityTimingUnit(target.value as TimingUnit);
+                                        }}
+                                    >
+                                        <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
+                                        <VSCodeOption value="us">Microseconds</VSCodeOption>
+                                        <VSCodeOption value="ms">Milliseconds</VSCodeOption>
+                                    </VSCodeDropdown>
+                                </div>
+                                <div className="dropdown-container">
+                                    <label htmlFor="ecs-entity-view-mode" style={{ marginBottom: '5px' }}>
+                                        Entity View
+                                    </label>
+                                    <VSCodeDropdown
+                                        id="ecs-entity-view-mode"
+                                        value={entityViewMode}
+                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                            const target = event.target as HTMLSelectElement;
+                                            setEntityViewMode(target.value as EntityViewMode);
+                                        }}
+                                    >
+                                        <VSCodeOption value="grouped">Grouped</VSCodeOption>
+                                        <VSCodeOption value="flat">Flat</VSCodeOption>
+                                    </VSCodeDropdown>
+                                </div>
+                            </div>
                         </div>
-                        <MinecraftMultiColumnStatisticTable
-                            key={`entity-timings-${selectedClient}-${clearResetEpoch}`}
+
+                        <MinecraftGroupedStatisticTable
+                            key={`entity-timings-${entityViewMode}-${selectedClient}-${clearResetEpoch}`}
                             title="Entity Timings"
+                            showTitle={false}
                             keyLabel="Entity"
-                            valueLabels={[getTimingColumnLabel(entityTimingUnit), 'Percent Of Total']}
+                            valueLabels={entityValueLabels}
+                            displayMode={
+                                entityViewMode === 'grouped'
+                                    ? MinecraftGroupedStatisticTableDisplayMode.Grouped
+                                    : MinecraftGroupedStatisticTableDisplayMode.Flat
+                            }
+                            groupColumnAggregations={[
+                                MinecraftGroupedStatisticTableColumnAggregation.Average,
+                                MinecraftGroupedStatisticTableColumnAggregation.Sum,
+                            ]}
+                            getGroupKey={resolveEntityTypeGroupKey}
+                            groupCountLabel="entities"
+                            defaultCollapsed={true}
+                            defaultSortColumn="value_1"
+                            defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
+                            defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
@@ -176,27 +234,24 @@ const statsTab: TabPrefab = {
                                     valueScalar: 1,
                                 }),
                             )}
-                            defaultSortColumn="value_1"
-                            defaultSortOrder={MinecraftMultiColumnStatisticTableSortOrder.Descending}
-                            defaultSortType={MinecraftMultiColumnStatisticTableSortType.Numerical}
-                            columnWidths={['auto', 'auto', 'auto', '70px']}
-                            prettifyNames={false}
                             rowAction={{
                                 label: '🔍',
                                 headerLabel: 'Focus',
                                 width: '70px',
                                 disabled: () => isDebuggerRequestInFlight(START_ENTITY_SYSTEM_PROFILER_REQUEST),
                                 onClick: async row => {
+                                    const entityId = extractEntityId(row.category);
+                                    if (!entityId) {
+                                        return;
+                                    }
+
                                     setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
 
-                                    // given an entity name like: minecraft:arrow<> (2#262231)
-                                    // we want to extract the numeric id at the end (262231 in this case) to send to the profiler
                                     const args = {
-                                        entityId: row.category.split('#')[1]?.replace(')', ''),
+                                        entityId,
                                     };
                                     sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, args);
 
-                                    // Wait for isDebuggerRequestInFlight to become false and then clear
                                     while (isDebuggerRequestInFlight(START_ENTITY_SYSTEM_PROFILER_REQUEST)) {
                                         await new Promise(resolve => setTimeout(resolve, 100));
                                     }
@@ -205,43 +260,53 @@ const statsTab: TabPrefab = {
                             }}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                             valueFormatter={(value, columnIndex) => {
+                                // Timing column
                                 if (columnIndex === 0) {
-                                    return formatTimingValue(value, entityTimingUnit);
+                                    return formatTimingValue(Number(value), entityTimingUnit);
+                                }
+                                // Percentage column
+                                else if (columnIndex === 1) {
+                                    return formatPercentageValue(Number(value));
                                 }
 
-                                return typeof value === 'number' ? value.toFixed(1) : String(value);
+                                return String(value);
                             }}
                         />
                     </div>
                     <div style={{ flex: 1, marginRight: '5px' }}>
-                        <div
-                            style={{
-                                marginTop: '10px',
-                                marginBottom: '10px',
-                                width: `150px`,
-                            }}
-                        >
-                            <label htmlFor="ecs-system-timing-unit" style={{ marginBottom: '5px' }}>
-                                System Timing Unit
-                            </label>
-                            <VSCodeDropdown
-                                id="ecs-system-timing-unit"
-                                value={systemTimingUnit}
-                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                    const target = event.target as HTMLSelectElement;
-                                    setSystemTimingUnit(target.value as TimingUnit);
-                                }}
-                            >
-                                <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
-                                <VSCodeOption value="us">Microseconds</VSCodeOption>
-                                <VSCodeOption value="ms">Milliseconds</VSCodeOption>
-                            </VSCodeDropdown>
+                        <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                            <h2>System Timings</h2>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                <div className="dropdown-container">
+                                    <label htmlFor="ecs-system-timing-unit" style={{ marginBottom: '5px' }}>
+                                        System Timing Unit
+                                    </label>
+                                    <VSCodeDropdown
+                                        id="ecs-system-timing-unit"
+                                        value={systemTimingUnit}
+                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                            const target = event.target as HTMLSelectElement;
+                                            setSystemTimingUnit(target.value as TimingUnit);
+                                        }}
+                                    >
+                                        <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
+                                        <VSCodeOption value="us">Microseconds</VSCodeOption>
+                                        <VSCodeOption value="ms">Milliseconds</VSCodeOption>
+                                    </VSCodeDropdown>
+                                </div>
+                            </div>
                         </div>
-                        <MinecraftMultiColumnStatisticTable
+                        <MinecraftGroupedStatisticTable
                             key={`system-timings-${selectedClient}-${clearResetEpoch}`}
                             title="System Timings"
+                            showTitle={false}
                             keyLabel="System"
                             valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
+                            displayMode={MinecraftGroupedStatisticTableDisplayMode.Flat}
+                            groupColumnAggregations={[
+                                MinecraftGroupedStatisticTableColumnAggregation.Average,
+                                MinecraftGroupedStatisticTableColumnAggregation.Sum,
+                            ]}
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
@@ -257,17 +322,21 @@ const statsTab: TabPrefab = {
                                 }),
                             )}
                             defaultSortColumn="value_1"
-                            defaultSortOrder={MinecraftMultiColumnStatisticTableSortOrder.Descending}
-                            defaultSortType={MinecraftMultiColumnStatisticTableSortType.Numerical}
-                            columnWidths={['auto', 'auto', 'auto']}
+                            defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
+                            defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
                             prettifyNames={false}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                             valueFormatter={(value, columnIndex) => {
+                                // Timing column
                                 if (columnIndex === 0) {
-                                    return formatTimingValue(value, systemTimingUnit);
+                                    return formatTimingValue(Number(value), systemTimingUnit);
+                                }
+                                // Percentage column
+                                else if (columnIndex === 1) {
+                                    return formatPercentageValue(Number(value));
                                 }
 
-                                return typeof value === 'number' ? value.toFixed(1) : String(value);
+                                return String(value);
                             }}
                         />
                     </div>

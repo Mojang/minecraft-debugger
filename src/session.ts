@@ -845,7 +845,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this._terminated = true;
 
             this.sendEvent(new TerminatedEvent());
-            this.showNotification(`Session terminated, ${reason}.`, logLevel);
+            this.showNotification(`Session terminated, ${reason}.`, logLevel, logLevel !== LogLevel.Log);
             this._homeViewProvider.setDebuggerStatus(false, this._minecraftCapabilities);
             this.dispose();
         }

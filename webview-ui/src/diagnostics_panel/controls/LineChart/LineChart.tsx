@@ -19,6 +19,15 @@ type LineChartProps = {
 
 type PlotResult = ((SVGSVGElement | HTMLElement) & Plot.Plot) | undefined;
 
+function formatYAxisTick(d: d3.NumberValue): string {
+    const n = d.valueOf();
+    if (n === 0) return '0';
+    const abs = Math.abs(n);
+    if (abs >= 1000) return `${Math.round(n)}`;
+    if (abs >= 1) return `${parseFloat(n.toPrecision(4))}`;
+    return `${parseFloat(n.toPrecision(3))}`;
+}
+
 //chart component
 export function LineChart({
     title,
@@ -94,6 +103,7 @@ export function LineChart({
                     type: yAxisStyle,
                     domain: yDomain,
                     label: yLabel,
+                    tickFormat: formatYAxisTick,
                 },
                 marks: [
                     // TODO: Clean up with factory?
@@ -142,6 +152,7 @@ export function LineChart({
                     type: 'linear',
                     domain: yDomain,
                     label: yLabel,
+                    tickFormat: formatYAxisTick,
                 },
             });
         };

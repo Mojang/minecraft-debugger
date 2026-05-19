@@ -1,9 +1,58 @@
 main {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: flex-start;
   height: 100%;
+  overflow: hidden;
+}
+
+.vertical-tabs-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+  width: 100%;
+}
+
+.vertical-tab-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--vscode-editorGroup-border);
+}
+
+.vertical-tab-item {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  font-size: var(--vscode-font-size);
+  font-family: var(--vscode-font-family);
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vertical-tab-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  color: var(--vscode-list-hoverForeground);
+}
+
+.vertical-tab-item.active {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.vertical-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .dropdown-container {

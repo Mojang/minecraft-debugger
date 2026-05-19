@@ -1,24 +1,26 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { VSCodePanelTab, VSCodePanelView, VSCodePanels } from '@vscode/webview-ui-toolkit/react';
 import { StatGroupSelectionBox } from './controls/StatGroupSelectionBox';
 import { useCallback, useEffect, useState } from 'react';
 import ReplayControls from './controls/ReplayControls';
 import { Icons } from './Icons';
 import './App.css';
 import tabPrefabs from './prefabs';
-import { TabPrefabDataSource } from './prefabs/TabPrefab';
+import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from './prefabs/TabPrefab';
 import { handleDebuggerRequestResult } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
+
+// Wraps each tab's content() as a proper React component so that any hooks
+// inside the content function are correctly isolated and not called conditionally
+// from the parent App component (which would violate the Rules of Hooks).
+function TabView({ tabPrefab, params }: { tabPrefab: TabPrefab; params: TabPrefabParams }) {
+    return <>{tabPrefab.content(params)}</>;
+}
 
 declare global {
     interface Window {
         initialParams: any;
     }
-}
-
-interface VSCodePanelsChangeEvent extends Event {
-    target: EventTarget & { activeid: string };
 }
 
 const onRestart = () => {
@@ -46,9 +48,10 @@ const onRunCommand = (command: string) => {
 };
 
 function App() {
+    const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.name));
     const [selectedPlugin, setSelectedPlugin] = useState<string>('');
     const [selectedClient, setSelectedClient] = useState<string>('');
-    const [currentTab, setCurrentTab] = useState<string>();
+    const [currentTab, setCurrentTab] = useState<string>('tab-0');
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
 
@@ -60,12 +63,7 @@ function App() {
         setSelectedClient(() => clientSelectionId);
     }, []);
 
-    const handlePanelChange = useCallback((event: VSCodePanelsChangeEvent): void => {
-        const newTabId = event.target.activeid;
-        if (newTabId) {
-            setCurrentTab(newTabId);
-        }
-    }, []);
+
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -98,38 +96,50 @@ function App() {
                     svgIcons={Icons}
                 />
             )}
-            <VSCodePanels activeid={currentTab} onChange={event => handlePanelChange(event as VSCodePanelsChangeEvent)}>
-                {tabPrefabs.map((tabPrefab, index) => (
-                    <VSCodePanelTab id={`tab-${index}`}>{tabPrefab.name}</VSCodePanelTab>
-                ))}
-                {tabPrefabs.map((tabPrefab, index) => (
-                    <VSCodePanelView id={`view-${index}`} style={{ flexDirection: 'column' }}>
-                        {tabPrefab.dataSource === TabPrefabDataSource.Client ? (
-                            <StatGroupSelectionBox
-                                labelName="Client"
-                                statParentId="client_stats"
-                                onChange={handleClientSelection}
+            <div className="vertical-tabs-container">
+                <div className="vertical-tab-list">
+                    {sortedTabPrefabs.map((tabPrefab, index) => (
+                        <button
+                            key={`tab-${index}`}
+                            className={`vertical-tab-item${currentTab === `tab-${index}` ? ' active' : ''}`}
+                            onClick={() => setCurrentTab(`tab-${index}`)}
+                        >
+                            {tabPrefab.name}
+                        </button>
+                    ))}
+                </div>
+                <div className="vertical-tab-content">
+                    {sortedTabPrefabs.map((tabPrefab, index) => (
+                        <div
+                            key={`view-${index}`}
+                            style={{ display: currentTab === `tab-${index}` ? 'flex' : 'none', flexDirection: 'column', flex: 1 }}
+                        >
+                            {tabPrefab.dataSource === TabPrefabDataSource.Client ? (
+                                <StatGroupSelectionBox
+                                    labelName="Client"
+                                    statParentId="client_stats"
+                                    onChange={handleClientSelection}
+                                />
+                            ) : (
+                                <div />
+                            )}
+                            {tabPrefab.dataSource === TabPrefabDataSource.ServerScript ? (
+                                <StatGroupSelectionBox
+                                    labelName="Script Plugin"
+                                    statParentId="handle_counts"
+                                    onChange={handlePluginSelection}
+                                />
+                            ) : (
+                                <div />
+                            )}
+                            <TabView
+                                tabPrefab={tabPrefab}
+                                params={{ selectedClient, selectedPlugin, onRunCommand }}
                             />
-                        ) : (
-                            <div />
-                        )}
-                        {tabPrefab.dataSource === TabPrefabDataSource.ServerScript ? (
-                            <StatGroupSelectionBox
-                                labelName="Script Plugin"
-                                statParentId="handle_counts"
-                                onChange={handlePluginSelection}
-                            />
-                        ) : (
-                            <div />
-                        )}
-                        {tabPrefab.content({
-                            selectedClient,
-                            selectedPlugin,
-                            onRunCommand,
-                        })}
-                    </VSCodePanelView>
-                ))}
-            </VSCodePanels>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </main>
     );
 }

@@ -1,4 +1,5 @@
-import { MultipleStatisticProvider } from '../../StatisticProvider';
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { ParentNameStatResolver, StatisticType, YAxisType, createStatResolver } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from '../TabPrefab';
 import MinecraftGroupedStatisticTable, {
@@ -14,7 +15,8 @@ import {
     sendDebuggerRequest,
     useDebuggerRequestUpdates,
 } from '../../utilities/useDebuggerRequests';
-import { useState } from 'react';
+import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
+import { useEffect, useMemo, useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 
 const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
@@ -27,6 +29,9 @@ const DEBUGGER_REQUEST_COMMANDS = [
 
 type TimingUnit = 'ns' | 'us' | 'ms';
 type EntityViewMode = 'flat' | 'grouped';
+type SystemViewMode = 'flat' | 'grouped';
+
+const UNCATEGORIZED_SYSTEM_GROUP = 'INVALID CATEGORY';
 
 function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
     return (Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces)).toFixed(decimalPlaces);
@@ -93,6 +98,15 @@ function extractEntityId(entityCategory: string): string | undefined {
     return match?.[1];
 }
 
+function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap: Map<string, string>): string {
+    // Example fullName: "System Name (4)"
+    // Take anything before the first '('
+    const indexAndBracket = fullName ? fullName.split('(')[1] : undefined;
+    const index = indexAndBracket ? indexAndBracket.split(')')[0].trim() : undefined;
+    // Then lookup the category name from the legend map if it exists
+    return index ? systemCategoryLegendMap.get(index) || UNCATEGORIZED_SYSTEM_GROUP : UNCATEGORIZED_SYSTEM_GROUP;
+}
+
 function lastResultToUserFriendlyString(lastResult: DebuggerRequestResultMessage): string {
     if (lastResult.error) {
         return `Error: ${lastResult.error}`;
@@ -107,7 +121,7 @@ function lastResultToUserFriendlyString(lastResult: DebuggerRequestResultMessage
     }
 }
 
-const statsTab: TabPrefab = {
+const StatsTab: TabPrefab = {
     name: 'Client - Entity Systems',
     dataSource: TabPrefabDataSource.Client,
     content: ({ selectedClient }: TabPrefabParams) => {
@@ -117,6 +131,47 @@ const statsTab: TabPrefab = {
         const [entityTimingUnit, setEntityTimingUnit] = useState<TimingUnit>('ms');
         const [systemTimingUnit, setSystemTimingUnit] = useState<TimingUnit>('us');
         const [entityViewMode, setEntityViewMode] = useState<EntityViewMode>('grouped');
+        const [systemViewMode, setSystemViewMode] = useState<SystemViewMode>('grouped');
+        const [systemCategoryLegendMap, setSystemCategoryLegendMap] = useState<Map<string, string>>(new Map());
+        const categoriesProvider = useMemo(() => {
+            if (!selectedClient) {
+                return undefined;
+            }
+
+            return new MultipleStatisticProvider({
+                statisticParentId: new RegExp(`${selectedClient}_client_ecs_categories`),
+            });
+        }, [selectedClient]);
+
+        useEffect(() => {
+            setSystemCategoryLegendMap(new Map());
+
+            if (!selectedClient || !categoriesProvider) {
+                return;
+            }
+
+            const eventHandler = (event: StatisticUpdatedMessage): void => {
+                const nameAndIndex = event.group_name;
+                const name = nameAndIndex.split('(')[0].trim();
+                const index = nameAndIndex.split('(')[1]?.split(')')[0].trim();
+
+                if (index && name) {
+                    setSystemCategoryLegendMap(prev => {
+                        const newMap = new Map(prev);
+                        newMap.set(index, name);
+                        return newMap;
+                    });
+                }
+            };
+
+            categoriesProvider.registerWindowListener(window);
+            categoriesProvider.addSubscriber(eventHandler);
+
+            return () => {
+                categoriesProvider.removeSubscriber(eventHandler);
+                categoriesProvider.unregisterWindowListener(window);
+            };
+        }, [categoriesProvider, selectedClient]);
 
         const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), 'Percent Of Total'];
 
@@ -223,7 +278,7 @@ const statsTab: TabPrefab = {
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
-                                    statisticParentId: new RegExp(`.*${selectedClient}_client_ecs_entities`),
+                                    statisticParentId: new RegExp(`${selectedClient}_client_ecs_entities`),
                                 })
                             }
                             statisticResolver={ParentNameStatResolver(
@@ -294,15 +349,40 @@ const statsTab: TabPrefab = {
                                         <VSCodeOption value="ms">Milliseconds</VSCodeOption>
                                     </VSCodeDropdown>
                                 </div>
+                                <div className="dropdown-container">
+                                    <label htmlFor="ecs-system-view-mode" style={{ marginBottom: '5px' }}>
+                                        System View
+                                    </label>
+                                    <VSCodeDropdown
+                                        id="ecs-system-view-mode"
+                                        value={systemViewMode}
+                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                            const target = event.target as HTMLSelectElement;
+                                            setSystemViewMode(target.value as SystemViewMode);
+                                        }}
+                                    >
+                                        <VSCodeOption value="grouped">Grouped</VSCodeOption>
+                                        <VSCodeOption value="flat">Flat</VSCodeOption>
+                                    </VSCodeDropdown>
+                                </div>
                             </div>
                         </div>
                         <MinecraftGroupedStatisticTable
-                            key={`system-timings-${selectedClient}-${clearResetEpoch}`}
+                            key={`system-timings-${systemViewMode}-${selectedClient}-${clearResetEpoch}`}
                             title="System Timings"
                             showTitle={false}
                             keyLabel="System"
                             valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
-                            displayMode={MinecraftGroupedStatisticTableDisplayMode.Flat}
+                            displayMode={
+                                systemViewMode === 'grouped'
+                                    ? MinecraftGroupedStatisticTableDisplayMode.Grouped
+                                    : MinecraftGroupedStatisticTableDisplayMode.Flat
+                            }
+                            getGroupKey={(fullName: string) =>
+                                resolveSystemCategoryGroupKey(fullName, systemCategoryLegendMap)
+                            }
+                            groupCountLabel="systems"
+                            defaultCollapsed={true}
                             groupColumnAggregations={[
                                 MinecraftGroupedStatisticTableColumnAggregation.Average,
                                 MinecraftGroupedStatisticTableColumnAggregation.Sum,
@@ -310,7 +390,7 @@ const statsTab: TabPrefab = {
                             statisticDataProvider={
                                 new MultipleStatisticProvider({
                                     statisticIds: ['time_in_ns', 'percent_of_total'],
-                                    statisticParentId: new RegExp(`.*${selectedClient}_client_ecs_systems`),
+                                    statisticParentId: new RegExp(`${selectedClient}_client_ecs_systems`),
                                 })
                             }
                             statisticResolver={ParentNameStatResolver(
@@ -346,4 +426,4 @@ const statsTab: TabPrefab = {
     },
 };
 
-export default statsTab;
+export default StatsTab;

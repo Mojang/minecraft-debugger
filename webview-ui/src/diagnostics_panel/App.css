@@ -267,6 +267,19 @@ main {
   text-align: right;
 }
 
+.minecraft-entity-system-count-badge {
+  display: flex;
+  align-items: center;
+  height: 57px; /* Forces the Entity and Systems charts to be visually aligned */
+}
+
+.minecraft-entity-system-count-badge-content {
+  font-style: italic;
+  padding: 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 33%, var(--vscode-editor-background));
+}
+
 .minecraft-grouped-statistic-table-root {
   width: 100%;
 }
@@ -320,6 +333,12 @@ main {
   width: 90px;
 }
 
+.minecraft-grouped-statistic-table-grid-select {
+  text-align: center !important;
+  width: 72px;
+  padding: 6px 4px !important;
+}
+
 .minecraft-grouped-statistic-table-grid-pin {
   text-align: center !important;
   width: 34px;
@@ -361,6 +380,10 @@ main {
 
 .minecraft-grouped-statistic-row-pinned {
   background: color-mix(in srgb, var(--vscode-list-highlightForeground) 12%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-row-selected {
+  box-shadow: inset 3px 0 0 var(--vscode-focusBorder);
 }
 
 .minecraft-profiler-flame-stream-root {

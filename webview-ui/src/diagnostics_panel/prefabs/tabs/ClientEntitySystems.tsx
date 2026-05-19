@@ -1,3 +1,5 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import { ParentNameStatResolver, StatisticType, YAxisType, createStatResolver } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from '../TabPrefab';
 import MinecraftGroupedStatisticTable, {

@@ -320,8 +320,18 @@ main {
   width: 90px;
 }
 
+.minecraft-grouped-statistic-table-grid-pin {
+  text-align: center !important;
+  width: 34px;
+  padding: 6px 4px !important;
+}
+
 .minecraft-grouped-statistic-group-row {
   background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 33%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-group-row-pinned {
+  background: color-mix(in srgb, var(--vscode-list-highlightForeground) 33%, var(--vscode-editor-background));
 }
 
 .minecraft-grouped-statistic-group-key {
@@ -347,6 +357,10 @@ main {
 .minecraft-grouped-statistic-child-key {
   display: inline-block;
   padding-left: 18px;
+}
+
+.minecraft-grouped-statistic-row-pinned {
+  background: color-mix(in srgb, var(--vscode-list-highlightForeground) 12%, var(--vscode-editor-background));
 }
 
 .minecraft-profiler-flame-stream-root {

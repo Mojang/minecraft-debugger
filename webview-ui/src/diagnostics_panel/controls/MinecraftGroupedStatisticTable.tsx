@@ -319,31 +319,28 @@ export default function MinecraftGroupedStatisticTable({
         setSelectedSortColumn(target.value);
     }, []);
 
+    // Helper function to toggle values in a Set, returning a new Set instance
+    // If the set already contains the key, it will be removed.
+    // If it does not contain the key, it will be added.
+    const handleSetToggle = useCallback((set: Set<string>, key: string): Set<string> => {
+        const updated = new Set(set);
+        if (updated.has(key)) {
+            updated.delete(key);
+        } else {
+            updated.add(key);
+        }
+        return updated;
+    }, []);
+
     const onToggleGroup = useCallback((groupKey: string): void => {
         setExpandedGroups(previousExpandedGroups => {
-            const updated = new Set(previousExpandedGroups);
-
-            if (updated.has(groupKey)) {
-                updated.delete(groupKey);
-            } else {
-                updated.add(groupKey);
-            }
-
-            return updated;
+            return handleSetToggle(previousExpandedGroups, groupKey);
         });
     }, []);
 
     const onTogglePinnedGroup = useCallback((groupKey: string): void => {
         setPinnedGroups(previousPinnedGroups => {
-            const updated = new Set(previousPinnedGroups);
-
-            if (updated.has(groupKey)) {
-                updated.delete(groupKey);
-            } else {
-                updated.add(groupKey);
-            }
-
-            return updated;
+            return handleSetToggle(previousPinnedGroups, groupKey);
         });
     }, []);
 
@@ -351,15 +348,7 @@ export default function MinecraftGroupedStatisticTable({
         const rowPinKey = getRowPinKey(groupKey, rowCategory);
 
         setPinnedRows(previousPinnedRows => {
-            const updated = new Set(previousPinnedRows);
-
-            if (updated.has(rowPinKey)) {
-                updated.delete(rowPinKey);
-            } else {
-                updated.add(rowPinKey);
-            }
-
-            return updated;
+            return handleSetToggle(previousPinnedRows, rowPinKey);
         });
     }, []);
 

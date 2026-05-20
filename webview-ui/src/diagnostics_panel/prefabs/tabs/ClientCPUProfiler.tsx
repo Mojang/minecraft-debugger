@@ -56,7 +56,7 @@ const StatsTab: TabPrefab = {
 
         return (
             <div>
-                <div style={{ flexDirection: 'column', display: 'flex', width: '25%' }}>
+                <div style={{ flexDirection: 'column', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, margin: '5px' }}>
                         <h2>CPU Profiler Controls</h2>
                         {DEBUGGER_REQUEST_COMMANDS.map(command => {
@@ -84,7 +84,7 @@ const StatsTab: TabPrefab = {
                         </div>
                     </div>
                 </div>
-                <div style={{ flexDirection: 'row', display: 'flex', width: '85%' }}>
+                <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
                     <MinecraftProfilerFlameStreamChart
                         title="Profiler Scopes"
                         statisticDataProvider={statisticDataProvider}

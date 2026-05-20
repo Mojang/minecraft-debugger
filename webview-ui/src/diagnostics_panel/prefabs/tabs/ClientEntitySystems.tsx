@@ -181,7 +181,7 @@ const StatsTab: TabPrefab = {
 
         return (
             <div>
-                <div style={{ flexDirection: 'column', display: 'flex', width: '25%' }}>
+                <div style={{ flexDirection: 'column', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, margin: '5px' }}>
                         <h2>Entity System Profiler Controls</h2>
                         {DEBUGGER_REQUEST_COMMANDS.map(command => {
@@ -213,7 +213,7 @@ const StatsTab: TabPrefab = {
                         </div>
                     </div>
                 </div>
-                <div style={{ flexDirection: 'row', display: 'flex', width: '90%' }}>
+                <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, marginRight: '5px' }}>
                         <div style={{ marginTop: '10px', marginBottom: '10px' }}>
                             <h2>Entity Timings</h2>

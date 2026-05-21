@@ -406,7 +406,7 @@ const StatsTab: TabPrefab = {
                             title="Entity Timings"
                             showTitle={false}
                             selectionEnabled={selectionMode === 'filter'}
-                            selectionHeaderLabel="Focus"
+                            selectionHeaderLabel="Filter To"
                             onSelectionChange={selectionMode === 'filter' ? handleEntitySelectionChange : undefined}
                             keyLabel="Entity"
                             valueLabels={entityValueLabels}

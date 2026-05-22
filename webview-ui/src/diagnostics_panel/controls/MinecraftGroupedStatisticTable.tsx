@@ -1128,7 +1128,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
                 <table className="minecraft-grouped-statistic-table-grid">
                     <thead>
                         <tr>
-                            <th className="minecraft-grouped-statistic-table-grid-pin" aria-label="Pinned"></th>
+                            <th className="minecraft-grouped-statistic-table-grid-pin">Pin</th>
                             {selectionEnabled && (
                                 <th className="minecraft-grouped-statistic-table-grid-select">
                                     {selectionHeaderLabel}

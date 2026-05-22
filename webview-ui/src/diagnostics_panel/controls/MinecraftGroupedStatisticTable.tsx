@@ -781,84 +781,40 @@ const MinecraftGroupedStatisticTable = forwardRef<
             validRowKeys.add(getRowPinKey(groupKey, row.category));
         });
 
-        setPinnedGroups(previousPinnedGroups => {
+        const handleUpdateSet = (set: Set<string>, validKeys: Set<string>): Set<string> => {
             let changed = false;
             const updated = new Set<string>();
 
-            previousPinnedGroups.forEach(groupKey => {
-                if (validGroupKeys.has(groupKey)) {
-                    updated.add(groupKey);
+            set.forEach(key => {
+                if (validKeys.has(key)) {
+                    updated.add(key);
                     return;
                 }
 
                 changed = true;
             });
 
-            return changed ? updated : previousPinnedGroups;
+            return changed ? updated : set;
+        };
+
+        setPinnedGroups(previousPinnedGroups => {
+            return handleUpdateSet(previousPinnedGroups, validGroupKeys);
         });
 
         setPinnedRows(previousPinnedRows => {
-            let changed = false;
-            const updated = new Set<string>();
-
-            previousPinnedRows.forEach(rowPinKey => {
-                if (validRowKeys.has(rowPinKey)) {
-                    updated.add(rowPinKey);
-                    return;
-                }
-
-                changed = true;
-            });
-
-            return changed ? updated : previousPinnedRows;
+            return handleUpdateSet(previousPinnedRows, validRowKeys);
         });
 
         setSelectedGroups(previousSelectedGroups => {
-            let changed = false;
-            const updated = new Set<string>();
-
-            previousSelectedGroups.forEach(groupKey => {
-                if (validGroupKeys.has(groupKey)) {
-                    updated.add(groupKey);
-                    return;
-                }
-
-                changed = true;
-            });
-
-            return changed ? updated : previousSelectedGroups;
+            return handleUpdateSet(previousSelectedGroups, validGroupKeys);
         });
 
         setSelectedRows(previousSelectedRows => {
-            let changed = false;
-            const updated = new Set<string>();
-
-            previousSelectedRows.forEach(rowKey => {
-                if (validRowKeys.has(rowKey)) {
-                    updated.add(rowKey);
-                    return;
-                }
-
-                changed = true;
-            });
-
-            return changed ? updated : previousSelectedRows;
+            return handleUpdateSet(previousSelectedRows, validRowKeys);
         });
 
         setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
-            let changed = false;
-            const updated = new Set<string>();
-
-            previousDeselectedRows.forEach(rowKey => {
-                if (validRowKeys.has(rowKey)) {
-                    updated.add(rowKey);
-                    return;
-                }
-
-                changed = true;
-            });
-
-            return changed ? updated : previousDeselectedRows;
+            return handleUpdateSet(previousDeselectedRows, validRowKeys);
         });
     }, [data, groupKeyResolver]);
 

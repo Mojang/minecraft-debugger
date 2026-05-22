@@ -11,7 +11,8 @@ import { StatMessageModel } from './stats/stats-provider';
 // 4 - mc can require a passcode to connect
 // 5 - debugger can take mc script profiler captures
 // 6 - breakpoints as request, MC can reject
-// 7 - New serialization tech (use Cereal)
+// 7 - support for debugger requests, MC can reject or respond with args
+// 8 - New serialization tech (use Cereal)
 
 export enum ProtocolVersion {
     _Unknown = 0,
@@ -21,7 +22,8 @@ export enum ProtocolVersion {
     SupportPasscode = 4,
     SupportProfilerCaptures = 5,
     SupportBreakpointsAsRequest = 6,
-    SupportCerealSerialization = 7,
+    SupportDebuggerRequests = 7,
+    SupportCerealSerialization = 8,
 }
 
 export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportCerealSerialization;

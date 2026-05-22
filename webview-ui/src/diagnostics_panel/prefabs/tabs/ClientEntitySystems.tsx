@@ -360,6 +360,13 @@ const StatsTab: TabPrefab = {
                                         onChange={(event: Event | React.FormEvent<HTMLElement>) => {
                                             const target = event.target as HTMLSelectElement;
                                             setSelectionMode(target.value as EntitySelectionMode);
+                                            if (target.value !== 'single-entity') {
+                                                // send a new start event to get back to a clean state
+                                                setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
+                                                sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, {
+                                                    entityIds: [],
+                                                });
+                                            }
                                         }}
                                     >
                                         <VSCodeOption value="force-all">All Entities</VSCodeOption>

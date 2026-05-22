@@ -1,6 +1,6 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver } from '../StatisticResolver';
 import { VSCodeButton, VSCodeCheckbox, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
@@ -29,7 +29,7 @@ export enum MinecraftGroupedStatisticTableColumnAggregation {
     Sum = 'sum',
 }
 
-type GroupedStatisticTableRow = {
+export type GroupedStatisticTableRow = {
     category: string;
     values: (string | number)[];
     time: number;
@@ -56,6 +56,17 @@ type GroupedStatisticTableRowAction = {
 
 type NonConsolidatedColumnResolver = (event: StatisticUpdatedMessage, valueLabels: string[]) => number | undefined;
 
+export type MinecraftGroupedStatisticTableSelectionSnapshot = {
+    selectedGroupKeys: string[];
+    selectedRowKeys: string[];
+    resolvedSelectedRows: GroupedStatisticTableRow[];
+};
+
+export type MinecraftGroupedStatisticTableHandle = {
+    getSelectionSnapshot: () => MinecraftGroupedStatisticTableSelectionSnapshot;
+    clearSelection: () => void;
+};
+
 type MinecraftGroupedStatisticTableProps = {
     title: string;
     showTitle?: boolean;
@@ -75,6 +86,10 @@ type MinecraftGroupedStatisticTableProps = {
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver;
     valueFormatter?: (value: string | number, columnIndex: number) => string;
     prettifyNames?: boolean;
+    selectionEnabled?: boolean;
+    selectionHeaderLabel?: string;
+    defaultSelectAllGroups?: boolean;
+    onSelectionChange?: (snapshot: MinecraftGroupedStatisticTableSelectionSnapshot) => void;
 };
 
 const sortOrderOptions = [
@@ -86,6 +101,8 @@ const sortTypeOptions = [
     { id: MinecraftGroupedStatisticTableSortType.Alphabetical, label: 'Alphabetical' },
     { id: MinecraftGroupedStatisticTableSortType.Numerical, label: 'Numerical' },
 ];
+
+const NON_CONSOLIDATED_STALE_TICK_THRESHOLD = 3;
 
 function getColumnIndexFromSortColumn(sortColumn: string, valueLabelsLength: number): number | undefined {
     const columnIndex = parseInt(sortColumn.replace('value_', ''));
@@ -223,6 +240,7 @@ function processChildrenStringValues(
     valueLabels: string[],
     prettifyNames: boolean,
     eventTime: number,
+    observedCategories?: Set<string>,
 ): void {
     childrenStringValues.forEach(childRow => {
         // The first childRow value is the rowName,
@@ -258,29 +276,40 @@ function processChildrenStringValues(
             values,
             time: eventTime,
         });
+        observedCategories?.add(cleanRowName);
     });
 }
 
-export default function MinecraftGroupedStatisticTable({
-    title,
-    showTitle = true,
-    statisticDataProvider,
-    statisticResolver,
-    keyLabel,
-    valueLabels,
-    getGroupKey,
-    displayMode = MinecraftGroupedStatisticTableDisplayMode.Grouped,
-    groupColumnAggregations = [],
-    groupCountLabel = '',
-    defaultCollapsed = true,
-    defaultSortOrder = MinecraftGroupedStatisticTableSortOrder.Descending,
-    defaultSortType = MinecraftGroupedStatisticTableSortType.Numerical,
-    defaultSortColumn,
-    rowAction,
-    nonConsolidatedColumnResolver,
-    valueFormatter,
-    prettifyNames = false,
-}: MinecraftGroupedStatisticTableProps): JSX.Element {
+const MinecraftGroupedStatisticTable = forwardRef<
+    MinecraftGroupedStatisticTableHandle,
+    MinecraftGroupedStatisticTableProps
+>(function MinecraftGroupedStatisticTable(
+    {
+        title,
+        showTitle = true,
+        statisticDataProvider,
+        statisticResolver,
+        keyLabel,
+        valueLabels,
+        getGroupKey,
+        displayMode = MinecraftGroupedStatisticTableDisplayMode.Grouped,
+        groupColumnAggregations = [],
+        groupCountLabel = '',
+        defaultCollapsed = true,
+        defaultSortOrder = MinecraftGroupedStatisticTableSortOrder.Descending,
+        defaultSortType = MinecraftGroupedStatisticTableSortType.Numerical,
+        defaultSortColumn,
+        rowAction,
+        nonConsolidatedColumnResolver,
+        valueFormatter,
+        prettifyNames = false,
+        selectionEnabled = false,
+        selectionHeaderLabel = 'Selected',
+        defaultSelectAllGroups = false,
+        onSelectionChange,
+    }: MinecraftGroupedStatisticTableProps,
+    ref,
+): JSX.Element {
     const sortColumnOptions = useMemo(
         () => [
             { id: MinecraftGroupedStatisticTableSortColumn.Key, label: keyLabel },
@@ -299,8 +328,81 @@ export default function MinecraftGroupedStatisticTable({
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const [pinnedGroups, setPinnedGroups] = useState<Set<string>>(new Set());
     const [pinnedRows, setPinnedRows] = useState<Set<string>>(new Set());
+    const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
+    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+    const [deselectedRowsInSelectedGroups, setDeselectedRowsInSelectedGroups] = useState<Set<string>>(new Set());
+    const [hasInitializedDefaultSelection, setHasInitializedDefaultSelection] = useState<boolean>(false);
+    const nonConsolidatedTickCounterRef = useRef(0);
+    const nonConsolidatedLastEventTimeRef = useRef<number | undefined>(undefined);
+    const nonConsolidatedLastSeenTickByCategoryRef = useRef<Map<string, number>>(new Map());
     const isGroupedMode = displayMode === MinecraftGroupedStatisticTableDisplayMode.Grouped;
     const groupKeyResolver = getGroupKey ?? ((rowCategory: string) => rowCategory);
+
+    const groupedRowsByKey = useMemo((): Map<string, GroupedStatisticTableRow[]> => {
+        const groupedRows = new Map<string, GroupedStatisticTableRow[]>();
+
+        data.forEach(row => {
+            const groupKey = groupKeyResolver(row.category);
+            const existing = groupedRows.get(groupKey);
+
+            if (existing) {
+                existing.push(row);
+                return;
+            }
+
+            groupedRows.set(groupKey, [row]);
+        });
+
+        return groupedRows;
+    }, [data, groupKeyResolver]);
+
+    const rowKeysByGroup = useMemo((): Map<string, string[]> => {
+        const rowKeys = new Map<string, string[]>();
+
+        groupedRowsByKey.forEach((rows, groupKey) => {
+            rowKeys.set(
+                groupKey,
+                rows.map(row => getRowPinKey(groupKey, row.category)),
+            );
+        });
+
+        return rowKeys;
+    }, [groupedRowsByKey]);
+
+    const rowLookup = useMemo((): Map<string, GroupedStatisticTableRow> => {
+        const lookup = new Map<string, GroupedStatisticTableRow>();
+
+        groupedRowsByKey.forEach((rows, groupKey) => {
+            rows.forEach(row => {
+                lookup.set(getRowPinKey(groupKey, row.category), row);
+            });
+        });
+
+        return lookup;
+    }, [groupedRowsByKey]);
+
+    const rowGroupLookup = useMemo((): Map<string, string> => {
+        const lookup = new Map<string, string>();
+
+        groupedRowsByKey.forEach((rows, groupKey) => {
+            rows.forEach(row => {
+                lookup.set(getRowPinKey(groupKey, row.category), groupKey);
+            });
+        });
+
+        return lookup;
+    }, [groupedRowsByKey]);
+
+    const isRowSelected = useCallback(
+        (groupKey: string, rowPinKey: string): boolean => {
+            if (selectedGroups.has(groupKey)) {
+                return !deselectedRowsInSelectedGroups.has(rowPinKey);
+            }
+
+            return selectedRows.has(rowPinKey);
+        },
+        [deselectedRowsInSelectedGroups, selectedGroups, selectedRows],
+    );
 
     const controlIdBase = useId().replace(/:/g, '');
 
@@ -352,6 +454,172 @@ export default function MinecraftGroupedStatisticTable({
         });
     }, []);
 
+    const onToggleSelectedGroup = useCallback(
+        (groupKey: string): void => {
+            const groupRowKeys = rowKeysByGroup.get(groupKey) || [];
+            const selectedGroupRowCount = groupRowKeys.filter(rowKey => isRowSelected(groupKey, rowKey)).length;
+            const isGroupFullySelected = groupRowKeys.length > 0 && selectedGroupRowCount === groupRowKeys.length;
+
+            setSelectedGroups(previousSelectedGroups => {
+                const updated = new Set(previousSelectedGroups);
+
+                if (isGroupFullySelected) {
+                    updated.delete(groupKey);
+                } else {
+                    updated.add(groupKey);
+                }
+
+                return updated;
+            });
+
+            setSelectedRows(previousSelectedRows => {
+                const updated = new Set(previousSelectedRows);
+
+                groupRowKeys.forEach(rowKey => {
+                    updated.delete(rowKey);
+                });
+
+                return updated;
+            });
+
+            setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
+                const updated = new Set(previousDeselectedRows);
+
+                groupRowKeys.forEach(rowKey => {
+                    updated.delete(rowKey);
+                });
+
+                return updated;
+            });
+        },
+        [isRowSelected, rowKeysByGroup],
+    );
+
+    const onToggleSelectedRow = useCallback(
+        (groupKey: string, rowCategory: string): void => {
+            const rowPinKey = getRowPinKey(groupKey, rowCategory);
+            const isGroupSelected = selectedGroups.has(groupKey);
+
+            if (isGroupSelected) {
+                setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
+                    const updated = new Set(previousDeselectedRows);
+
+                    if (updated.has(rowPinKey)) {
+                        updated.delete(rowPinKey);
+                    } else {
+                        updated.add(rowPinKey);
+                    }
+
+                    return updated;
+                });
+
+                setSelectedRows(previousSelectedRows => {
+                    if (!previousSelectedRows.has(rowPinKey)) {
+                        return previousSelectedRows;
+                    }
+
+                    const updated = new Set(previousSelectedRows);
+                    updated.delete(rowPinKey);
+                    return updated;
+                });
+
+                return;
+            }
+
+            setSelectedRows(previousSelectedRows => {
+                const updated = new Set(previousSelectedRows);
+
+                if (updated.has(rowPinKey)) {
+                    updated.delete(rowPinKey);
+                } else {
+                    updated.add(rowPinKey);
+                }
+
+                return updated;
+            });
+
+            setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
+                if (!previousDeselectedRows.has(rowPinKey)) {
+                    return previousDeselectedRows;
+                }
+
+                const updated = new Set(previousDeselectedRows);
+                updated.delete(rowPinKey);
+                return updated;
+            });
+        },
+        [selectedGroups],
+    );
+
+    const selectionSnapshot = useMemo((): MinecraftGroupedStatisticTableSelectionSnapshot => {
+        const resolvedRowsByKey = new Map<string, GroupedStatisticTableRow>();
+
+        selectedGroups.forEach(groupKey => {
+            (groupedRowsByKey.get(groupKey) || []).forEach(row => {
+                const rowKey = getRowPinKey(groupKey, row.category);
+
+                if (deselectedRowsInSelectedGroups.has(rowKey)) {
+                    return;
+                }
+
+                resolvedRowsByKey.set(rowKey, row);
+            });
+        });
+
+        selectedRows.forEach(rowKey => {
+            const rowGroupKey = rowGroupLookup.get(rowKey);
+            if (rowGroupKey && selectedGroups.has(rowGroupKey) && deselectedRowsInSelectedGroups.has(rowKey)) {
+                return;
+            }
+
+            const row = rowLookup.get(rowKey);
+            if (row) {
+                resolvedRowsByKey.set(rowKey, row);
+            }
+        });
+
+        const resolvedSelectedRows = Array.from(resolvedRowsByKey.entries())
+            .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+            .map(([, row]) => row);
+
+        return {
+            selectedGroupKeys: Array.from(selectedGroups).sort((left, right) => left.localeCompare(right)),
+            selectedRowKeys: Array.from(resolvedRowsByKey.keys()).sort((left, right) => left.localeCompare(right)),
+            resolvedSelectedRows,
+        };
+    }, [deselectedRowsInSelectedGroups, groupedRowsByKey, rowGroupLookup, rowLookup, selectedGroups, selectedRows]);
+
+    useImperativeHandle(
+        ref,
+        () => ({
+            getSelectionSnapshot: () => selectionSnapshot,
+            clearSelection: () => {
+                setSelectedGroups(new Set());
+                setSelectedRows(new Set());
+                setDeselectedRowsInSelectedGroups(new Set());
+            },
+        }),
+        [selectionSnapshot],
+    );
+
+    const prevSelectionRowKeysRef = useRef<string[]>([]);
+    useEffect(() => {
+        if (!onSelectionChange) {
+            return;
+        }
+
+        const prev = prevSelectionRowKeysRef.current;
+        const curr = selectionSnapshot.selectedRowKeys;
+        const changed = prev.length !== curr.length || curr.some((key, index) => key !== prev[index]);
+
+        if (!changed) {
+            return;
+        }
+
+        prevSelectionRowKeysRef.current = curr;
+        onSelectionChange(selectionSnapshot);
+    }, [onSelectionChange, selectionSnapshot]);
+
     useEffect(() => {
         setSelectedSortOrder(defaultSortOrder);
     }, [defaultSortOrder]);
@@ -367,12 +635,10 @@ export default function MinecraftGroupedStatisticTable({
     useEffect(() => {
         const eventHandler = (event: StatisticUpdatedMessage): void => {
             setData(previousState => {
-                const isConsolidatedDataEvent =
-                    event.id === 'consolidated_data' &&
-                    event.children_string_values &&
-                    event.children_string_values.length > 0;
+                const isConsolidatedDataEvent = event.id === 'consolidated_data';
 
                 const categoryMap = new Map<string, GroupedStatisticTableRow>();
+                const observedCategories = new Set<string>();
 
                 if (!isConsolidatedDataEvent) {
                     previousState.forEach(previousRow => {
@@ -400,19 +666,38 @@ export default function MinecraftGroupedStatisticTable({
 
                 if (isConsolidatedDataEvent) {
                     processChildrenStringValues(
-                        event.children_string_values,
+                        event.children_string_values ?? [],
                         categoryMap,
                         valueLabels,
                         prettifyNames,
                         event.time || Date.now(),
+                        observedCategories,
                     );
+
+                    nonConsolidatedTickCounterRef.current = 0;
+                    nonConsolidatedLastEventTimeRef.current = undefined;
+                    nonConsolidatedLastSeenTickByCategoryRef.current.clear();
                 } else {
+                    const eventTime = Number.isFinite(event.time) ? event.time : undefined;
+                    const lastEventTime = nonConsolidatedLastEventTimeRef.current;
+
+                    if (eventTime === undefined) {
+                        nonConsolidatedTickCounterRef.current += 1;
+                    } else if (lastEventTime === undefined || lastEventTime !== eventTime) {
+                        nonConsolidatedTickCounterRef.current += 1;
+                        nonConsolidatedLastEventTimeRef.current = eventTime;
+                    }
+
+                    const currentTickCounter = Math.max(1, nonConsolidatedTickCounterRef.current);
+
                     const rawStats = statisticResolver(event, []);
 
                     rawStats.forEach(stat => {
                         if (!stat.category) {
                             return;
                         }
+
+                        observedCategories.add(stat.category);
 
                         const existing = categoryMap.get(stat.category);
                         if (existing) {
@@ -443,8 +728,33 @@ export default function MinecraftGroupedStatisticTable({
                             valueLabels,
                             prettifyNames,
                             event.time || Date.now(),
+                            observedCategories,
                         );
                     }
+
+                    const lastSeenByCategory = nonConsolidatedLastSeenTickByCategoryRef.current;
+
+                    observedCategories.forEach(category => {
+                        lastSeenByCategory.set(category, currentTickCounter);
+                    });
+
+                    categoryMap.forEach((_, rowCategory) => {
+                        if (observedCategories.has(rowCategory)) {
+                            return;
+                        }
+
+                        const lastSeenEvent = lastSeenByCategory.get(rowCategory);
+                        if (lastSeenEvent === undefined) {
+                            // Bootstrap rows that predate tick-based tracking without immediate removal.
+                            lastSeenByCategory.set(rowCategory, currentTickCounter);
+                            return;
+                        }
+
+                        if (currentTickCounter - lastSeenEvent >= NON_CONSOLIDATED_STALE_TICK_THRESHOLD) {
+                            categoryMap.delete(rowCategory);
+                            lastSeenByCategory.delete(rowCategory);
+                        }
+                    });
                 }
 
                 const newestData = Array.from(categoryMap.values());
@@ -471,38 +781,57 @@ export default function MinecraftGroupedStatisticTable({
             validRowKeys.add(getRowPinKey(groupKey, row.category));
         });
 
-        setPinnedGroups(previousPinnedGroups => {
+        const handleUpdateSet = (set: Set<string>, validKeys: Set<string>): Set<string> => {
             let changed = false;
             const updated = new Set<string>();
 
-            previousPinnedGroups.forEach(groupKey => {
-                if (validGroupKeys.has(groupKey)) {
-                    updated.add(groupKey);
+            set.forEach(key => {
+                if (validKeys.has(key)) {
+                    updated.add(key);
                     return;
                 }
 
                 changed = true;
             });
 
-            return changed ? updated : previousPinnedGroups;
+            return changed ? updated : set;
+        };
+
+        setPinnedGroups(previousPinnedGroups => {
+            return handleUpdateSet(previousPinnedGroups, validGroupKeys);
         });
 
         setPinnedRows(previousPinnedRows => {
-            let changed = false;
-            const updated = new Set<string>();
+            return handleUpdateSet(previousPinnedRows, validRowKeys);
+        });
 
-            previousPinnedRows.forEach(rowPinKey => {
-                if (validRowKeys.has(rowPinKey)) {
-                    updated.add(rowPinKey);
-                    return;
-                }
+        setSelectedGroups(previousSelectedGroups => {
+            return handleUpdateSet(previousSelectedGroups, validGroupKeys);
+        });
 
-                changed = true;
-            });
+        setSelectedRows(previousSelectedRows => {
+            return handleUpdateSet(previousSelectedRows, validRowKeys);
+        });
 
-            return changed ? updated : previousPinnedRows;
+        setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
+            return handleUpdateSet(previousDeselectedRows, validRowKeys);
         });
     }, [data, groupKeyResolver]);
+
+    useEffect(() => {
+        if (!selectionEnabled || !defaultSelectAllGroups || hasInitializedDefaultSelection) {
+            return;
+        }
+
+        if (rowKeysByGroup.size === 0) {
+            return;
+        }
+
+        setSelectedGroups(new Set(rowKeysByGroup.keys()));
+        setSelectedRows(new Set());
+        setDeselectedRowsInSelectedGroups(new Set());
+        setHasInitializedDefaultSelection(true);
+    }, [defaultSelectAllGroups, hasInitializedDefaultSelection, rowKeysByGroup, selectionEnabled]);
 
     const groupedData = useMemo((): GroupedStatisticTableGroup[] => {
         if (!isGroupedMode) {
@@ -699,11 +1028,12 @@ export default function MinecraftGroupedStatisticTable({
     const renderLeafRow = (row: GroupedStatisticTableRow, rowKey: string, groupKey: string): JSX.Element => {
         const rowPinKey = getRowPinKey(groupKey, row.category);
         const isPinned = pinnedRows.has(rowPinKey);
+        const isSelected = isRowSelected(groupKey, rowPinKey);
 
         return (
             <tr
                 key={rowKey}
-                className={`minecraft-grouped-statistic-child-row${isPinned ? ' minecraft-grouped-statistic-row-pinned' : ''}`}
+                className={`minecraft-grouped-statistic-child-row${isPinned ? ' minecraft-grouped-statistic-row-pinned' : ''}${isSelected ? ' minecraft-grouped-statistic-row-selected' : ''}`}
             >
                 <td className="minecraft-grouped-statistic-table-grid-pin">
                     <VSCodeCheckbox
@@ -712,6 +1042,15 @@ export default function MinecraftGroupedStatisticTable({
                         aria-label={isPinned ? `Unpin ${row.category}` : `Pin ${row.category}`}
                     />
                 </td>
+                {selectionEnabled && (
+                    <td className="minecraft-grouped-statistic-table-grid-select">
+                        <VSCodeCheckbox
+                            checked={isSelected}
+                            onClick={() => onToggleSelectedRow(groupKey, row.category)}
+                            aria-label={isSelected ? `Deselect ${row.category}` : `Select ${row.category}`}
+                        />
+                    </td>
+                )}
                 <td>
                     <span className="minecraft-grouped-statistic-child-key">{row.category}</span>
                 </td>
@@ -789,7 +1128,12 @@ export default function MinecraftGroupedStatisticTable({
                 <table className="minecraft-grouped-statistic-table-grid">
                     <thead>
                         <tr>
-                            <th className="minecraft-grouped-statistic-table-grid-pin" aria-label="Pinned"></th>
+                            <th className="minecraft-grouped-statistic-table-grid-pin">Pin</th>
+                            {selectionEnabled && (
+                                <th className="minecraft-grouped-statistic-table-grid-select">
+                                    {selectionHeaderLabel}
+                                </th>
+                            )}
                             <th>{keyLabel}</th>
                             {valueLabels.map(label => (
                                 <th key={label} className="minecraft-grouped-statistic-table-grid-numeric">
@@ -809,10 +1153,18 @@ export default function MinecraftGroupedStatisticTable({
                                   const isExpanded = expandedGroups.has(group.expansionKey);
                                   const isGroupExplicitlyPinned = pinnedGroups.has(group.key);
                                   const isGroupPinned = isGroupExplicitlyPinned || group.isPinnedSection;
+                                  const groupRows = groupedRowsByKey.get(group.key) || [];
+                                  const selectedGroupRowCount = groupRows.filter(row =>
+                                      isRowSelected(group.key, getRowPinKey(group.key, row.category)),
+                                  ).length;
+                                  const isGroupSelected =
+                                      groupRows.length > 0 && selectedGroupRowCount === groupRows.length;
+                                  const isGroupSelectionIndeterminate =
+                                      selectedGroupRowCount > 0 && selectedGroupRowCount < groupRows.length;
                                   const rows: JSX.Element[] = [
                                       <tr
                                           key={`group-${group.expansionKey}-${groupIndex}`}
-                                          className={`minecraft-grouped-statistic-group-row${isGroupPinned ? ' minecraft-grouped-statistic-group-row-pinned' : ''}`}
+                                          className={`minecraft-grouped-statistic-group-row${isGroupPinned ? ' minecraft-grouped-statistic-group-row-pinned' : ''}${isGroupSelected ? ' minecraft-grouped-statistic-row-selected' : ''}`}
                                       >
                                           <td className="minecraft-grouped-statistic-table-grid-pin">
                                               <VSCodeCheckbox
@@ -830,6 +1182,20 @@ export default function MinecraftGroupedStatisticTable({
                                                   }
                                               />
                                           </td>
+                                          {selectionEnabled && (
+                                              <td className="minecraft-grouped-statistic-table-grid-select">
+                                                  <VSCodeCheckbox
+                                                      checked={isGroupSelected}
+                                                      indeterminate={isGroupSelectionIndeterminate}
+                                                      onClick={() => onToggleSelectedGroup(group.key)}
+                                                      aria-label={
+                                                          isGroupSelected
+                                                              ? `Deselect group ${group.key}`
+                                                              : `Select group ${group.key}`
+                                                      }
+                                                  />
+                                              </td>
+                                          )}
                                           <td>
                                               <button
                                                   type="button"
@@ -912,4 +1278,6 @@ export default function MinecraftGroupedStatisticTable({
             </div>
         </div>
     );
-}
+});
+
+export default MinecraftGroupedStatisticTable;

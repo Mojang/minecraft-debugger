@@ -3,6 +3,7 @@ import { StatisticPrefab } from './StatisticPrefab';
 export type TabPrefabParams = {
     selectedClient: string;
     selectedPlugin: string;
+    onRunCommand: (command: string) => void;
 };
 
 export enum TabPrefabDataSource {

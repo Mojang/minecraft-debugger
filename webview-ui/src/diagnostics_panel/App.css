@@ -1,9 +1,58 @@
 main {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: flex-start;
   height: 100%;
+  overflow: hidden;
+}
+
+.vertical-tabs-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+  width: 100%;
+}
+
+.vertical-tab-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--vscode-editorGroup-border);
+}
+
+.vertical-tab-item {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground);
+  font-size: var(--vscode-font-size);
+  font-family: var(--vscode-font-family);
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vertical-tab-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  color: var(--vscode-list-hoverForeground);
+}
+
+.vertical-tab-item.active {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.vertical-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .dropdown-container {
@@ -85,6 +134,14 @@ main {
 
 .minecraft-statistic-stacked-bar-chart tspan {
   fill: var(--vscode-editor-background);
+}
+
+.minecraft-statistic-table-actions {
+  flex-direction: row;
+  display: flex;
+  width: 100%;
+  margin-bottom: 10px;
+  gap: 5px;
 }
 
 .minecraft-statistic-table-container {
@@ -208,4 +265,264 @@ main {
 /* Default styling for value columns when no columnWidths prop is provided */
 #multi-column-grid vscode-data-grid-cell:not([grid-column="1"]) {
   text-align: right;
+}
+
+.minecraft-entity-system-count-badge {
+  display: flex;
+  align-items: center;
+  height: 57px; /* Forces the Entity and Systems charts to be visually aligned */
+}
+
+.minecraft-entity-system-count-badge-content {
+  font-style: italic;
+  padding: 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 33%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-table-root {
+  width: 100%;
+}
+
+.minecraft-grouped-statistic-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.minecraft-grouped-statistic-toolbar-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.minecraft-grouped-statistic-table-surface {
+  border: 1px solid var(--vscode-editorGroup-border);
+  border-radius: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.minecraft-grouped-statistic-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.minecraft-grouped-statistic-table-grid th,
+.minecraft-grouped-statistic-table-grid td {
+  border-bottom: 1px solid var(--vscode-editorGroup-border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.minecraft-grouped-statistic-table-grid th {
+  background: var(--vscode-editor-background);
+  font-weight: 600;
+}
+
+.minecraft-grouped-statistic-table-grid-numeric {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.minecraft-grouped-statistic-table-grid-action {
+  text-align: center !important;
+  width: 90px;
+}
+
+.minecraft-grouped-statistic-table-grid-select {
+  text-align: center !important;
+  width: 72px;
+  padding: 6px 4px !important;
+}
+
+.minecraft-grouped-statistic-table-grid-pin {
+  text-align: center !important;
+  width: 34px;
+  padding: 6px 4px !important;
+}
+
+.minecraft-grouped-statistic-group-row {
+  background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 33%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-group-row-pinned {
+  background: color-mix(in srgb, var(--vscode-list-highlightForeground) 33%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-group-key {
+  margin-right: 6px;
+  font-weight: 600;
+}
+
+.minecraft-grouped-statistic-group-meta {
+  color: var(--vscode-descriptionForeground);
+}
+
+.minecraft-grouped-statistic-toggle {
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  padding: 0;
+  margin-right: 6px;
+  width: 14px;
+  text-align: center;
+}
+
+.minecraft-grouped-statistic-child-key {
+  display: inline-block;
+  padding-left: 18px;
+}
+
+.minecraft-grouped-statistic-row-pinned {
+  background: color-mix(in srgb, var(--vscode-list-highlightForeground) 12%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-row-selected {
+  box-shadow: inset 3px 0 0 var(--vscode-focusBorder);
+}
+
+.minecraft-profiler-flame-stream-root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.minecraft-profiler-flame-stream-toolbar {
+  --flame-stream-control-height: 30px;
+  --flame-stream-control-padding-x: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 60px;
+  align-items: start;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group-unit {
+  min-width: 0;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group-lane-display {
+  min-width: 0;
+}
+
+.minecraft-profiler-flame-stream-toolbar-group > label {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.minecraft-profiler-flame-stream-range-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--flame-stream-control-height);
+}
+
+.minecraft-profiler-flame-stream-range-row input[type="range"] {
+  flex: 1;
+  margin: 0;
+  height: var(--flame-stream-control-height);
+}
+
+.minecraft-profiler-flame-stream-range-row vscode-button {
+  height: var(--flame-stream-control-height);
+  min-width: 68px;
+}
+
+.minecraft-profiler-flame-stream-select {
+  width: 100%;
+  min-width: 0;
+  height: var(--flame-stream-control-height);
+  padding: 0 var(--flame-stream-control-padding-x);
+  box-sizing: border-box;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border);
+}
+
+.minecraft-profiler-flame-stream-toolbar-caption {
+  font-size: 11px;
+  line-height: 14px;
+  min-height: 14px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.minecraft-profiler-flame-stream-surface {
+  width: 100%;
+  border: 1px solid var(--vscode-editorGroup-border);
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 8px minmax(0, 1fr);
+  overflow: visible;
+  min-height: 260px;
+}
+
+.minecraft-profiler-flame-stream-label-pane {
+  overflow: visible;
+  max-height: none;
+}
+
+.minecraft-profiler-flame-stream-pane-resizer {
+  cursor: col-resize;
+  background: color-mix(in srgb, var(--vscode-editorGroup-border) 72%, transparent);
+  border-left: 1px solid var(--vscode-editorGroup-border);
+  border-right: 1px solid var(--vscode-editorGroup-border);
+}
+
+.minecraft-profiler-flame-stream-pane-resizer:hover {
+  background: color-mix(in srgb, var(--vscode-focusBorder) 55%, transparent);
+}
+
+.minecraft-profiler-flame-stream-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--vscode-editorGroup-border);
+  font-size: 14px;
+  padding-left: 8px;
+}
+
+.minecraft-profiler-flame-stream-label-text {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 18px;
+}
+
+.minecraft-profiler-flame-stream-label-depth-badge {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  margin-right: 15px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  color: var(--vscode-editor-background);
+}
+
+.minecraft-profiler-flame-stream-chart-pane {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  max-height: none;
+}
+
+.minecraft-profiler-flame-stream-empty {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
 }

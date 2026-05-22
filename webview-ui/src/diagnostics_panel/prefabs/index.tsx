@@ -11,6 +11,8 @@ import serverScriptSubscriberCountsTab from './tabs/ServerScriptSubscriberCounts
 
 import clientTimingTab from './tabs/ClientTiming';
 import clientMemoryTab from './tabs/ClientMemory';
+import clientEntitySystemTab from './tabs/ClientEntitySystems';
+import clientProfilerScopesTab from './tabs/ClientCPUProfiler';
 
 import editorNetworkStatsTab from './tabs/EditorNetworkStats';
 
@@ -24,6 +26,8 @@ export default [
     serverScriptSubscriberCountsTab,
     clientTimingTab,
     clientMemoryTab,
+    clientEntitySystemTab,
+    clientProfilerScopesTab,
     dynamicPropertyTab,
     editorNetworkStatsTab,
 ];

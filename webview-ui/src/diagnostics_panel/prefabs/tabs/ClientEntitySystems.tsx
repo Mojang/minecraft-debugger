@@ -385,6 +385,12 @@ const StatsTab: TabPrefab = {
                                                     sendDebuggerRequest(FILTER_SINGLE_ENTITY_REQUEST, {
                                                         entityIds: [entityId],
                                                     });
+                                                } else {
+                                                    // If we don't have a valid entity selected, still send the event with no id's
+                                                    setLastRequestedCommand(FILTER_SINGLE_ENTITY_REQUEST);
+                                                    sendDebuggerRequest(FILTER_SINGLE_ENTITY_REQUEST, {
+                                                        entityIds: [],
+                                                    });
                                                 }
                                             }}
                                         >

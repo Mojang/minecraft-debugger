@@ -57,11 +57,12 @@ import {
     RequestMessage,
     StoppedEventMessage,
     ThreadEventMessage,
+    DebuggeeResponseEnvelope
 } from './protocol-events';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
 import { RequestManager } from './requests/request-manager';
-import { DebuggeeResponseEnvelope, DebuggerRequestArguments } from './requests/debugger-request-schema';
+import { DebuggerRequestArguments } from './requests/debugger-request-schema';
 
 interface PendingResponse {
     onSuccess?: (result: any) => void;

@@ -84,6 +84,14 @@ export interface NotificationEventMessage {
     logLevel: LogLevel;
 }
 
+export interface DebuggeeResponseEnvelope {
+    type: 'debuggee-response';
+    request_seq: number;
+    args?: unknown;
+    success?: boolean;
+    response_message?: string;
+}
+
 export type IncomingDebuggeeMessage =
     | PluginDetails
     | ProtocolCapabilities
@@ -91,8 +99,8 @@ export type IncomingDebuggeeMessage =
     | StoppedEventMessage
     | ThreadEventMessage
     | PrintEventMessage
-    | NotificationEventMessage;
-
+    | NotificationEventMessage
+    | DebuggeeResponseEnvelope;
 
 
 // -------------------------------------------------------------------------
@@ -156,6 +164,15 @@ export interface BreakpointsMessage {
     breakpoints: { path: string; breakpoints: DebugProtocol.SourceBreakpoint[] | undefined };
 }
 
+export interface DebuggerRequestEnvelope {
+    type: 'debugger-request';
+    request: {
+        request_seq: number;
+        request: string;
+        args?: unknown;
+    };
+}
+
 export type OutgoingDebuggeeMessage =
     | ProtocolResponse
     | MinecraftCommandLegacyMessage
@@ -165,7 +182,8 @@ export type OutgoingDebuggeeMessage =
     | StopOnExceptionMessage
     | ResumeMessage
     | RequestMessage
-    | BreakpointsMessage;
+    | BreakpointsMessage
+    | DebuggerRequestEnvelope;
 
 
 

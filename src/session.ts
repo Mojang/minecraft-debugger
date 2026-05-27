@@ -936,7 +936,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 return;
             }
 
-            this._requestManager?.handleDebuggeeResponse(envelope as DebuggeeResponseEnvelope);
+            this._requestManager?.handleDebuggeeResponse(envelope.event as DebuggeeResponseEnvelope);
         } else if (envelope.type === 'response') {
             this.handleDebugeeResponse(envelope);
         }

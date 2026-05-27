@@ -3,7 +3,7 @@
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { DebuggerRequestArguments} from './debugger-request-schema';
 import { IDebuggeeMessageSender } from '../debuggee-message-sender';
-import { DebuggeeResponseEnvelope, DebuggerRequestEnvelope } from '../protocol-events';
+import { DebuggeeResponseEnvelope, DebuggerRequestEnvelope, OutgoingEventType } from '../protocol-events';
 
 interface PendingDebuggerRequest {
     resolve: (value: DebuggeeResponseEnvelope) => void;
@@ -47,7 +47,7 @@ export class RequestManager {
 
             // Create an envelope to hold the request, and send it to the debuggee
             const envelope: DebuggerRequestEnvelope = {
-                type: 'debugger-request',
+                type:  OutgoingEventType.debuggerRequest,
                 request: {
                     request_seq: seq,
                     request,

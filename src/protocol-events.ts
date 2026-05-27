@@ -40,6 +40,7 @@ export const IncomingEventType = {
     stat2: 'StatEvent2',
     schema: 'SchemaEvent',
     profilerCapture: 'ProfilerCapture',
+    debuggeeResponse: 'debuggee-response',
 } as const;
 
 export interface PluginDetails {
@@ -85,7 +86,7 @@ export interface NotificationEventMessage {
 }
 
 export interface DebuggeeResponseEnvelope {
-    type: 'debuggee-response';
+    type: typeof IncomingEventType.debuggeeResponse;
     request_seq: number;
     args?: unknown;
     success?: boolean;
@@ -115,6 +116,7 @@ export const OutgoingEventType = {
     resume: 'resume',
     request: 'request',
     breakpoints: 'breakpoints',
+    debuggerRequest: 'debugger-request'
 } as const;
 
 export interface ProtocolResponse {
@@ -165,7 +167,7 @@ export interface BreakpointsMessage {
 }
 
 export interface DebuggerRequestEnvelope {
-    type: 'debugger-request';
+    type: typeof OutgoingEventType.debuggerRequest;
     request: {
         request_seq: number;
         request: string;

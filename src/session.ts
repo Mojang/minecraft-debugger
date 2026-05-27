@@ -927,7 +927,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private receiveDebugeeMessage(envelope: any) {
         if (envelope.type === 'event') {
             this.handleDebugeeEvent(envelope.event);
-        } else if (envelope.type === 'debuggee-response') {
+        } else if (envelope.type === IncomingEventType.debuggeeResponse) {
             if (!this._minecraftCapabilities.supportsDebuggerRequests) {
                 this.log(
                     'Received debuggee-response from a Minecraft instance that should not support it.',

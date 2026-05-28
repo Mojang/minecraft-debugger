@@ -47,6 +47,10 @@ const onRunCommand = (command: string) => {
     vscode.postMessage({ type: 'run-minecraft-command', command: command });
 };
 
+const CLIENT_SELECTION_HELP_TOOLTIP =
+    "If you're not seeing your player here, you may need to enable diagnostic collection.\n" +
+    'Please enable "Creator > Script Diagnostics Settings > Enable Client Diagnostics" from within the game settings.';
+
 function App() {
     const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.name));
     const [selectedPlugin, setSelectedPlugin] = useState<string>('');
@@ -62,8 +66,6 @@ function App() {
     const handleClientSelection = useCallback((clientSelectionId: string) => {
         setSelectedClient(() => clientSelectionId);
     }, []);
-
-
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -112,13 +114,18 @@ function App() {
                     {sortedTabPrefabs.map((tabPrefab, index) => (
                         <div
                             key={`view-${index}`}
-                            style={{ display: currentTab === `tab-${index}` ? 'flex' : 'none', flexDirection: 'column', flex: 1 }}
+                            style={{
+                                display: currentTab === `tab-${index}` ? 'flex' : 'none',
+                                flexDirection: 'column',
+                                flex: 1,
+                            }}
                         >
                             {tabPrefab.dataSource === TabPrefabDataSource.Client ? (
                                 <StatGroupSelectionBox
                                     labelName="Client"
                                     statParentId="client_stats"
                                     onChange={handleClientSelection}
+                                    helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
                                 />
                             ) : (
                                 <div />
@@ -132,10 +139,7 @@ function App() {
                             ) : (
                                 <div />
                             )}
-                            <TabView
-                                tabPrefab={tabPrefab}
-                                params={{ selectedClient, selectedPlugin, onRunCommand }}
-                            />
+                            <TabView tabPrefab={tabPrefab} params={{ selectedClient, selectedPlugin, onRunCommand }} />
                         </div>
                     ))}
                 </div>

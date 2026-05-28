@@ -72,6 +72,27 @@ main {
   margin-bottom: 2px;
 }
 
+.stat-group-selection-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-group-selection-help {
+  margin: 8px 0px 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid var(--vscode-descriptionForeground);
+  color: var(--vscode-descriptionForeground);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+}
+
 .minecraft-debugger-request-result {
   display: flex;
   align-items: flex-start;

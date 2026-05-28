@@ -9,7 +9,7 @@ import {
     sendDebuggerRequest,
     useDebuggerRequestUpdates,
 } from '../../utilities/useDebuggerRequests';
-import { DebuggerRequestResultBanner } from '../../utilities/debuggerRequestResult';
+import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResult';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 const DEBUGGER_REQUEST_COMMANDS = [

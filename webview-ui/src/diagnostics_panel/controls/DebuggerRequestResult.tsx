@@ -1,5 +1,7 @@
+// Copyright (C) Microsoft Corporation.  All rights reserved.
+
 import type { ReactNode } from 'react';
-import type { DebuggerRequestResultMessage } from './useDebuggerRequests';
+import type { DebuggerRequestResultMessage } from '../utilities/useDebuggerRequests';
 
 type DebuggerRequestResultTone = 'error' | 'success' | 'neutral';
 
@@ -49,10 +51,6 @@ function getDebuggerRequestResultViewModel(lastResult?: DebuggerRequestResultMes
     };
 }
 
-export function lastResultToUserFriendlyString(lastResult: DebuggerRequestResultMessage): string {
-    return getDebuggerRequestResultViewModel(lastResult).message;
-}
-
 function renderMultilineMessage(message: string): ReactNode[] {
     return message
         .replace(/\r\n/g, '\n')
@@ -77,7 +75,9 @@ export function DebuggerRequestResultBanner({
             <div className="minecraft-debugger-request-result__badge">Client</div>
             <div className="minecraft-debugger-request-result__content">
                 <div className="minecraft-debugger-request-result__title">{viewModel.title}</div>
-                <div className="minecraft-debugger-request-result__message">{renderMultilineMessage(viewModel.message)}</div>
+                <div className="minecraft-debugger-request-result__message">
+                    {renderMultilineMessage(viewModel.message)}
+                </div>
             </div>
         </div>
     );

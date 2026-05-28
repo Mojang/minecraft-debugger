@@ -17,7 +17,7 @@ import {
     sendDebuggerRequest,
     useDebuggerRequestUpdates,
 } from '../../utilities/useDebuggerRequests';
-import { DebuggerRequestResultBanner } from '../../utilities/debuggerRequestResult';
+import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResult';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';

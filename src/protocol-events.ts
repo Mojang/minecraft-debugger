@@ -93,7 +93,7 @@ export interface DebuggeeResponseEnvelope {
     response_message?: string;
 }
 
-type StatEventMessage = StatMessageModel & {
+export type StatEventMessage = StatMessageModel & {
     type: IncomingEventType.Stat2;
 };
 
@@ -192,9 +192,6 @@ export type OutgoingDebuggeeMessage =
     | DebuggerRequestEnvelope;
 
 
-
-// Re-export for callers that need these alongside event types
-export type { StatMessageModel };
 
 // -------------------------------------------------------------------------
 // Registry that maps event type name strings to handler callbacks

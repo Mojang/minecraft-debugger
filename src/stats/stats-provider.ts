@@ -46,7 +46,7 @@ export class StatsProvider {
             this._fireStatUpdated(stat, stats.tick);
         }
     }
-    
+
     public start(): void {
         throw new Error('Method not implemented.');
     }

@@ -31,17 +31,17 @@ export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportCerealSerializat
 // -------------------------------------------------------------------------
 // Interfaces for event message payloads (received from the debugee)
 // -------------------------------------------------------------------------
-export const IncomingEventType = {
-    stopped: 'StoppedEvent',
-    thread: 'ThreadEvent',
-    print: 'PrintEvent',
-    notification: 'NotificationEvent',
-    protocol: 'ProtocolEvent',
-    stat2: 'StatEvent2',
-    schema: 'SchemaEvent',
-    profilerCapture: 'ProfilerCapture',
-    debuggeeResponse: 'debuggee-response',
-} as const;
+export enum IncomingEventType {
+    Stopped = 'StoppedEvent',
+    Thread = 'ThreadEvent',
+    Print = 'PrintEvent',
+    Notification = 'NotificationEvent',
+    Protocol = 'ProtocolEvent',
+    Stat2 = 'StatEvent2',
+    Schema = 'SchemaEvent',
+    ProfilerCapture = 'ProfilerCapture',
+    DebuggeeResponse = 'debuggee-response',
+}
 
 export interface PluginDetails {
     name: string;
@@ -49,125 +49,129 @@ export interface PluginDetails {
 }
 
 export interface ProtocolCapabilities {
-    type: typeof IncomingEventType.protocol;
+    type: IncomingEventType.Protocol;
     version: number;
     plugins: PluginDetails[];
     require_passcode?: boolean;
 }
 
 export interface ProfilerCapture {
-    type: typeof IncomingEventType.profilerCapture;
+    type: IncomingEventType.ProfilerCapture;
     capture_base_path: string;
     capture_data: string;
 }
 
 export interface StoppedEventMessage {
-    type: typeof IncomingEventType.stopped;
+    type: IncomingEventType.Stopped;
     reason: string;
     thread: number;
 }
 
 export interface ThreadEventMessage {
-    type: typeof IncomingEventType.thread;
+    type: IncomingEventType.Thread;
     reason: string;
     thread: number;
 }
 
 export interface PrintEventMessage {
-    type: typeof IncomingEventType.print;
+    type: IncomingEventType.Print;
     message: string;
     logLevel: LogLevel;
 }
 
 export interface NotificationEventMessage {
-    type: typeof IncomingEventType.notification;
+    type: IncomingEventType.Notification;
     message: string;
     logLevel: LogLevel;
 }
 
 export interface DebuggeeResponseEnvelope {
-    type: typeof IncomingEventType.debuggeeResponse;
+    type: IncomingEventType.DebuggeeResponse;
     request_seq: number;
     args?: unknown;
     success?: boolean;
     response_message?: string;
 }
 
+type StatEventMessage = StatMessageModel & {
+    type: IncomingEventType.Stat2;
+};
+
 export type IncomingDebuggeeMessage =
-    | PluginDetails
     | ProtocolCapabilities
     | ProfilerCapture
     | StoppedEventMessage
     | ThreadEventMessage
     | PrintEventMessage
     | NotificationEventMessage
+    | StatEventMessage
     | DebuggeeResponseEnvelope;
 
 
 // -------------------------------------------------------------------------
 // Interfaces for outbound message payloads (sent to the debugee)
 // -------------------------------------------------------------------------
-export const OutgoingEventType = {
-    protocol: 'protocol',
-    minecraftCommand: 'minecraftCommand',
-    startProfiler: 'startProfiler',
-    stopProfiler: 'stopProfiler',
-    stopOnException: 'stopOnException',
-    resume: 'resume',
-    request: 'request',
-    breakpoints: 'breakpoints',
-    debuggerRequest: 'debugger-request'
-} as const;
+export enum OutgoingEventType {
+    Protocol = 'protocol',
+    MinecraftCommand = 'minecraftCommand',
+    StartProfiler = 'startProfiler',
+    StopProfiler = 'stopProfiler',
+    StopOnException = 'stopOnException',
+    Resume = 'resume',
+    Request = 'request',
+    Breakpoints = 'breakpoints',
+    DebuggerRequest = 'debugger-request'
+}
 
 export interface ProtocolResponse {
-    type: typeof OutgoingEventType.protocol;
+    type: OutgoingEventType.Protocol;
     version: number;
     target_module_uuid?: string;
     passcode?: string;
 }
 
 export interface MinecraftCommandLegacyMessage {
-    type: typeof OutgoingEventType.minecraftCommand;
+    type: OutgoingEventType.MinecraftCommand;
     command: string;
     dimension_type: string;
 }
 
 export interface MinecraftCommandMessage {
-    type: typeof OutgoingEventType.minecraftCommand;
+    type: OutgoingEventType.MinecraftCommand;
     command: { command: string; dimension_type: string };
 }
 
 export interface StartProfilerMessage {
-    type: typeof OutgoingEventType.startProfiler;
+    type: OutgoingEventType.StartProfiler;
     profiler: { target_module_uuid?: string };
 }
 
 export interface StopProfilerMessage {
-    type: typeof OutgoingEventType.stopProfiler;
+    type: OutgoingEventType.StopProfiler;
     profiler: { captures_path: string; target_module_uuid?: string };
 }
 
 export interface StopOnExceptionMessage {
-    type: typeof OutgoingEventType.stopOnException;
+    type: OutgoingEventType.StopOnException;
     stopOnException: boolean;
 }
 
 export interface ResumeMessage {
-    type: typeof OutgoingEventType.resume;
+    type: OutgoingEventType.Resume;
 }
 
 export interface RequestMessage {
-    type: typeof OutgoingEventType.request;
+    type: OutgoingEventType.Request;
     request: { request_seq: number; command: string; args: unknown };
 }
 
 export interface BreakpointsMessage {
-    type: typeof OutgoingEventType.breakpoints;
+    type: OutgoingEventType.Breakpoints;
     breakpoints: { path: string; breakpoints: DebugProtocol.SourceBreakpoint[] | undefined };
 }
 
 export interface DebuggerRequestEnvelope {
-    type: typeof OutgoingEventType.debuggerRequest;
+    type: OutgoingEventType.DebuggerRequest;
     request: {
         request_seq: number;
         request: string;
@@ -196,17 +200,20 @@ export type { StatMessageModel };
 // Registry that maps event type name strings to handler callbacks
 // -------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DebuggeeEventHandler = (event: any) => void;
+type DebuggeeEventHandler<T extends IncomingEventType> = (
+    event: Extract<IncomingDebuggeeMessage, { type: T }>,
+) => void;
 
 export class DebuggeeEventRegistry {
-    private readonly _handlers = new Map<string, DebuggeeEventHandler>();
+    private readonly _handlers = new Map<IncomingEventType, (event: IncomingDebuggeeMessage) => void>();
 
-    public register(eventType: string, handler: DebuggeeEventHandler): void {
-        this._handlers.set(eventType, handler);
+    public register<T extends IncomingEventType>(eventType: T, handler: DebuggeeEventHandler<T>): void {
+        this._handlers.set(eventType, event => {
+            handler(event as Extract<IncomingDebuggeeMessage, { type: T }>);
+        });
     }
 
-    public dispatch(eventMessage: { type: string }): boolean {
+    public dispatch(eventMessage: IncomingDebuggeeMessage): boolean {
         const handler = this._handlers.get(eventMessage.type);
         if (handler) {
             handler(eventMessage);

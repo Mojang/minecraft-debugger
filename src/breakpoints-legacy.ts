@@ -69,7 +69,7 @@ export class BreakpointsLegacy implements IBreakpointsHandler {
         // send full set of breakpoints for each generated file, a message per file
         for (const [generatedRemoteLocalPath, generatedBreakpoints] of generatedBreakpointsMap) {
             const envelope: BreakpointsMessage = {
-                type: OutgoingEventType.breakpoints,
+                type: OutgoingEventType.Breakpoints,
                 breakpoints: {
                     path: generatedRemoteLocalPath,
                     breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined,

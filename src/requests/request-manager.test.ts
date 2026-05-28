@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import type { DebugProtocol } from '@vscode/debugprotocol';
 import { RequestManager } from './request-manager';
 import type { IDebuggeeMessageSender } from '../debuggee-message-sender';
+import { IncomingEventType } from '../protocol-events';
 
 describe('RequestManager', () => {
     let manager: RequestManager;
@@ -27,7 +28,7 @@ describe('RequestManager', () => {
             });
 
             const handled = manager.handleDebuggeeResponse({
-                type: 'debuggee-response',
+                type: IncomingEventType.DebuggeeResponse,
                 request_seq: 42,
                 success: true,
                 args: { ok: true },
@@ -44,7 +45,7 @@ describe('RequestManager', () => {
             });
             expect(handled).toBe(true);
             await expect(promise).resolves.toEqual({
-                type: 'debuggee-response',
+                type: IncomingEventType.DebuggeeResponse,
                 request_seq: 42,
                 success: true,
                 args: { ok: true },
@@ -78,7 +79,7 @@ describe('RequestManager', () => {
             });
 
             manager.handleDebuggeeResponse({
-                type: 'debuggee-response',
+                type: IncomingEventType.DebuggeeResponse,
                 request_seq: 7,
                 success: false,
                 response_message: 'Denied',
@@ -91,7 +92,7 @@ describe('RequestManager', () => {
             manager = new RequestManager(mockSender);
 
             const handled = manager.handleDebuggeeResponse({
-                type: 'debuggee-response',
+                type: IncomingEventType.DebuggeeResponse,
                 request_seq: -1,
                 success: true,
             });

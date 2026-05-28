@@ -20,7 +20,7 @@ To build and use this extension locally, run the following commands:
 cd webview-ui
 npm install
 ```
-Go to the Run and Debug panel (Ctrl-Shift-D) and select "Run Extension". This was automatically build and run the extension.
+Go to the Run and Debug panel (Ctrl-Shift-D) and select "Run Extension". This will automatically build and run the extension.
 You can now use the extension as normal (in the new VS Code instance) by attaching to Minecraft to debug.
 
 # Tests

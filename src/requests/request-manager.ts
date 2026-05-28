@@ -47,7 +47,7 @@ export class RequestManager {
 
             // Create an envelope to hold the request, and send it to the debuggee
             const envelope: DebuggerRequestEnvelope = {
-                type:  OutgoingEventType.debuggerRequest,
+                type:  OutgoingEventType.DebuggerRequest,
                 request: {
                     request_seq: seq,
                     request,

@@ -178,27 +178,27 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     // then you can create a new event type in protocol-events.ts, have Minecraft send that event with the new data, and then register a handler 
     // for that event here to handle the incoming data and do something with it (e.g. update the home view, send a notification, etc).
     private registerServerEvents() {
-        this._eventRegistry.register(IncomingEventType.stopped, (msg: StoppedEventMessage) => {
+        this._eventRegistry.register(IncomingEventType.Stopped, (msg: StoppedEventMessage) => {
             this.trackThreadChanges(msg.reason, msg.thread);
             this.sendEvent(new StoppedEvent(msg.reason, msg.thread));
         });
-        this._eventRegistry.register(IncomingEventType.thread, (msg: ThreadEventMessage) => {
+        this._eventRegistry.register(IncomingEventType.Thread, (msg: ThreadEventMessage) => {
             this.trackThreadChanges(msg.reason, msg.thread);
             this.sendEvent(new ThreadEvent(msg.reason, msg.thread));
         });
-        this._eventRegistry.register(IncomingEventType.print, (msg: PrintEventMessage) => {
+        this._eventRegistry.register(IncomingEventType.Print, (msg: PrintEventMessage) => {
             this.handlePrintEvent(msg.message, msg.logLevel);
         });
-        this._eventRegistry.register(IncomingEventType.notification, (msg: NotificationEventMessage) => {
+        this._eventRegistry.register(IncomingEventType.Notification, (msg: NotificationEventMessage) => {
             this.showNotification(msg.message, msg.logLevel);
         });
-        this._eventRegistry.register(IncomingEventType.protocol, (msg: ProtocolCapabilities) => {
+        this._eventRegistry.register(IncomingEventType.Protocol, (msg: ProtocolCapabilities) => {
             this.handleProtocolEvent(msg);
         });
-        this._eventRegistry.register(IncomingEventType.stat2, (msg: StatMessageModel) => {
+        this._eventRegistry.register(IncomingEventType.Stat2, (msg: StatMessageModel) => {
             this._statsProvider.setStats(msg);
         });
-        this._eventRegistry.register(IncomingEventType.profilerCapture, (msg: ProfilerCapture) => {
+        this._eventRegistry.register(IncomingEventType.ProfilerCapture, (msg: ProfilerCapture) => {
             this.handleProfilerCapture(msg);
         });
     }
@@ -222,13 +222,13 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private onRunMinecraftCommand(command: string): void {
         if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures) {
             this.sendDebuggeeMessage({
-                type: OutgoingEventType.minecraftCommand,
+                type: OutgoingEventType.MinecraftCommand,
                 command: command,
                 dimension_type: 'overworld',
             });
         } else {
             this.sendDebuggeeMessage({
-                type: OutgoingEventType.minecraftCommand,
+                type: OutgoingEventType.MinecraftCommand,
                 command: {
                     command: command,
                     dimension_type: 'overworld',
@@ -239,7 +239,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     private onStartProfiler(): void {
         this.sendDebuggeeMessage({
-            type: OutgoingEventType.startProfiler,
+            type: OutgoingEventType.StartProfiler,
             profiler: {
                 target_module_uuid: this._targetModuleUuid,
             },
@@ -248,7 +248,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     private onStopProfiler(capturesBasePath: string): void {
         this.sendDebuggeeMessage({
-            type: OutgoingEventType.stopProfiler,
+            type: OutgoingEventType.StopProfiler,
             profiler: {
                 captures_path: capturesBasePath,
                 target_module_uuid: this._targetModuleUuid,
@@ -449,7 +449,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         args: DebugProtocol.SetExceptionBreakpointsArguments,
     ): void {
         this.sendDebuggeeMessage({
-            type: OutgoingEventType.stopOnException,
+            type: OutgoingEventType.StopOnException,
             stopOnException: args.filters.length > 0, // there's only 1 type for now so no need to look at which one it is
         });
 
@@ -458,7 +458,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse): void {
         this.sendDebuggeeMessage({
-            type: OutgoingEventType.resume,
+            type: OutgoingEventType.Resume,
         });
 
         this.sendResponse(response);
@@ -775,7 +775,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
         // respond with protocol version and chosen debugee target
         this.sendDebuggeeMessage({
-            type: OutgoingEventType.protocol,
+            type: OutgoingEventType.Protocol,
             version: protocolVersion,
             target_module_uuid: targetModuleUuid,
             passcode: passcode,
@@ -894,7 +894,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage {
         const envelope: RequestMessage = {
-            type: OutgoingEventType.request,
+            type: OutgoingEventType.Request,
             request: {
                 request_seq: requestSeq,
                 command: responseCommand,
@@ -927,7 +927,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private receiveDebugeeMessage(envelope: any) {
         if (envelope.type === 'event') {
             this.handleDebugeeEvent(envelope.event);
-        } else if (envelope.type === IncomingEventType.debuggeeResponse) {
+        } else if (envelope.type === IncomingEventType.DebuggeeResponse) {
             if (!this._minecraftCapabilities.supportsDebuggerRequests) {
                 this.log(
                     'Received debuggee-response from a Minecraft instance that should not support it.',

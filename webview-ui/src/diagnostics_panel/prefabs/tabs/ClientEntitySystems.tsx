@@ -17,6 +17,7 @@ import {
     sendDebuggerRequest,
     useDebuggerRequestUpdates,
 } from '../../utilities/useDebuggerRequests';
+import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResult';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
@@ -110,20 +111,6 @@ function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap
     const index = indexAndBracket ? indexAndBracket.split(')')[0].trim() : undefined;
     // Then lookup the category name from the legend map if it exists
     return index ? systemCategoryLegendMap.get(index) || UNCATEGORIZED_SYSTEM_GROUP : UNCATEGORIZED_SYSTEM_GROUP;
-}
-
-function lastResultToUserFriendlyString(lastResult: DebuggerRequestResultMessage): string {
-    if (lastResult.error) {
-        return `Error: ${lastResult.error}`;
-    } else if (lastResult.response) {
-        if (lastResult.response.success) {
-            return `${lastResult.response.response_message}`;
-        } else {
-            return `Failed: ${lastResult.response.response_message}`;
-        }
-    } else {
-        return 'Press Start to Begin Profiling';
-    }
 }
 
 const StatsTab: TabPrefab = {
@@ -292,11 +279,7 @@ const StatsTab: TabPrefab = {
                             );
                         })}
                         <div style={{ marginTop: '20px' }}>
-                            <text style={{ fontStyle: 'italic' }}>
-                                {lastResult
-                                    ? lastResultToUserFriendlyString(lastResult)
-                                    : 'Press Start to Begin Profiling'}
-                            </text>
+                            <DebuggerRequestResultBanner lastResult={lastResult} />
                         </div>
                     </div>
                 </div>

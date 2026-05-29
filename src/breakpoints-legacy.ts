@@ -70,10 +70,8 @@ export class BreakpointsLegacy implements IBreakpointsHandler {
         for (const [generatedRemoteLocalPath, generatedBreakpoints] of generatedBreakpointsMap) {
             const envelope: BreakpointsMessage = {
                 type: OutgoingEventType.Breakpoints,
-                breakpoints: {
-                    path: generatedRemoteLocalPath,
-                    breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined,
-                },
+                path: generatedRemoteLocalPath,
+                breakpoints: generatedBreakpoints.length ? generatedBreakpoints : undefined,
             };
             this._messageSender.sendDebuggeeMessage(envelope);
         }

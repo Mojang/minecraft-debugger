@@ -220,39 +220,25 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     // ------------------------------------------------------------------------
 
     private onRunMinecraftCommand(command: string): void {
-        if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures) {
-            this.sendDebuggeeMessage({
-                type: OutgoingEventType.MinecraftCommand,
-                command: command,
-                dimension_type: 'overworld',
-            });
-        } else {
-            this.sendDebuggeeMessage({
-                type: OutgoingEventType.MinecraftCommand,
-                command: {
-                    command: command,
-                    dimension_type: 'overworld',
-                },
-            });
-        }
+        this.sendDebuggeeMessage({
+            type: OutgoingEventType.MinecraftCommand,
+            command: command,
+            dimension_type: 'overworld',
+        });
     }
 
     private onStartProfiler(): void {
         this.sendDebuggeeMessage({
             type: OutgoingEventType.StartProfiler,
-            profiler: {
-                target_module_uuid: this._targetModuleUuid,
-            },
+            target_module_uuid: this._targetModuleUuid,
         });
     }
 
     private onStopProfiler(capturesBasePath: string): void {
         this.sendDebuggeeMessage({
             type: OutgoingEventType.StopProfiler,
-            profiler: {
-                captures_path: capturesBasePath,
-                target_module_uuid: this._targetModuleUuid,
-            },
+            captures_path: capturesBasePath,
+            target_module_uuid: this._targetModuleUuid,
         });
     }
 
@@ -895,11 +881,9 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage {
         const envelope: RequestMessage = {
             type: OutgoingEventType.Request,
-            request: {
-                request_seq: requestSeq,
-                command: responseCommand,
-                args,
-            },
+            request_seq: requestSeq,
+            command: responseCommand,
+            args,
         };
         return envelope;
     }

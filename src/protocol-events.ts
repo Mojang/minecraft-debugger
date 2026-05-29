@@ -138,17 +138,19 @@ export interface MinecraftCommandLegacyMessage {
 
 export interface MinecraftCommandMessage {
     type: OutgoingEventType.MinecraftCommand;
-    command: { command: string; dimension_type: string };
+    command: string; 
+    dimension_type: string;
 }
 
 export interface StartProfilerMessage {
     type: OutgoingEventType.StartProfiler;
-    profiler: { target_module_uuid?: string };
+    target_module_uuid?: string;
 }
 
 export interface StopProfilerMessage {
     type: OutgoingEventType.StopProfiler;
-    profiler: { captures_path: string; target_module_uuid?: string };
+    captures_path: string; 
+    target_module_uuid?: string;
 }
 
 export interface StopOnExceptionMessage {
@@ -162,21 +164,22 @@ export interface ResumeMessage {
 
 export interface RequestMessage {
     type: OutgoingEventType.Request;
-    request: { request_seq: number; command: string; args: unknown };
+    request_seq: number;
+    command: string;
+    args: unknown;
 }
 
 export interface BreakpointsMessage {
     type: OutgoingEventType.Breakpoints;
-    breakpoints: { path: string; breakpoints: DebugProtocol.SourceBreakpoint[] | undefined };
+    path: string; 
+    breakpoints: DebugProtocol.SourceBreakpoint[] | undefined;
 }
 
 export interface DebuggerRequestEnvelope {
     type: OutgoingEventType.DebuggerRequest;
-    request: {
-        request_seq: number;
-        request: string;
-        args?: unknown;
-    };
+    request_seq: number;
+    request: string;
+    args?: unknown;
 }
 
 export type OutgoingDebuggeeMessage =

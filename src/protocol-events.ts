@@ -132,19 +132,28 @@ export interface ProtocolResponse {
 
 export interface MinecraftCommandLegacyMessage {
     type: OutgoingEventType.MinecraftCommand;
-    command: string;
-    dimension_type: string;
+    command: { command: string; dimension_type: string };
 }
 
 export interface MinecraftCommandMessage {
     type: OutgoingEventType.MinecraftCommand;
-    command: string; 
+    command: string;
     dimension_type: string;
+}
+
+export interface StartProfilerLegacyMessage {
+    type: OutgoingEventType.StartProfiler;
+    profiler: { target_module_uuid?: string };
 }
 
 export interface StartProfilerMessage {
     type: OutgoingEventType.StartProfiler;
     target_module_uuid?: string;
+}
+
+export interface StopProfilerLegacyMessage {
+    type: OutgoingEventType.StopProfiler;
+    profiler: { captures_path: string; target_module_uuid?: string };
 }
 
 export interface StopProfilerMessage {
@@ -162,6 +171,11 @@ export interface ResumeMessage {
     type: OutgoingEventType.Resume;
 }
 
+export interface RequestLegacyMessage {
+    type: OutgoingEventType.Request;
+    request: { request_seq: number; command: string; args: unknown };
+}
+
 export interface RequestMessage {
     type: OutgoingEventType.Request;
     request_seq: number;
@@ -169,10 +183,24 @@ export interface RequestMessage {
     args: unknown;
 }
 
+export interface BreakpointsLegacyMessage {
+    type: OutgoingEventType.Breakpoints;
+    breakpoints: { path: string; breakpoints: DebugProtocol.SourceBreakpoint[] | undefined };
+}
+
 export interface BreakpointsMessage {
     type: OutgoingEventType.Breakpoints;
     path: string; 
     breakpoints: DebugProtocol.SourceBreakpoint[] | undefined;
+}
+
+export interface DebuggerRequestLegacyEnvelope {
+    type: OutgoingEventType.DebuggerRequest;
+    request: {
+        request_seq: number;
+        request: string;
+        args?: unknown;
+    };
 }
 
 export interface DebuggerRequestEnvelope {
@@ -186,12 +214,17 @@ export type OutgoingDebuggeeMessage =
     | ProtocolResponse
     | MinecraftCommandLegacyMessage
     | MinecraftCommandMessage
+    | StartProfilerLegacyMessage
     | StartProfilerMessage
+    | StopProfilerLegacyMessage
     | StopProfilerMessage
     | StopOnExceptionMessage
     | ResumeMessage
+    | RequestLegacyMessage
     | RequestMessage
+    | BreakpointsLegacyMessage
     | BreakpointsMessage
+    | DebuggerRequestLegacyEnvelope
     | DebuggerRequestEnvelope;
 
 

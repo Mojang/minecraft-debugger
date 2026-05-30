@@ -22,7 +22,7 @@ describe('RequestManager', () => {
             manager = new RequestManager(mockSender);
             const response = { request_seq: 42 } as DebugProtocol.Response;
 
-            const promise = manager.sendDebuggerRequest(response, {
+            const promise = manager.sendDebuggerRequest(0, response, {
                 request: 'test-debugger-request',
                 args: { foo: 'bar' },
             });
@@ -57,7 +57,7 @@ describe('RequestManager', () => {
             manager = new RequestManager(mockSender);
             const response = { request_seq: 123 } as DebugProtocol.Response;
 
-            const promise = manager.sendDebuggerRequest(response, {
+            const promise = manager.sendDebuggerRequest(0, response, {
                 request: 'test-debugger-request',
             });
             const rejection = expect(promise).rejects.toThrow(
@@ -74,7 +74,7 @@ describe('RequestManager', () => {
         it('should reject request on failed response', async () => {
             manager = new RequestManager(mockSender);
             const response = { request_seq: 7 } as DebugProtocol.Response;
-            const promise = manager.sendDebuggerRequest(response, {
+            const promise = manager.sendDebuggerRequest(0, response, {
                 request: 'test-debugger-request',
             });
 
@@ -107,8 +107,8 @@ describe('RequestManager', () => {
             const responseA = { request_seq: 1 } as DebugProtocol.Response;
             const responseB = { request_seq: 2 } as DebugProtocol.Response;
 
-            const promiseA = manager.sendDebuggerRequest(responseA, { request: 'A' });
-            const promiseB = manager.sendDebuggerRequest(responseB, { request: 'B' });
+            const promiseA = manager.sendDebuggerRequest(0, responseA, { request: 'A' });
+            const promiseB = manager.sendDebuggerRequest(0, responseB, { request: 'B' });
 
             manager.rejectPendingRequests('Disconnected');
 

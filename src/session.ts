@@ -57,7 +57,8 @@ import {
     RequestMessage,
     StoppedEventMessage,
     ThreadEventMessage,
-    DebuggeeResponseEnvelope
+    DebuggeeResponseEnvelope,
+    RequestLegacyMessage
 } from './protocol-events';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
@@ -220,26 +221,57 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     // ------------------------------------------------------------------------
 
     private onRunMinecraftCommand(command: string): void {
-        this.sendDebuggeeMessage({
-            type: OutgoingEventType.MinecraftCommand,
-            command: command,
-            dimension_type: 'overworld',
-        });
+        if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures || 
+            this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.MinecraftCommand,
+                command: command,
+                dimension_type: 'overworld',
+            });
+        } else {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.MinecraftCommand,
+                command: {
+                    command: command,
+                    dimension_type: 'overworld',
+                },
+            });
+        }
     }
 
     private onStartProfiler(): void {
-        this.sendDebuggeeMessage({
-            type: OutgoingEventType.StartProfiler,
-            target_module_uuid: this._targetModuleUuid,
-        });
+        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StartProfiler,
+                target_module_uuid: this._targetModuleUuid,
+            });
+        }
+        else {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StartProfiler,
+                profiler: {
+                    target_module_uuid: this._targetModuleUuid,
+                },
+            });
+        }
     }
 
     private onStopProfiler(capturesBasePath: string): void {
-        this.sendDebuggeeMessage({
-            type: OutgoingEventType.StopProfiler,
-            captures_path: capturesBasePath,
-            target_module_uuid: this._targetModuleUuid,
-        });
+        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StopProfiler,
+                captures_path: capturesBasePath,
+                target_module_uuid: this._targetModuleUuid,
+            });
+        } else {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StopProfiler,
+                profiler: {
+                    captures_path: capturesBasePath,
+                    target_module_uuid: this._targetModuleUuid,
+                },
+            });
+        }
     }
 
     private writeProfilerCaptureToFile(
@@ -659,6 +691,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
                 try {
                     const result = await this._requestManager?.sendDebuggerRequest(
+                        this._clientProtocolVersion,
                         response,
                         args as DebuggerRequestArguments,
                     );
@@ -878,14 +911,27 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this.sendDebuggeeMessage(this.makeRequestPayload(requestSeq, response.command, args));
     }
 
-    private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage {
-        const envelope: RequestMessage = {
-            type: OutgoingEventType.Request,
-            request_seq: requestSeq,
-            command: responseCommand,
-            args,
-        };
-        return envelope;
+    private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage | RequestLegacyMessage {
+        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            const envelope: RequestMessage = {
+                type: OutgoingEventType.Request,
+                request_seq: requestSeq,
+                command: responseCommand,
+                args,
+            };
+            return envelope;
+        }
+        else {
+            const envelope: RequestLegacyMessage = {
+                type: OutgoingEventType.Request,
+                request: {
+                    request_seq: requestSeq,
+                    command: responseCommand,
+                    args,
+                },
+            };
+            return envelope;
+        }
     }
 
     public sendDebuggeeMessage(envelope: OutgoingDebuggeeMessage): void {

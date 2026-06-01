@@ -42,10 +42,28 @@ import { IBreakpointsHandler } from './ibreakpoints-handler';
 import { injectSourceMapIntoProfilerCapture } from './profiler-utils';
 import { isUUID } from './utils';
 import { MessageStreamParser } from './message-stream-parser';
-import { DebuggerRequestArguments, DebuggeeResponseEnvelope } from './requests/debugger-request-schema';
-import { RequestManager } from './requests/request-manager';
+import {
+    DebuggeeEventRegistry,
+    DEBUGGER_PROTOCOL_VERSION,
+    IncomingEventType,
+    NotificationEventMessage,
+    OutgoingDebuggeeMessage,
+    OutgoingEventType,
+    PluginDetails,
+    PrintEventMessage,
+    ProfilerCapture,
+    ProtocolCapabilities,
+    ProtocolVersion,
+    RequestMessage,
+    StoppedEventMessage,
+    ThreadEventMessage,
+    DebuggeeResponseEnvelope,
+    RequestLegacyMessage
+} from './protocol-events';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
+import { RequestManager } from './requests/request-manager';
+import { DebuggerRequestArguments } from './requests/debugger-request-schema';
 
 interface PendingResponse {
     onSuccess?: (result: any) => void;
@@ -55,24 +73,6 @@ interface PendingResponse {
 // Module mapping for getting line numbers for a given module
 export interface ModuleMapping {
     [moduleName: string]: string;
-}
-
-interface PluginDetails {
-    name: string;
-    module_uuid: string;
-}
-
-interface ProtocolCapabilities {
-    type: string;
-    version: number;
-    plugins: PluginDetails[];
-    require_passcode?: boolean;
-}
-
-interface ProfilerCapture {
-    type: string;
-    capture_base_path: string;
-    capture_data: string;
 }
 
 // Interface for specific launch arguments.
@@ -110,25 +110,6 @@ interface DebuggerStackFrame {
     column: number;
 }
 
-// protocol version history
-// 1 - initial version
-// 2 - add targetModuleUuid to protocol event
-// 3 - add array of plugins and target module ids to incoming protocol event
-// 4 - mc can require a passcode to connect
-// 5 - debugger can take mc script profiler captures
-// 6 - breakpoints as request, MC can reject
-// 7 - support for debugger requests, MC can reject or respond with args
-enum ProtocolVersion {
-    _Unknown = 0,
-    Initial = 1,
-    SupportTargetModuleUuid = 2,
-    SupportTargetSelection = 3,
-    SupportPasscode = 4,
-    SupportProfilerCaptures = 5,
-    SupportBreakpointsAsRequest = 6,
-    SupportDebuggerRequests = 7,
-}
-
 // capabilites based on protocol version
 export interface MinecraftCapabilities {
     supportsCommands: boolean;
@@ -140,10 +121,8 @@ export interface MinecraftCapabilities {
 // The Debug Adapter for 'minecraft-js'
 //
 export class Session extends DebugSession implements IDebuggeeMessageSender {
-    private readonly _debuggerProtocolVersion = ProtocolVersion.SupportDebuggerRequests;
     private readonly _connectionRetryAttempts = 3;
     private readonly _connectionRetryWaitMs = 500;
-
     private _debugeeServer?: Server; // when listening for incoming connections
     private _connectionSocket?: Socket;
     private _connected = false;
@@ -168,6 +147,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         supportsDebuggerRequests: false,
     };
     private _passcode?: string;
+    private _eventRegistry: DebuggeeEventRegistry;
 
     // external communication
     private _homeViewProvider: HomeViewProvider;
@@ -185,10 +165,43 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this.setDebuggerLinesStartAt1(true);
         this.setDebuggerColumnsStartAt1(true);
 
+        this._eventRegistry = new DebuggeeEventRegistry();
+        this.registerServerEvents();
+
         this._eventEmitter.on('run-minecraft-command', this.onRunMinecraftCommand.bind(this));
         this._eventEmitter.on('start-profiler', this.onStartProfiler.bind(this));
         this._eventEmitter.on('stop-profiler', this.onStopProfiler.bind(this));
         this._eventEmitter.on('request-debugger-status', this.onRequestDebuggerStatus.bind(this));
+    }
+
+    // Use this to register new events that are handled from the debugee (Minecraft)
+    // For example you want to send new arbitary data to the debugger that doesn't fit into the existing event types (such as a live stat)
+    // then you can create a new event type in protocol-events.ts, have Minecraft send that event with the new data, and then register a handler 
+    // for that event here to handle the incoming data and do something with it (e.g. update the home view, send a notification, etc).
+    private registerServerEvents() {
+        this._eventRegistry.register(IncomingEventType.Stopped, (msg: StoppedEventMessage) => {
+            this.trackThreadChanges(msg.reason, msg.thread);
+            this.sendEvent(new StoppedEvent(msg.reason, msg.thread));
+        });
+        this._eventRegistry.register(IncomingEventType.Thread, (msg: ThreadEventMessage) => {
+            this.trackThreadChanges(msg.reason, msg.thread);
+            this.sendEvent(new ThreadEvent(msg.reason, msg.thread));
+        });
+        this._eventRegistry.register(IncomingEventType.Print, (msg: PrintEventMessage) => {
+            this.handlePrintEvent(msg.message, msg.logLevel);
+        });
+        this._eventRegistry.register(IncomingEventType.Notification, (msg: NotificationEventMessage) => {
+            this.showNotification(msg.message, msg.logLevel);
+        });
+        this._eventRegistry.register(IncomingEventType.Protocol, (msg: ProtocolCapabilities) => {
+            this.handleProtocolEvent(msg);
+        });
+        this._eventRegistry.register(IncomingEventType.Stat2, (msg: StatMessageModel) => {
+            this._statsProvider.setStats(msg);
+        });
+        this._eventRegistry.register(IncomingEventType.ProfilerCapture, (msg: ProfilerCapture) => {
+            this.handleProfilerCapture(msg);
+        });
     }
 
     public dispose(): void {
@@ -208,15 +221,16 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     // ------------------------------------------------------------------------
 
     private onRunMinecraftCommand(command: string): void {
-        if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures) {
+        if (this._clientProtocolVersion < ProtocolVersion.SupportProfilerCaptures || 
+            this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
             this.sendDebuggeeMessage({
-                type: 'minecraftCommand',
+                type: OutgoingEventType.MinecraftCommand,
                 command: command,
                 dimension_type: 'overworld',
             });
         } else {
             this.sendDebuggeeMessage({
-                type: 'minecraftCommand',
+                type: OutgoingEventType.MinecraftCommand,
                 command: {
                     command: command,
                     dimension_type: 'overworld',
@@ -226,22 +240,38 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     }
 
     private onStartProfiler(): void {
-        this.sendDebuggeeMessage({
-            type: 'startProfiler',
-            profiler: {
+        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StartProfiler,
                 target_module_uuid: this._targetModuleUuid,
-            },
-        });
+            });
+        }
+        else {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StartProfiler,
+                profiler: {
+                    target_module_uuid: this._targetModuleUuid,
+                },
+            });
+        }
     }
 
     private onStopProfiler(capturesBasePath: string): void {
-        this.sendDebuggeeMessage({
-            type: 'stopProfiler',
-            profiler: {
+        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StopProfiler,
                 captures_path: capturesBasePath,
                 target_module_uuid: this._targetModuleUuid,
-            },
-        });
+            });
+        } else {
+            this.sendDebuggeeMessage({
+                type: OutgoingEventType.StopProfiler,
+                profiler: {
+                    captures_path: capturesBasePath,
+                    target_module_uuid: this._targetModuleUuid,
+                },
+            });
+        }
     }
 
     private writeProfilerCaptureToFile(
@@ -437,7 +467,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         args: DebugProtocol.SetExceptionBreakpointsArguments,
     ): void {
         this.sendDebuggeeMessage({
-            type: 'stopOnException',
+            type: OutgoingEventType.StopOnException,
             stopOnException: args.filters.length > 0, // there's only 1 type for now so no need to look at which one it is
         });
 
@@ -446,7 +476,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse): void {
         this.sendDebuggeeMessage({
-            type: 'resume',
+            type: OutgoingEventType.Resume,
         });
 
         this.sendResponse(response);
@@ -661,6 +691,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
                 try {
                     const result = await this._requestManager?.sendDebuggerRequest(
+                        this._clientProtocolVersion,
                         response,
                         args as DebuggerRequestArguments,
                     );
@@ -763,7 +794,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
         // respond with protocol version and chosen debugee target
         this.sendDebuggeeMessage({
-            type: 'protocol',
+            type: OutgoingEventType.Protocol,
             version: protocolVersion,
             target_module_uuid: targetModuleUuid,
             passcode: passcode,
@@ -880,19 +911,30 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this.sendDebuggeeMessage(this.makeRequestPayload(requestSeq, response.command, args));
     }
 
-    private makeRequestPayload(requestSeq: number, responseCommand: string, args: any) {
-        const envelope = {
-            type: 'request',
-            request: {
+    private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage | RequestLegacyMessage {
+        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+            const envelope: RequestMessage = {
+                type: OutgoingEventType.Request,
                 request_seq: requestSeq,
                 command: responseCommand,
                 args,
-            },
-        };
-        return envelope;
+            };
+            return envelope;
+        }
+        else {
+            const envelope: RequestLegacyMessage = {
+                type: OutgoingEventType.Request,
+                request: {
+                    request_seq: requestSeq,
+                    command: responseCommand,
+                    args,
+                },
+            };
+            return envelope;
+        }
     }
 
-    public sendDebuggeeMessage(envelope: unknown): void {
+    public sendDebuggeeMessage(envelope: OutgoingDebuggeeMessage): void {
         if (!this._connectionSocket) {
             return;
         }
@@ -915,7 +957,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private receiveDebugeeMessage(envelope: any) {
         if (envelope.type === 'event') {
             this.handleDebugeeEvent(envelope.event);
-        } else if (envelope.type === 'debuggee-response') {
+        } else if (envelope.type === IncomingEventType.DebuggeeResponse) {
             if (!this._minecraftCapabilities.supportsDebuggerRequests) {
                 this.log(
                     'Received debuggee-response from a Minecraft instance that should not support it.',
@@ -924,31 +966,18 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 return;
             }
 
-            this._requestManager?.handleDebuggeeResponse(envelope as DebuggeeResponseEnvelope);
+            this._requestManager?.handleDebuggeeResponse(envelope.event as DebuggeeResponseEnvelope);
         } else if (envelope.type === 'response') {
             this.handleDebugeeResponse(envelope);
+        }
+        else {
+            this.log(`Debugee message error: Unknown message type: ${envelope?.type ?? "NO TYPE"}`, LogLevel.Error);
         }
     }
 
     // Debugee (MC) has sent an event.
     private handleDebugeeEvent(eventMessage: any) {
-        if (eventMessage.type === 'StoppedEvent') {
-            this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
-            this.sendEvent(new StoppedEvent(eventMessage.reason, eventMessage.thread));
-        } else if (eventMessage.type === 'ThreadEvent') {
-            this.trackThreadChanges(eventMessage.reason, eventMessage.thread);
-            this.sendEvent(new ThreadEvent(eventMessage.reason, eventMessage.thread));
-        } else if (eventMessage.type === 'PrintEvent') {
-            this.handlePrintEvent(eventMessage.message, eventMessage.logLevel);
-        } else if (eventMessage.type === 'NotificationEvent') {
-            this.showNotification(eventMessage.message, eventMessage.logLevel);
-        } else if (eventMessage.type === 'ProtocolEvent') {
-            this.handleProtocolEvent(eventMessage as ProtocolCapabilities);
-        } else if (eventMessage.type === 'StatEvent2') {
-            this._statsProvider.setStats(eventMessage as StatMessageModel);
-        } else if (eventMessage.type === 'ProfilerCapture') {
-            this.handleProfilerCapture(eventMessage as ProfilerCapture);
-        }
+        this._eventRegistry.dispatch(eventMessage);
     }
 
     private async handlePrintEvent(message: string, logLevel: LogLevel) {
@@ -1017,7 +1046,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         // handle protocol capabilities here...
         // can fail connection on errors
         //
-        if (this._debuggerProtocolVersion < protocolCapabilities.version) {
+        if (DEBUGGER_PROTOCOL_VERSION < protocolCapabilities.version) {
             this.terminateSession(
                 `protocol unsupported. Upgrade Debugger Extension. Protocol Version: ${protocolCapabilities.version} is not supported by the current version of the Debugger.`,
                 LogLevel.Error,

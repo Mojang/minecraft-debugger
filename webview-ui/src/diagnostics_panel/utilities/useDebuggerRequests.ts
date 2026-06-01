@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useEffect, useState } from 'react';
-import type { DebuggeeResponseEnvelope } from '../../../../src/requests/debugger-request-schema';
+import type { DebuggeeResponseEnvelope } from '../../../../src/protocol-events';
 import { vscode } from './vscode';
 
 // Result payload posted back from the extension host after a debugger request completes.

@@ -67,6 +67,10 @@
     background-color: var(--vscode-editorError-foreground);
 }
 
+.status-circle.listening {
+    background-color: var(--vscode-editorWarning-foreground);
+}
+
 /*
  * Command Section
  */

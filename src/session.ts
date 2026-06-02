@@ -296,7 +296,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     }
 
     private onRequestDebuggerStatus(): void {
-        this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities);
+        this._homeViewProvider.setDebuggerStatus(this._connected, this._minecraftCapabilities, !!this._debugeeServer);
     }
 
     // MC has sent the profiler capture results to the debugger
@@ -728,6 +728,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             this.onDebugeeConnected(socket);
         });
         this._debugeeServer.listen(port);
+        this._homeViewProvider.setDebuggerStatus(false, this._minecraftCapabilities, true);
         this.showNotification(`Listening for debugger connections on port [${port}].`, LogLevel.Log);
     }
 
@@ -795,7 +796,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this._minecraftCapabilities = this.getMinecraftCapabilities();
 
         // notify home view of session connection
-        this._homeViewProvider.setDebuggerStatus(true, this._minecraftCapabilities);
+        this._homeViewProvider.setDebuggerStatus(true, this._minecraftCapabilities, !!this._debugeeServer);
 
         // respond with protocol version and chosen debugee target
         this.sendDebuggeeMessage({
@@ -882,7 +883,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
             this.sendEvent(new TerminatedEvent());
             this.showNotification(`Session terminated, ${reason}.`, logLevel, logLevel !== LogLevel.Log);
-            this._homeViewProvider.setDebuggerStatus(false, this._minecraftCapabilities);
+            this._homeViewProvider.setDebuggerStatus(false, this._minecraftCapabilities, !!this._debugeeServer);
             this.dispose();
         }
     }

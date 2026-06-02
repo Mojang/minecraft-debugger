@@ -176,7 +176,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     // Use this to register new events that are handled from the debugee (Minecraft)
     // For example you want to send new arbitary data to the debugger that doesn't fit into the existing event types (such as a live stat)
-    // then you can create a new event type in protocol-events.ts, have Minecraft send that event with the new data, and then register a handler 
+    // then you can create a new event type in protocol-events.ts, have Minecraft send that event with the new data, and then register a handler
     // for that event here to handle the incoming data and do something with it (e.g. update the home view, send a notification, etc).
     private registerServerEvents() {
         this._eventRegistry.register(IncomingEventType.Stopped, (msg: StoppedEventMessage) => {
@@ -420,12 +420,17 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     protected resolveEnvironmentVariables(args: IAttachRequestArguments): void {
         const localAppDataDir = process.env.LOCALAPPDATA || '';
+        const appDataDir = process.env.APPDATA || '';
 
         for (const key of Object.keys(args)) {
             //if the value is a string and starts with %localappdata%, replace it with the actual path to AppData\Local
             const value = args[key as keyof IAttachRequestArguments];
             if (typeof value === 'string' && value.toLowerCase().startsWith('%localappdata%')) {
                 (args as any)[key] = path.join(localAppDataDir, value.substring('%localappdata%'.length));
+            }
+            //replace %appdata% with the actual path to AppData\Roaming
+            if (typeof value === 'string' && value.toLowerCase().startsWith('%appdata%')) {
+                (args as any)[key] = path.join(appDataDir, value.substring('%appdata%'.length));
             }
         }
     }

@@ -406,7 +406,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
         defaultSelectAllGroups = false,
         onSelectionChange,
         sparklineColumnIndex,
-        sparklineTickRange,
+        sparklineTickRange = 0,
         sparklineValueFormatter,
     }: MinecraftGroupedStatisticTableProps,
     ref,

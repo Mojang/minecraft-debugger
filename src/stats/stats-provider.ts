@@ -26,12 +26,35 @@ export interface StatMessageModel {
     stats: StatDataModel[];
 }
 
+// Mirrors ScriptDiagnosticsDescriptor from C++. Sent once on connect via SchemaEvent.
+export interface DiagnosticsTabDescriptor {
+    name: string;
+    stat_group_id: string;
+    data_source: 'server' | 'client' | 'server_script';
+    display_type: 'line_chart' | 'stacked_line_chart' | 'stacked_bar_chart' | 'table' | 'multi_column_table' | 'dynamic_properties_table';
+    title?: string;
+    y_label?: string;
+    tick_range?: number;
+    value_scalar?: number;
+    target_value?: number;
+    key_label?: string;
+    value_labels?: string[];
+    statistic_id?: string;
+    statistic_ids?: string[];
+}
+
+export interface SchemaMessageModel {
+    type: 'SchemaEvent';
+    descriptors: DiagnosticsTabDescriptor[];
+}
+
 export interface StatsListener {
     onStatUpdated?: (stat: StatData) => void;
     onSpeedUpdated?: (speed: number) => void;
     onPauseUpdated?: (paused: boolean) => void;
     onStopped?: () => void;
     onNotification?: (message: string) => void;
+    onSchemaReceived?: (schema: DiagnosticsTabDescriptor[]) => void;
 }
 
 export class StatsProvider {
@@ -45,6 +68,12 @@ export class StatsProvider {
         for (const stat of stats.stats) {
             this._fireStatUpdated(stat, stats.tick);
         }
+    }
+
+    public setSchema(schema: DiagnosticsTabDescriptor[]): void {
+        this._statListeners.forEach((listener: StatsListener) => {
+            listener.onSchemaReceived?.(schema);
+        });
     }
 
     public start(): void {

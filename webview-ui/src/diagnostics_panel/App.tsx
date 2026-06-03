@@ -9,6 +9,7 @@ import tabPrefabs from './prefabs';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from './prefabs/TabPrefab';
 import { handleDebuggerRequestResult } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
+import { DiagnosticsTabDescriptor } from './DiagnosticsSchema';
 
 // Wraps each tab's content() as a proper React component so that any hooks
 // inside the content function are correctly isolated and not called conditionally
@@ -58,6 +59,10 @@ function App() {
     const [currentTab, setCurrentTab] = useState<string>('tab-0');
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
+    // Dynamic schema received from the game on connect. Empty = use static prefab fallback.
+    const [schema, setSchema] = useState<DiagnosticsTabDescriptor[]>([]);
+    // Index of the selected tab in the dynamic dropdown
+    const [selectedSchemaIndex, setSelectedSchemaIndex] = useState<number>(0);
 
     const handlePluginSelection = useCallback((pluginSelectionId: string) => {
         setSelectedPlugin(() => pluginSelectionId);
@@ -65,6 +70,11 @@ function App() {
 
     const handleClientSelection = useCallback((clientSelectionId: string) => {
         setSelectedClient(() => clientSelectionId);
+    }, []);
+
+    const handleSchemaTabChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
+        const target = e.target as HTMLSelectElement;
+        setSelectedSchemaIndex(target.selectedIndex);
     }, []);
 
     useEffect(() => {
@@ -76,6 +86,9 @@ function App() {
                 setPaused(message.paused);
             } else if (message.type === 'debugger-request-result') {
                 handleDebuggerRequestResult(message);
+            } else if (message.type === 'diagnostics-schema') {
+                setSchema(message.schema as DiagnosticsTabDescriptor[]);
+                setSelectedSchemaIndex(0);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -83,6 +96,9 @@ function App() {
             window.removeEventListener('message', handleMessage);
         };
     }, [handleDebuggerRequestResult]);
+
+    const usingDynamicSchema = schema.length > 0;
+    const activeDescriptor = usingDynamicSchema ? schema[selectedSchemaIndex] : undefined;
 
     return (
         <main>

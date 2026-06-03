@@ -405,7 +405,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
         selectionHeaderLabel = 'Selected',
         defaultSelectAllGroups = false,
         onSelectionChange,
-        sparklineColumnIndex,
+        sparklineColumnIndex = 0,
         sparklineTickRange = 0,
         sparklineValueFormatter,
     }: MinecraftGroupedStatisticTableProps,
@@ -795,19 +795,17 @@ const MinecraftGroupedStatisticTable = forwardRef<
                         observedCategories,
                     );
 
-                    if (sparklineColumnIndex !== undefined) {
-                        categoryMap.forEach((row, category) => {
-                            const value = row.values[sparklineColumnIndex];
-                            if (typeof value === 'number') {
-                                const history = rowHistoryRef.current.get(category) ?? [];
-                                history.push(value);
-                                if (history.length > sparklineTickRange) {
-                                    history.splice(0, history.length - sparklineTickRange);
-                                }
-                                rowHistoryRef.current.set(category, history);
+                    categoryMap.forEach((row, category) => {
+                        const value = row.values[sparklineColumnIndex];
+                        if (typeof value === 'number') {
+                            const history = rowHistoryRef.current.get(category) ?? [];
+                            history.push(value);
+                            if (history.length > sparklineTickRange) {
+                                history.splice(0, history.length - sparklineTickRange);
                             }
-                        });
-                    }
+                            rowHistoryRef.current.set(category, history);
+                        }
+                    });
 
                     nonConsolidatedTickCounterRef.current = 0;
                     nonConsolidatedLastEventTimeRef.current = undefined;

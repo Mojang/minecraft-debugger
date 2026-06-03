@@ -9,26 +9,13 @@ import {
     sendDebuggerRequest,
     useDebuggerRequestUpdates,
 } from '../../utilities/useDebuggerRequests';
+import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResult';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 const DEBUGGER_REQUEST_COMMANDS = [
     { command: 'Start CPU Profiler', label: 'Start' },
     { command: 'Stop CPU Profiler', label: 'Stop' },
 ];
-
-function lastResultToUserFriendlyString(lastResult: DebuggerRequestResultMessage): string {
-    if (lastResult.error) {
-        return `Error: ${lastResult.error}`;
-    } else if (lastResult.response) {
-        if (lastResult.response.success) {
-            return `${lastResult.response.response_message}`;
-        } else {
-            return `Failed: ${lastResult.response.response_message}`;
-        }
-    } else {
-        return 'Press Start to Begin Profiling';
-    }
-}
 
 function isWhiskerEvent(event: StatisticUpdatedMessage): boolean {
     return event.group === 'low' || event.group === 'mid' || event.group === 'high' || event.group === 'indents';
@@ -76,11 +63,7 @@ const StatsTab: TabPrefab = {
                             );
                         })}
                         <div style={{ marginTop: '20px' }}>
-                            <text style={{ fontStyle: 'italic' }}>
-                                {lastResult
-                                    ? lastResultToUserFriendlyString(lastResult)
-                                    : 'Press Start to Begin Profiling'}
-                            </text>
+                            <DebuggerRequestResultBanner lastResult={lastResult} />
                         </div>
                     </div>
                 </div>

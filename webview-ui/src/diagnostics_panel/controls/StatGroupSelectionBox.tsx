@@ -7,6 +7,7 @@ type SelectionBoxProps = {
     labelName: string;
     statParentId: string;
     onChange: (selectedGroupId: string) => void;
+    helpTooltip?: string;
 };
 
 interface StatGroupEntry {
@@ -14,7 +15,7 @@ interface StatGroupEntry {
     name: string;
 }
 
-export function StatGroupSelectionBox({ labelName, statParentId, onChange }: SelectionBoxProps) {
+export function StatGroupSelectionBox({ labelName, statParentId, onChange, helpTooltip }: SelectionBoxProps) {
     // the groups directly under the 'statParentId'
     const [groups, setGroup] = useState<StatGroupEntry[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
@@ -24,11 +25,11 @@ export function StatGroupSelectionBox({ labelName, statParentId, onChange }: Sel
             const target = e.target as HTMLSelectElement;
             onChange(groups[target.selectedIndex].id);
         },
-        [groups]
+        [groups],
     );
 
     useEffect(() => {
-        onChange(selectedGroupId || "");
+        onChange(selectedGroupId || '');
     }, [selectedGroupId]);
 
     //draws chart
@@ -70,12 +71,17 @@ export function StatGroupSelectionBox({ labelName, statParentId, onChange }: Sel
 
     return (
         <div className="dropdown-container">
-            <label htmlFor="my-dropdown">{labelName}</label>
+            <label htmlFor="my-dropdown" className="stat-group-selection-label">
+                <span>{labelName}</span>
+                {helpTooltip && (
+                    <span className="stat-group-selection-help" title={helpTooltip} aria-label={`${labelName} help`}>
+                        ?
+                    </span>
+                )}
+            </label>
             <VSCodeDropdown id="my-dropdown" onChange={_onChange} disabled={groups.length === 0}>
                 {(groups ?? []).map(option => (
-                    <VSCodeOption key={option.id}>
-                        {option.name}
-                    </VSCodeOption>
+                    <VSCodeOption key={option.id}>{option.name}</VSCodeOption>
                 ))}
             </VSCodeDropdown>
         </div>

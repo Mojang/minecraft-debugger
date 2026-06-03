@@ -4,6 +4,7 @@ import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver } from '../StatisticResolver';
 import { VSCodeButton, VSCodeCheckbox, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
+import { SparklineCell } from './SparklineCell';
 
 export enum MinecraftGroupedStatisticTableSortOrder {
     Ascending,
@@ -33,6 +34,11 @@ export type GroupedStatisticTableRow = {
     category: string;
     values: (string | number)[];
     time: number;
+};
+
+type SparklineNormalizationBounds = {
+    min: number;
+    max: number;
 };
 
 type GroupedStatisticTableGroup = {
@@ -90,6 +96,9 @@ type MinecraftGroupedStatisticTableProps = {
     selectionHeaderLabel?: string;
     defaultSelectAllGroups?: boolean;
     onSelectionChange?: (snapshot: MinecraftGroupedStatisticTableSelectionSnapshot) => void;
+    sparklineColumnIndex?: number;
+    sparklineTickRange?: number;
+    sparklineValueFormatter?: (value: number) => string;
 };
 
 const sortOrderOptions = [
@@ -103,6 +112,95 @@ const sortTypeOptions = [
 ];
 
 const NON_CONSOLIDATED_STALE_TICK_THRESHOLD = 3;
+const SPARKLINE_BOUNDS_EXPAND_LERP = 0.35;
+const SPARKLINE_BOUNDS_CONTRACT_LERP = 0.12;
+const SPARKLINE_HISTORY_RETENTION_TICKS = 8;
+
+function getRowSparklineSeriesKey(category: string): string {
+    return `row:${category}`;
+}
+
+function getGroupSparklineSeriesKey(expansionKey: string): string {
+    return `group:${expansionKey}`;
+}
+
+function lerpValue(current: number, target: number, alpha: number): number {
+    return current + (target - current) * alpha;
+}
+
+function getSparklineBounds(values: number[]): SparklineNormalizationBounds {
+    const min = values.length > 0 ? Math.min(...values) : 0;
+    let max = values.length > 0 ? Math.max(...values) : 0;
+
+    // Gaurd against max being the same as min
+    // to avoid issues normalizing the lines.
+    if (max <= min) {
+        max = min + 0.01;
+    }
+
+    return { min, max };
+}
+
+function smoothSparklineBounds(
+    previousBounds: SparklineNormalizationBounds,
+    targetBounds: SparklineNormalizationBounds,
+): SparklineNormalizationBounds {
+    // Lerp the normalization bounds toward the target to prevent
+    // sharp changes in normalization.
+    // Use a more aggressive lerp when expanding bounds than when contracting them to help ensure that
+    // new values are visibile in a reasonable timeframe.
+    const minLerp =
+        targetBounds.min < previousBounds.min ? SPARKLINE_BOUNDS_EXPAND_LERP : SPARKLINE_BOUNDS_CONTRACT_LERP;
+    const maxLerp =
+        targetBounds.max > previousBounds.max ? SPARKLINE_BOUNDS_EXPAND_LERP : SPARKLINE_BOUNDS_CONTRACT_LERP;
+
+    const min = lerpValue(previousBounds.min, targetBounds.min, minLerp);
+    let max = lerpValue(previousBounds.max, targetBounds.max, maxLerp);
+
+    // Again, guard against max being the same as min after lerping to avoid normalization issues.
+    if (max <= min) {
+        max = min + 0.01;
+    }
+
+    return { min, max };
+}
+
+function aggregateGroupHistory(
+    rows: GroupedStatisticTableRow[],
+    historyMap: Map<string, number[]>,
+    tickRange: number,
+): number[] {
+    const histories = rows.map(row => historyMap.get(row.category) ?? []).filter(history => history.length > 0);
+    if (histories.length === 0) {
+        return [];
+    }
+
+    // Max length is the minimum of the tick range and the longest history
+    // to prevent aggregating more values than we have ticks to display
+    const maxLength = Math.min(tickRange, Math.max(...histories.map(history => history.length)));
+    if (maxLength === 0) {
+        return [];
+    }
+
+    const result = Array(maxLength).fill(0);
+
+    for (const history of histories) {
+        const historyStartIndex = maxLength - history.length;
+
+        for (let i = 0; i < maxLength; i++) {
+            // If the history doesn't have a value for this index,
+            // use the oldest value in the history to extend it backwards.
+            if (i < historyStartIndex) {
+                result[i] += history[0];
+                continue;
+            }
+
+            result[i] += history[i - historyStartIndex];
+        }
+    }
+
+    return result;
+}
 
 function getColumnIndexFromSortColumn(sortColumn: string, valueLabelsLength: number): number | undefined {
     const columnIndex = parseInt(sortColumn.replace('value_', ''));
@@ -307,6 +405,9 @@ const MinecraftGroupedStatisticTable = forwardRef<
         selectionHeaderLabel = 'Selected',
         defaultSelectAllGroups = false,
         onSelectionChange,
+        sparklineColumnIndex = 0,
+        sparklineTickRange = 0,
+        sparklineValueFormatter,
     }: MinecraftGroupedStatisticTableProps,
     ref,
 ): JSX.Element {
@@ -335,8 +436,28 @@ const MinecraftGroupedStatisticTable = forwardRef<
     const nonConsolidatedTickCounterRef = useRef(0);
     const nonConsolidatedLastEventTimeRef = useRef<number | undefined>(undefined);
     const nonConsolidatedLastSeenTickByCategoryRef = useRef<Map<string, number>>(new Map());
+    const rowHistoryRef = useRef<Map<string, number[]>>(new Map());
+    const rowHistoryMissingTickCountRef = useRef<Map<string, number>>(new Map());
+    const sparklineBoundsRef = useRef<Map<string, SparklineNormalizationBounds>>(new Map());
     const isGroupedMode = displayMode === MinecraftGroupedStatisticTableDisplayMode.Grouped;
     const groupKeyResolver = getGroupKey ?? ((rowCategory: string) => rowCategory);
+
+    const getSmoothedSparklineBounds = useCallback(
+        (seriesKey: string, history: number[]): SparklineNormalizationBounds => {
+            const targetBounds = getSparklineBounds(history);
+
+            const previousBounds = sparklineBoundsRef.current.get(seriesKey);
+            if (!previousBounds) {
+                sparklineBoundsRef.current.set(seriesKey, targetBounds);
+                return targetBounds;
+            }
+
+            const smoothedBounds = smoothSparklineBounds(previousBounds, targetBounds);
+            sparklineBoundsRef.current.set(seriesKey, smoothedBounds);
+            return smoothedBounds;
+        },
+        [],
+    );
 
     const groupedRowsByKey = useMemo((): Map<string, GroupedStatisticTableRow[]> => {
         const groupedRows = new Map<string, GroupedStatisticTableRow[]>();
@@ -674,6 +795,18 @@ const MinecraftGroupedStatisticTable = forwardRef<
                         observedCategories,
                     );
 
+                    categoryMap.forEach((row, category) => {
+                        const value = row.values[sparklineColumnIndex];
+                        if (typeof value === 'number') {
+                            const history = rowHistoryRef.current.get(category) ?? [];
+                            history.push(value);
+                            if (history.length > sparklineTickRange) {
+                                history.splice(0, history.length - sparklineTickRange);
+                            }
+                            rowHistoryRef.current.set(category, history);
+                        }
+                    });
+
                     nonConsolidatedTickCounterRef.current = 0;
                     nonConsolidatedLastEventTimeRef.current = undefined;
                     nonConsolidatedLastSeenTickByCategoryRef.current.clear();
@@ -720,6 +853,20 @@ const MinecraftGroupedStatisticTable = forwardRef<
                             categoryMap.set(stat.category, created);
                         }
                     });
+
+                    if (sparklineColumnIndex !== undefined && valueColumnIndex === sparklineColumnIndex) {
+                        rawStats.forEach(stat => {
+                            if (!stat.category) {
+                                return;
+                            }
+                            const history = rowHistoryRef.current.get(stat.category) ?? [];
+                            history.push(stat.absoluteValue);
+                            if (history.length > sparklineTickRange) {
+                                history.splice(0, history.length - sparklineTickRange);
+                            }
+                            rowHistoryRef.current.set(stat.category, history);
+                        });
+                    }
 
                     if (event.children_string_values && event.children_string_values.length > 0) {
                         processChildrenStringValues(
@@ -769,7 +916,15 @@ const MinecraftGroupedStatisticTable = forwardRef<
             statisticDataProvider.removeSubscriber(eventHandler);
             statisticDataProvider.unregisterWindowListener(window);
         };
-    }, [nonConsolidatedColumnResolver, prettifyNames, statisticDataProvider, statisticResolver, valueLabels]);
+    }, [
+        nonConsolidatedColumnResolver,
+        prettifyNames,
+        sparklineColumnIndex,
+        sparklineTickRange,
+        statisticDataProvider,
+        statisticResolver,
+        valueLabels,
+    ]);
 
     useEffect(() => {
         const validGroupKeys = new Set<string>();
@@ -816,7 +971,48 @@ const MinecraftGroupedStatisticTable = forwardRef<
         setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
             return handleUpdateSet(previousDeselectedRows, validRowKeys);
         });
+
+        const validCategories = new Set(data.map(row => row.category));
+        validCategories.forEach(category => {
+            rowHistoryMissingTickCountRef.current.delete(category);
+        });
+
+        rowHistoryRef.current.forEach((_, category) => {
+            if (validCategories.has(category)) {
+                return;
+            }
+
+            const missedTickCount = (rowHistoryMissingTickCountRef.current.get(category) ?? 0) + 1;
+            if (missedTickCount < SPARKLINE_HISTORY_RETENTION_TICKS) {
+                rowHistoryMissingTickCountRef.current.set(category, missedTickCount);
+                return;
+            }
+
+            rowHistoryRef.current.delete(category);
+            rowHistoryMissingTickCountRef.current.delete(category);
+            sparklineBoundsRef.current.delete(getRowSparklineSeriesKey(category));
+        });
+
+        sparklineBoundsRef.current.forEach((_, seriesKey) => {
+            if (!seriesKey.startsWith('row:')) {
+                return;
+            }
+
+            if (!validCategories.has(seriesKey) && !rowHistoryRef.current.has(seriesKey)) {
+                sparklineBoundsRef.current.delete(seriesKey);
+            }
+        });
     }, [data, groupKeyResolver]);
+
+    useEffect(() => {
+        if (sparklineColumnIndex !== undefined) {
+            return;
+        }
+
+        rowHistoryRef.current.clear();
+        rowHistoryMissingTickCountRef.current.clear();
+        sparklineBoundsRef.current.clear();
+    }, [sparklineColumnIndex]);
 
     useEffect(() => {
         if (!selectionEnabled || !defaultSelectAllGroups || hasInitializedDefaultSelection) {
@@ -949,6 +1145,20 @@ const MinecraftGroupedStatisticTable = forwardRef<
         valueLabels,
     ]);
 
+    useEffect(() => {
+        const validGroupSeriesKeys = new Set(groupedData.map(group => getGroupSparklineSeriesKey(group.expansionKey)));
+
+        sparklineBoundsRef.current.forEach((_, seriesKey) => {
+            if (!seriesKey.startsWith('group:')) {
+                return;
+            }
+
+            if (!validGroupSeriesKeys.has(seriesKey)) {
+                sparklineBoundsRef.current.delete(seriesKey);
+            }
+        });
+    }, [groupedData]);
+
     const sortedFlatData = useMemo((): GroupedStatisticTableRow[] => {
         if (isGroupedMode) {
             return [];
@@ -1029,6 +1239,8 @@ const MinecraftGroupedStatisticTable = forwardRef<
         const rowPinKey = getRowPinKey(groupKey, row.category);
         const isPinned = pinnedRows.has(rowPinKey);
         const isSelected = isRowSelected(groupKey, rowPinKey);
+        const sparklineHistory = rowHistoryRef.current.get(row.category) ?? [];
+        const sparklineBounds = getSmoothedSparklineBounds(getRowSparklineSeriesKey(row.category), sparklineHistory);
 
         return (
             <tr
@@ -1059,6 +1271,16 @@ const MinecraftGroupedStatisticTable = forwardRef<
                         {formatCellValue(value, valueIndex)}
                     </td>
                 ))}
+                {sparklineColumnIndex !== undefined && (
+                    <td className="minecraft-grouped-statistic-table-grid-sparkline">
+                        <SparklineCell
+                            values={sparklineHistory}
+                            formatValue={sparklineValueFormatter}
+                            displayedMin={sparklineBounds.min}
+                            displayedMax={sparklineBounds.max}
+                        />
+                    </td>
+                )}
                 {rowAction && (
                     <td
                         className="minecraft-grouped-statistic-table-grid-action"
@@ -1140,6 +1362,9 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                     {label}
                                 </th>
                             ))}
+                            {sparklineColumnIndex !== undefined && (
+                                <th className="minecraft-grouped-statistic-table-grid-sparkline">Trend</th>
+                            )}
                             {rowAction && (
                                 <th className="minecraft-grouped-statistic-table-grid-action">
                                     {rowAction.headerLabel || 'Action'}
@@ -1197,25 +1422,31 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                               </td>
                                           )}
                                           <td>
-                                              <button
-                                                  type="button"
-                                                  className="minecraft-grouped-statistic-toggle"
-                                                  onClick={() => onToggleGroup(group.expansionKey)}
-                                                  aria-expanded={isExpanded}
-                                                  aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
-                                              >
-                                                  {isExpanded ? '▾' : '▸'}
-                                              </button>
-                                              <span className="minecraft-grouped-statistic-group-key">{group.key}</span>
-                                              <span className="minecraft-grouped-statistic-group-meta">
-                                                  ({group.count} {groupCountLabel}
-                                                  {group.isSplit
-                                                      ? group.isPinnedSection
-                                                          ? ', pinned'
-                                                          : ', unpinned'
-                                                      : ''}
-                                                  )
-                                              </span>
+                                              <div className="minecraft-grouped-statistic-group-label">
+                                                  <div className="minecraft-grouped-statistic-group-title">
+                                                      <button
+                                                          type="button"
+                                                          className="minecraft-grouped-statistic-toggle"
+                                                          onClick={() => onToggleGroup(group.expansionKey)}
+                                                          aria-expanded={isExpanded}
+                                                          aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
+                                                      >
+                                                          {isExpanded ? '▾' : '▸'}
+                                                      </button>
+                                                      <span className="minecraft-grouped-statistic-group-key">
+                                                          {group.key}
+                                                      </span>
+                                                  </div>
+                                                  <span className="minecraft-grouped-statistic-group-meta">
+                                                      ({group.count} {groupCountLabel}
+                                                      {group.isSplit
+                                                          ? group.isPinnedSection
+                                                              ? ', pinned'
+                                                              : ', unpinned'
+                                                          : ''}
+                                                      )
+                                                  </span>
+                                              </div>
                                           </td>
                                           {valueLabels.map((label, valueIndex) => {
                                               const aggregatedValue = getAggregatedGroupColumnValue(
@@ -1245,6 +1476,29 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                                   </td>
                                               );
                                           })}
+                                          {sparklineColumnIndex !== undefined &&
+                                              (() => {
+                                                  const groupSparklineHistory = aggregateGroupHistory(
+                                                      group.rows,
+                                                      rowHistoryRef.current,
+                                                      sparklineTickRange,
+                                                  );
+                                                  const groupSparklineBounds = getSmoothedSparklineBounds(
+                                                      getGroupSparklineSeriesKey(group.expansionKey),
+                                                      groupSparklineHistory,
+                                                  );
+
+                                                  return (
+                                                      <td className="minecraft-grouped-statistic-table-grid-sparkline">
+                                                          <SparklineCell
+                                                              values={groupSparklineHistory}
+                                                              formatValue={sparklineValueFormatter}
+                                                              displayedMin={groupSparklineBounds.min}
+                                                              displayedMax={groupSparklineBounds.max}
+                                                          />
+                                                      </td>
+                                                  );
+                                              })()}
                                           {rowAction && (
                                               <td className="minecraft-grouped-statistic-table-grid-action" />
                                           )}

@@ -20,10 +20,15 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this._eventEmitter = eventEmitter;
     }
 
-    public setDebuggerStatus(isConnected: boolean, minecraftCapabilities: MinecraftCapabilities): void {
+    public setDebuggerStatus(
+        isConnected: boolean,
+        minecraftCapabilities: MinecraftCapabilities,
+        isListening: boolean,
+    ): void {
         this._view?.webview.postMessage({
             type: 'debugger-status',
             isConnected: isConnected,
+            isListening: isListening,
             supportsCommands: minecraftCapabilities.supportsCommands,
             supportsProfiler: minecraftCapabilities.supportsProfiler,
         });

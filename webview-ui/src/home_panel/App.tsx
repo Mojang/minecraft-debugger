@@ -39,6 +39,7 @@ const onCaptureBasePathBrowseButtonPressed = () => {
 
 const App = () => {
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
+    const [debuggerListening, setDebuggerListening] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
 
@@ -104,6 +105,7 @@ const App = () => {
                     setProfilerCapturing(false);
                 }
                 setDebuggerConnected(message.isConnected);
+                setDebuggerListening(message.isListening);
                 setSupportsCommands(message.supportsCommands);
                 setSupportsProfiler(message.supportsProfiler);
             }
@@ -119,7 +121,7 @@ const App = () => {
     // Render
     return (
         <main>
-            <StatusSection debuggerConnected={debuggerConnected} />
+            <StatusSection debuggerConnected={debuggerConnected} debuggerListening={debuggerListening} />
             <GeneralSection
                 onShowDiagnosticsPanel={onShowDiagnosticsPanel}
                 onOpenDiagnosticsReplay={onOpenDiagnosticsReplay}

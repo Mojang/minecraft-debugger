@@ -1,8 +1,9 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { DebuggerRequestArguments, DebuggerRequestEnvelope, DebuggeeResponseEnvelope } from './debugger-request-schema';
+import { DebuggerRequestArguments} from './debugger-request-schema';
 import { IDebuggeeMessageSender } from '../debuggee-message-sender';
+import { DebuggeeResponseEnvelope, OutgoingEventType, ProtocolVersion } from '../protocol-events';
 
 interface PendingDebuggerRequest {
     resolve: (value: DebuggeeResponseEnvelope) => void;
@@ -20,6 +21,7 @@ export class RequestManager {
     }
 
     public sendDebuggerRequest(
+        clientProtocolVersion: number,
         response: DebugProtocol.Response,
         debuggerRequestArgs: DebuggerRequestArguments,
         timeoutMs: number = this._defaultDebuggerRequestTimeoutMs,
@@ -45,16 +47,23 @@ export class RequestManager {
             });
 
             // Create an envelope to hold the request, and send it to the debuggee
-            const envelope: DebuggerRequestEnvelope = {
-                type: 'debugger-request',
-                request: {
+            if (clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
+                this._sender.sendDebuggeeMessage({
+                    type:  OutgoingEventType.DebuggerRequest,
                     request_seq: seq,
                     request,
                     args,
-                },
-            };
-
-            this._sender.sendDebuggeeMessage(envelope);
+                });
+            } else {
+                this._sender.sendDebuggeeMessage({
+                    type:  OutgoingEventType.DebuggerRequest,
+                    request: {
+                        request_seq: seq,
+                        request,
+                        args,
+                    },
+                });
+            }
         });
     }
 

@@ -436,6 +436,9 @@ const StatsTab: TabPrefab = {
                                 }),
                             )}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
+                            sparklineColumnIndex={0}
+                            sparklineTickRange={100}
+                            sparklineValueFormatter={value => formatTimingValue(value, entityTimingUnit)}
                             valueFormatter={(value, columnIndex) => {
                                 // Timing column
                                 if (columnIndex === 0) {
@@ -533,6 +536,9 @@ const StatsTab: TabPrefab = {
                             defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
                             prettifyNames={false}
                             nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
+                            sparklineColumnIndex={0}
+                            sparklineTickRange={100}
+                            sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
                             valueFormatter={(value, columnIndex) => {
                                 // Timing column
                                 if (columnIndex === 0) {

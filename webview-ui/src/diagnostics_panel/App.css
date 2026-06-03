@@ -439,6 +439,13 @@ main {
   padding: 6px 4px !important;
 }
 
+.minecraft-grouped-statistic-table-grid-sparkline {
+  width: 240px;
+  min-width: 240px;
+  padding: 4px 10px !important;
+  vertical-align: middle;
+}
+
 .minecraft-grouped-statistic-group-row {
   background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 33%, var(--vscode-editor-background));
 }
@@ -447,12 +454,28 @@ main {
   background: color-mix(in srgb, var(--vscode-list-highlightForeground) 33%, var(--vscode-editor-background));
 }
 
+.minecraft-grouped-statistic-group-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.minecraft-grouped-statistic-group-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 .minecraft-grouped-statistic-group-key {
-  margin-right: 6px;
+  display: inline-block;
+  margin-right: 0;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .minecraft-grouped-statistic-group-meta {
+  display: block;
+  margin-left: 0;
   color: var(--vscode-descriptionForeground);
 }
 

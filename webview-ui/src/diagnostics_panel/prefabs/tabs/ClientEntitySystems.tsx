@@ -25,6 +25,7 @@ import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-t
 const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
 const FILTER_MULTI_ENTITY_REQUEST = 'Filter Multi Entity System Profiler';
 const FILTER_SINGLE_ENTITY_REQUEST = 'Filter Single Entity System Profiler';
+const FILTER_BY_SYSTEM_REQUEST = 'Filter By System Entity System Profiler';
 
 const DEBUGGER_REQUEST_COMMANDS = [
     { command: START_ENTITY_SYSTEM_PROFILER_REQUEST, label: 'Start' },
@@ -35,7 +36,7 @@ const DEBUGGER_REQUEST_COMMANDS = [
 type TimingUnit = 'ns' | 'us' | 'ms';
 type EntityViewMode = 'flat' | 'grouped';
 type SystemViewMode = 'flat' | 'grouped';
-type EntitySelectionMode = 'force-all' | 'filter' | 'single-entity';
+type FilterSelectionMode = 'no-filter' | 'filter-by-entity' | 'filter-by-single-entity' | 'filter-by-system';
 
 const UNCATEGORIZED_SYSTEM_GROUP = 'INVALID CATEGORY';
 
@@ -104,6 +105,13 @@ function extractEntityId(entityCategory: string): string | undefined {
     return match?.[1];
 }
 
+function resolveSystemId(fullName: string): string | undefined {
+    // Example fullname: "System Name (4)"
+    const indexAndBracket = fullName ? fullName.split('(')[1] : undefined;
+    const index = indexAndBracket ? indexAndBracket.split(')')[0].trim() : undefined;
+    return index;
+}
+
 function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap: Map<string, string>): string {
     // Example fullName: "System Name (4)"
     // Take anything before the first '('
@@ -124,10 +132,11 @@ const StatsTab: TabPrefab = {
         const [entityViewMode, setEntityViewMode] = useState<EntityViewMode>('grouped');
         const [systemViewMode, setSystemViewMode] = useState<SystemViewMode>('grouped');
         const [systemCategoryLegendMap, setSystemCategoryLegendMap] = useState<Map<string, string>>(new Map());
-        const [selectionMode, setSelectionMode] = useState<EntitySelectionMode>('force-all');
+        const [filterSelectionMode, setFilterSelectionMode] = useState<FilterSelectionMode>('no-filter');
         const [availableEntities, setAvailableEntities] = useState<{ id: string; fullName: string }[]>([]);
         const [selectedSingleEntityId, setSelectedSingleEntityId] = useState<string | undefined>(undefined);
         const [filteredEntityCount, setFilteredEntityCount] = useState<number | undefined>(undefined);
+        const [filteredSystemCount, setFilteredSystemCount] = useState<number | undefined>(undefined);
         const entityTimingsTableRef = useRef<MinecraftGroupedStatisticTableHandle | null>(null);
         const isMountRef = useRef(true);
         const categoriesProvider = useMemo(() => {
@@ -217,12 +226,11 @@ const StatsTab: TabPrefab = {
             entityTimingsTableRef.current?.clearSelection();
             setSelectedSingleEntityId(undefined);
             setFilteredEntityCount(undefined);
+            setFilteredSystemCount(undefined);
 
-            if (selectionMode === 'force-all') {
-                setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
-                sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, { entityIds: [] });
-            }
-        }, [selectionMode]);
+            setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
+            sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, {});
+        }, [filterSelectionMode]);
 
         const handleEntitySelectionChange = useCallback(
             (snapshot: MinecraftGroupedStatisticTableSelectionSnapshot): void => {
@@ -238,19 +246,51 @@ const StatsTab: TabPrefab = {
                 setLastRequestedCommand(FILTER_MULTI_ENTITY_REQUEST);
                 sendDebuggerRequest(FILTER_MULTI_ENTITY_REQUEST, { entityIds });
             },
-            [],
+            [filterSelectionMode],
+        );
+
+        const handleSystemSelectionChange = useCallback(
+            (snapshot: MinecraftGroupedStatisticTableSelectionSnapshot): void => {
+                const systemIds = Array.from(
+                    new Set(
+                        snapshot.resolvedSelectedRows
+                            .map(row => resolveSystemId(row.category))
+                            .filter((systemId): systemId is string => systemId !== undefined),
+                    ),
+                );
+
+                setFilteredSystemCount(systemIds.length);
+                setLastRequestedCommand(FILTER_BY_SYSTEM_REQUEST);
+                sendDebuggerRequest(FILTER_BY_SYSTEM_REQUEST, { systemIds });
+            },
+            [filterSelectionMode],
         );
 
         const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), 'Percent Of Total'];
 
         const filteredEntityLabel = (() => {
-            if (selectionMode === 'single-entity') {
-                return selectedSingleEntityId ? 'Currently Filtered to 1 Entity' : 'Showing All Entities';
+            if (filterSelectionMode === 'filter-by-single-entity') {
+                return selectedSingleEntityId ? 'Showing System Timings For 1 Entity' : 'Showing All System Timings';
             }
-            if (selectionMode === 'filter' && filteredEntityCount !== undefined && filteredEntityCount > 0) {
-                return `Currently Filtered to ${filteredEntityCount} ${filteredEntityCount === 1 ? 'Entity' : 'Entities'}`;
+            if (
+                filterSelectionMode === 'filter-by-entity' &&
+                filteredEntityCount !== undefined &&
+                filteredEntityCount > 0
+            ) {
+                return `Showing System Timings For ${filteredEntityCount} ${filteredEntityCount === 1 ? 'Entity' : 'Entities'}`;
             }
-            return 'Showing All Entities';
+            return 'Showing All System Timings';
+        })();
+
+        const filteredSystemLabel = (() => {
+            if (
+                filterSelectionMode === 'filter-by-system' &&
+                filteredSystemCount !== undefined &&
+                filteredSystemCount > 0
+            ) {
+                return `Showing Entity Timings For ${filteredSystemCount} ${filteredSystemCount === 1 ? 'System' : 'Systems'}`;
+            }
+            return 'Showing All Entity Timings';
         })();
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
@@ -283,10 +323,85 @@ const StatsTab: TabPrefab = {
                         </div>
                     </div>
                 </div>
+                <div style={{ flexDirection: 'column', display: 'flex', width: '50%' }}>
+                    <div style={{ flex: 1, margin: '5px' }}>
+                        <h2>Selection Controls</h2>
+                        <div className="dropdown-container">
+                            <label htmlFor="ecs-filter-mode" style={{ marginBottom: '5px' }}>
+                                Filter Mode <span style={{ opacity: 0.8 }}>🛈</span>
+                            </label>
+                            <VSCodeDropdown
+                                id="ecs-filter-mode"
+                                style={{ width: '100%' }}
+                                value={filterSelectionMode}
+                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                    const target = event.target as HTMLSelectElement;
+                                    setFilterSelectionMode(target.value as FilterSelectionMode);
+                                }}
+                                title={
+                                    'Select Filtering Mode:\n' +
+                                    '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
+                                    '\u2022 "Filter By Entity" allows you to select specific entities, and only show the system information for that selection.\n' +
+                                    '\u2022 "Filter By Single Entity" allows you to select one specific entity, and only display information for that selection.\n' +
+                                    '    This option has some performance benefits on the backend profiler versus multi select.\n' +
+                                    '\u2022 "Filter By System" allows you to select specific systems and will only show the entities and entity timing values for those systems.'
+                                }
+                            >
+                                <VSCodeOption value="no-filter">No Filter</VSCodeOption>
+                                <VSCodeOption value="filter-by-entity">Filter By Entity</VSCodeOption>
+                                <VSCodeOption value="filter-by-single-entity">Filter By Single Entity</VSCodeOption>
+                                <VSCodeOption value="filter-by-system">Filter By System</VSCodeOption>
+                            </VSCodeDropdown>
+                        </div>
+                        {filterSelectionMode === 'filter-by-single-entity' && (
+                            <div className="dropdown-container" style={{ marginTop: '10px' }}>
+                                <label htmlFor="ecs-single-entity-id" style={{ marginBottom: '5px' }}>
+                                    Entity
+                                </label>
+                                <VSCodeDropdown
+                                    id="ecs-single-entity-id"
+                                    style={{ width: '100%' }}
+                                    value={selectedSingleEntityId ?? ''}
+                                    onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                        const target = event.target as HTMLSelectElement;
+                                        const entityId = target.value || undefined;
+                                        setSelectedSingleEntityId(entityId);
+                                        if (entityId) {
+                                            setLastRequestedCommand(FILTER_SINGLE_ENTITY_REQUEST);
+                                            sendDebuggerRequest(FILTER_SINGLE_ENTITY_REQUEST, {
+                                                entityIds: [entityId],
+                                            });
+                                        } else {
+                                            // If we don't have a valid entity selected, still send the event with no id's
+                                            setLastRequestedCommand(FILTER_SINGLE_ENTITY_REQUEST);
+                                            sendDebuggerRequest(FILTER_SINGLE_ENTITY_REQUEST, {
+                                                entityIds: [],
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <VSCodeOption value="">-- select an entity --</VSCodeOption>
+                                    {availableEntities.map(({ id, fullName }) => (
+                                        <VSCodeOption key={id} value={id}>
+                                            {fullName}
+                                        </VSCodeOption>
+                                    ))}
+                                </VSCodeDropdown>
+                            </div>
+                        )}
+                    </div>
+                </div>
                 <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, marginRight: '5px' }}>
                         <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-                            <h2>Entity Timings</h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <h2>Entity Timings</h2>
+                                <div className="minecraft-entity-system-count-badge">
+                                    <span className="minecraft-entity-system-count-badge-content">
+                                        {filteredSystemLabel}
+                                    </span>
+                                </div>
+                            </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                 <div className="dropdown-container">
                                     <label htmlFor="ecs-entity-timing-unit" style={{ marginBottom: '5px' }}>
@@ -322,78 +437,6 @@ const StatsTab: TabPrefab = {
                                     </VSCodeDropdown>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
-                                <div
-                                    className="dropdown-container"
-                                    style={{ flex: 0.5 }}
-                                    title={
-                                        'Select which entities to include in System profiling:\n' +
-                                        '\u2022 "All Entities" will display system information for every entity.\n' +
-                                        '\u2022 "Filter By Selection" allows you to select specific entities, and only show the System information for that selection.\n' +
-                                        '\u2022 "Filter to Single Entity" allows you to select one specific entity, and only display information for that selection. (This comes with some in-game performance benefits as we can narrow our profiling costs.)'
-                                    }
-                                >
-                                    <label htmlFor="ecs-entity-selection-mode" style={{ marginBottom: '5px' }}>
-                                        Entity Selection Mode <span style={{ opacity: 0.8 }}>🛈</span>
-                                    </label>
-                                    <VSCodeDropdown
-                                        id="ecs-entity-selection-mode"
-                                        style={{ width: '100%' }}
-                                        value={selectionMode}
-                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                            const target = event.target as HTMLSelectElement;
-                                            setSelectionMode(target.value as EntitySelectionMode);
-                                            if (target.value !== 'single-entity') {
-                                                // send a new start event to get back to a clean state
-                                                setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
-                                                sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, {
-                                                    entityIds: [],
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        <VSCodeOption value="force-all">All Entities</VSCodeOption>
-                                        <VSCodeOption value="filter">Filter By Selection</VSCodeOption>
-                                        <VSCodeOption value="single-entity">Filter to Single Entity</VSCodeOption>
-                                    </VSCodeDropdown>
-                                </div>
-                                {selectionMode === 'single-entity' && (
-                                    <div className="dropdown-container" style={{ flex: 0.5 }}>
-                                        <label htmlFor="ecs-single-entity-id" style={{ marginBottom: '5px' }}>
-                                            Entity
-                                        </label>
-                                        <VSCodeDropdown
-                                            id="ecs-single-entity-id"
-                                            style={{ width: '100%' }}
-                                            value={selectedSingleEntityId ?? ''}
-                                            onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                                const target = event.target as HTMLSelectElement;
-                                                const entityId = target.value || undefined;
-                                                setSelectedSingleEntityId(entityId);
-                                                if (entityId) {
-                                                    setLastRequestedCommand(FILTER_SINGLE_ENTITY_REQUEST);
-                                                    sendDebuggerRequest(FILTER_SINGLE_ENTITY_REQUEST, {
-                                                        entityIds: [entityId],
-                                                    });
-                                                } else {
-                                                    // If we don't have a valid entity selected, still send the event with no id's
-                                                    setLastRequestedCommand(FILTER_SINGLE_ENTITY_REQUEST);
-                                                    sendDebuggerRequest(FILTER_SINGLE_ENTITY_REQUEST, {
-                                                        entityIds: [],
-                                                    });
-                                                }
-                                            }}
-                                        >
-                                            <VSCodeOption value="">-- select an entity --</VSCodeOption>
-                                            {availableEntities.map(({ id, fullName }) => (
-                                                <VSCodeOption key={id} value={id}>
-                                                    {fullName}
-                                                </VSCodeOption>
-                                            ))}
-                                        </VSCodeDropdown>
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
                         <MinecraftGroupedStatisticTable
@@ -401,9 +444,11 @@ const StatsTab: TabPrefab = {
                             key={`entity-timings-${entityViewMode}-${selectedClient}`}
                             title="Entity Timings"
                             showTitle={false}
-                            selectionEnabled={selectionMode === 'filter'}
+                            selectionEnabled={filterSelectionMode === 'filter-by-entity'}
                             selectionHeaderLabel="Filter To"
-                            onSelectionChange={selectionMode === 'filter' ? handleEntitySelectionChange : undefined}
+                            onSelectionChange={
+                                filterSelectionMode === 'filter-by-entity' ? handleEntitySelectionChange : undefined
+                            }
                             keyLabel="Entity"
                             valueLabels={entityValueLabels}
                             displayMode={
@@ -455,11 +500,13 @@ const StatsTab: TabPrefab = {
                     </div>
                     <div style={{ flex: 1, marginRight: '5px' }}>
                         <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-                            <h2>System Timings</h2>
-                            <div className="minecraft-entity-system-count-badge">
-                                <span className="minecraft-entity-system-count-badge-content">
-                                    {filteredEntityLabel}
-                                </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <h2>System Timings</h2>
+                                <div className="minecraft-entity-system-count-badge">
+                                    <span className="minecraft-entity-system-count-badge-content">
+                                        {filteredEntityLabel}
+                                    </span>
+                                </div>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                 <div className="dropdown-container">
@@ -501,6 +548,11 @@ const StatsTab: TabPrefab = {
                             key={`system-timings-${systemViewMode}-${selectedClient}`}
                             title="System Timings"
                             showTitle={false}
+                            selectionEnabled={filterSelectionMode === 'filter-by-system'}
+                            selectionHeaderLabel="Filter To"
+                            onSelectionChange={
+                                filterSelectionMode === 'filter-by-system' ? handleSystemSelectionChange : undefined
+                            }
                             keyLabel="System"
                             valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
                             displayMode={

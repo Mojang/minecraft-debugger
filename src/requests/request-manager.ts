@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { DebuggerRequestArguments} from './debugger-request-schema';
+import { DebuggerRequestArguments } from './debugger-request-schema';
 import { IDebuggeeMessageSender } from '../debuggee-message-sender';
 import { DebuggeeResponseEnvelope, OutgoingEventType, ProtocolVersion } from '../protocol-events';
 

@@ -439,6 +439,12 @@ main {
   padding: 6px 4px !important;
 }
 
+.minecraft-grouped-statistic-table-grid-numeric {
+  text-align: right !important;
+  white-space: nowrap;
+  width: 120px;
+}
+
 .minecraft-grouped-statistic-table-grid-sparkline {
   width: 240px;
   min-width: 240px;
@@ -470,13 +476,19 @@ main {
   display: inline-block;
   margin-right: 0;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  vertical-align: middle;
 }
 
 .minecraft-grouped-statistic-group-meta {
   display: block;
   margin-left: 0;
   color: var(--vscode-descriptionForeground);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .minecraft-grouped-statistic-toggle {
@@ -493,6 +505,11 @@ main {
 .minecraft-grouped-statistic-child-key {
   display: inline-block;
   padding-left: 18px;
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  vertical-align: middle;
 }
 
 .minecraft-grouped-statistic-row-pinned {

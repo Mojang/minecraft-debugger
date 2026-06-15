@@ -116,6 +116,27 @@ const SPARKLINE_BOUNDS_EXPAND_LERP = 0.35;
 const SPARKLINE_BOUNDS_CONTRACT_LERP = 0.12;
 const SPARKLINE_HISTORY_RETENTION_TICKS = 8;
 
+const TICKS_PER_SECOND = 20;
+const TICKS_PER_SPARKLINE_UPDATE = 12; // TODO I don't know if this is accurate or not, but it gives us the right values for now
+
+function sparklineTickRangeToSeconds(updatePoints: number): string {
+    const totalTicks = updatePoints * TICKS_PER_SPARKLINE_UPDATE;
+    const seconds = totalTicks / TICKS_PER_SECOND;
+
+    if (seconds <= 0) {
+        return '0s';
+    }
+
+    if (seconds >= 60) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.round(seconds % 60);
+
+        return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    }
+
+    // For short ranges, show one decimal place for precision
+    return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
+}
 function getRowSparklineSeriesKey(category: string): string {
     return `row:${category}`;
 }
@@ -1363,7 +1384,9 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                 </th>
                             ))}
                             {sparklineColumnIndex !== undefined && (
-                                <th className="minecraft-grouped-statistic-table-grid-sparkline">Trend</th>
+                                <th className="minecraft-grouped-statistic-table-grid-sparkline">
+                                    Trend ({sparklineTickRangeToSeconds(sparklineTickRange)})
+                                </th>
                             )}
                             {rowAction && (
                                 <th className="minecraft-grouped-statistic-table-grid-action">

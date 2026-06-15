@@ -58,7 +58,8 @@ import {
     StoppedEventMessage,
     ThreadEventMessage,
     DebuggeeResponseEnvelope,
-    RequestLegacyMessage
+    RequestLegacyMessage,
+    DiagnosticsDescriptorMessage,
 } from './protocol-events';
 import { SourceMaps } from './source-maps';
 import { StatMessageModel, StatsProvider } from './stats/stats-provider';
@@ -201,6 +202,9 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         });
         this._eventRegistry.register(IncomingEventType.ProfilerCapture, (msg: ProfilerCapture) => {
             this.handleProfilerCapture(msg);
+        });
+        this._eventRegistry.register(IncomingEventType.DiagnosticsDescriptor, (msg: DiagnosticsDescriptorMessage) => {
+            this._statsProvider.setSchema(msg.descriptors);
         });
     }
 
@@ -957,7 +961,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         const newline = Buffer.from('\n');
         const buffer = Buffer.concat([lengthBuffer, jsonBuffer, newline]);
 
-        this._connectionSocket.write(buffer);
+        this._connectionSocket.write(buffer);55
     }
 
     private receiveDebugeeMessage(envelope: any) {

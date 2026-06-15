@@ -10,6 +10,7 @@ import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from './prefabs/TabPr
 import { handleDebuggerRequestResult } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
 import { DiagnosticsTabDescriptor } from './DiagnosticsSchema';
+import DynamicTab from './DynamicTab';
 
 // Wraps each tab's content() as a proper React component so that any hooks
 // inside the content function are correctly isolated and not called conditionally
@@ -17,6 +18,11 @@ import { DiagnosticsTabDescriptor } from './DiagnosticsSchema';
 function TabView({ tabPrefab, params }: { tabPrefab: TabPrefab; params: TabPrefabParams }) {
     return <>{tabPrefab.content(params)}</>;
 }
+
+// A tab entry is either a hardcoded prefab or a dynamic descriptor received from the game.
+type MergedTab =
+    | { kind: 'prefab'; name: string; tab: TabPrefab }
+    | { kind: 'dynamic'; name: string; descriptor: DiagnosticsTabDescriptor };
 
 declare global {
     interface Window {
@@ -59,10 +65,8 @@ function App() {
     const [currentTab, setCurrentTab] = useState<string>('tab-0');
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
-    // Dynamic schema received from the game on connect. Empty = use static prefab fallback.
+    // Dynamic schema received from the game on connect. Merged into the prefab tab list.
     const [schema, setSchema] = useState<DiagnosticsTabDescriptor[]>([]);
-    // Index of the selected tab in the dynamic dropdown
-    const [selectedSchemaIndex, setSelectedSchemaIndex] = useState<number>(0);
 
     const handlePluginSelection = useCallback((pluginSelectionId: string) => {
         setSelectedPlugin(() => pluginSelectionId);
@@ -70,11 +74,6 @@ function App() {
 
     const handleClientSelection = useCallback((clientSelectionId: string) => {
         setSelectedClient(() => clientSelectionId);
-    }, []);
-
-    const handleSchemaTabChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
-        const target = e.target as HTMLSelectElement;
-        setSelectedSchemaIndex(target.selectedIndex);
     }, []);
 
     useEffect(() => {
@@ -88,7 +87,6 @@ function App() {
                 handleDebuggerRequestResult(message);
             } else if (message.type === 'diagnostics-schema') {
                 setSchema(message.schema as DiagnosticsTabDescriptor[]);
-                setSelectedSchemaIndex(0);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -97,8 +95,21 @@ function App() {
         };
     }, [handleDebuggerRequestResult]);
 
-    const usingDynamicSchema = schema.length > 0;
-    const activeDescriptor = usingDynamicSchema ? schema[selectedSchemaIndex] : undefined;
+    // Merge schema tabs into the prefab list. Schema tabs whose name matches a prefab replace it;
+    // new names are appended. Falls back to all prefabs when no schema has arrived yet.
+    const mergedTabs: MergedTab[] = sortedTabPrefabs.map(tab => ({
+        kind: 'prefab' as const,
+        name: tab.name,
+        tab,
+    }));
+    for (const descriptor of schema) {
+        const existingIndex = mergedTabs.findIndex(t => t.name === descriptor.name);
+        if (existingIndex !== -1) {
+            mergedTabs[existingIndex] = { kind: 'dynamic' as const, name: descriptor.name, descriptor };
+        } else {
+            mergedTabs.push({ kind: 'dynamic' as const, name: descriptor.name, descriptor });
+        }
+    }
 
     return (
         <main>
@@ -116,18 +127,18 @@ function App() {
             )}
             <div className="vertical-tabs-container">
                 <div className="vertical-tab-list">
-                    {sortedTabPrefabs.map((tabPrefab, index) => (
+                    {mergedTabs.map((tab, index) => (
                         <button
                             key={`tab-${index}`}
                             className={`vertical-tab-item${currentTab === `tab-${index}` ? ' active' : ''}`}
                             onClick={() => setCurrentTab(`tab-${index}`)}
                         >
-                            {tabPrefab.name}
+                            {tab.name}
                         </button>
                     ))}
                 </div>
                 <div className="vertical-tab-content">
-                    {sortedTabPrefabs.map((tabPrefab, index) => (
+                    {mergedTabs.map((tab, index) => (
                         <div
                             key={`view-${index}`}
                             style={{
@@ -136,26 +147,53 @@ function App() {
                                 flex: 1,
                             }}
                         >
-                            {tabPrefab.dataSource === TabPrefabDataSource.Client ? (
-                                <StatGroupSelectionBox
-                                    labelName="Client"
-                                    statParentId="client_stats"
-                                    onChange={handleClientSelection}
-                                    helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
-                                />
+                            {tab.kind === 'prefab' ? (
+                                <>
+                                    {tab.tab.dataSource === TabPrefabDataSource.Client ? (
+                                        <StatGroupSelectionBox
+                                            labelName="Client"
+                                            statParentId="client_stats"
+                                            onChange={handleClientSelection}
+                                            helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
+                                        />
+                                    ) : (
+                                        <div />
+                                    )}
+                                    {tab.tab.dataSource === TabPrefabDataSource.ServerScript ? (
+                                        <StatGroupSelectionBox
+                                            labelName="Script Plugin"
+                                            statParentId="handle_counts"
+                                            onChange={handlePluginSelection}
+                                        />
+                                    ) : (
+                                        <div />
+                                    )}
+                                    <TabView tabPrefab={tab.tab} params={{ selectedClient, selectedPlugin, onRunCommand }} />
+                                </>
                             ) : (
-                                <div />
+                                <>
+                                    {tab.descriptor.data_source === 'client' && (
+                                        <StatGroupSelectionBox
+                                            labelName="Client"
+                                            statParentId="client_stats"
+                                            onChange={handleClientSelection}
+                                            helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
+                                        />
+                                    )}
+                                    {tab.descriptor.data_source === 'server_script' && (
+                                        <StatGroupSelectionBox
+                                            labelName="Script Plugin"
+                                            statParentId="handle_counts"
+                                            onChange={handlePluginSelection}
+                                        />
+                                    )}
+                                    <DynamicTab
+                                        descriptor={tab.descriptor}
+                                        selectedClient={selectedClient}
+                                        selectedPlugin={selectedPlugin}
+                                    />
+                                </>
                             )}
-                            {tabPrefab.dataSource === TabPrefabDataSource.ServerScript ? (
-                                <StatGroupSelectionBox
-                                    labelName="Script Plugin"
-                                    statParentId="handle_counts"
-                                    onChange={handlePluginSelection}
-                                />
-                            ) : (
-                                <div />
-                            )}
-                            <TabView tabPrefab={tabPrefab} params={{ selectedClient, selectedPlugin, onRunCommand }} />
                         </div>
                     ))}
                 </div>

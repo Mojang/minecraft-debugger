@@ -25,7 +25,7 @@ const serverTickTimings: StatisticPrefab = {
                 type: StatisticType.Absolute,
                 tickRange: 20 * 10 /* About 10 seconds */,
                 yAxisType: YAxisType.Absolute,
-                valueScalar: 1 / 1000, // Microseconds to milliseconds
+                valueScalar: 1, // milliseconds
             })}
             yLabel="Server Tick Time (ms)"
             targetValue={50} // 50ms is the target for server time, 20hz

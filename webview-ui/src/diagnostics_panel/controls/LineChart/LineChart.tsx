@@ -86,13 +86,11 @@ export function LineChart({
                 x: {
                     //domain: [0, _maxDataPoints - 1],
                     grid: true,
-                    tickFormat: function (d: d3.NumberValue, i: number) {
+                    tickFormat: function (d: d3.NumberValue, _i: number) {
                         const tickDifference = latestTime - d.valueOf();
-
                         if (tickDifference < 20) {
                             return 'now';
                         }
-
                         // Assume 20 ticks per second
                         return Math.floor(tickDifference / 20) + 's';
                     },
@@ -117,32 +115,40 @@ export function LineChart({
                         : undefined,
                     Plot.lineY(data, { x: 'time', y: 'value' }),
                     enableFilledChart ? Plot.ruleY([0]) : undefined,
-                    Plot.crosshairX(data, { x: 'time', y: 'value' }),
+                    Plot.tip(
+                        data,
+                        Plot.pointerX({
+                            x: 'time',
+                            y: 'value',
+                            format: {
+                                x: (d: number) => {
+                                    const diff = latestTime - d;
+                                    return diff < 20 ? 'now' : `${Math.floor(diff / 20)}s ago`;
+                                },
+                                y: (d: number) => formatYAxisTick(d),
+                            },
+                        })
+                    ),
                 ],
             });
         };
 
         const generateDifferenceChart = (): PlotResult => {
-            return Plot.differenceY(data, {
-                x: 'time',
-                y: 'value',
-                //positiveFill: "red",
-                //negativeFill: "blue",
-                tip: true,
-            }).plot({
+            const xFormat = (d: number) => {
+                const diff = latestTime - d;
+                return diff < 20 ? 'now' : `${Math.floor(diff / 20)}s ago`;
+            };
+            return Plot.plot({
                 className: 'difference-chart',
                 title: title,
                 marginLeft: 50, // Y Axis labels were getting cut off
                 x: {
                     grid: true,
-                    tickFormat: function (d: d3.NumberValue, i: number) {
+                    tickFormat: function (d: d3.NumberValue) {
                         const tickDifference = latestTime - d.valueOf();
-
                         if (tickDifference < 20) {
                             return 'now';
                         }
-
-                        // Assume 20 ticks per second
                         return Math.floor(tickDifference / 20) + 's';
                     },
                     label: xLabel,
@@ -154,6 +160,10 @@ export function LineChart({
                     label: yLabel,
                     tickFormat: formatYAxisTick,
                 },
+                marks: [
+                    Plot.differenceY(data, { x: 'time', y: 'value' }),
+                    Plot.tip(data, Plot.pointerX({ x: 'time', y: 'value', format: { x: xFormat, y: (d: number) => formatYAxisTick(d) } })),
+                ],
             });
         };
 

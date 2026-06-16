@@ -45,14 +45,14 @@ function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
 
 function getTimingColumnLabel(unit: TimingUnit): string {
     if (unit === 'ms') {
-        return 'Time In Milliseconds';
+        return 'Time (ms)';
     }
 
     if (unit === 'us') {
-        return 'Time In Microseconds';
+        return 'Time (µs)';
     }
 
-    return 'Time In Nanoseconds';
+    return 'Time (ns)';
 }
 
 function formatTimingValue(value: number, unit: TimingUnit): string {
@@ -65,7 +65,7 @@ function formatTimingValue(value: number, unit: TimingUnit): string {
     }
 
     if (unit === 'us') {
-        return `${ceilToDecimalPlace(value / 1_000, 1)} us`;
+        return `${ceilToDecimalPlace(value / 1_000, 1)} µs`;
     }
 
     return `${value} ns`;
@@ -245,7 +245,7 @@ const StatsTab: TabPrefab = {
             [],
         );
 
-        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), 'Percent Of Total'];
+        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), '% Of Total'];
 
         const filteredEntityLabel = (() => {
             if (selectionMode === 'single-entity') {
@@ -506,7 +506,7 @@ const StatsTab: TabPrefab = {
                             title="System Timings"
                             showTitle={false}
                             keyLabel="System"
-                            valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
+                            valueLabels={[getTimingColumnLabel(systemTimingUnit), '% Of Total']}
                             displayMode={
                                 systemViewMode === 'grouped'
                                     ? MinecraftGroupedStatisticTableDisplayMode.Grouped

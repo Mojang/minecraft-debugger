@@ -91,6 +91,7 @@ type MinecraftGroupedStatisticTableProps = {
     rowAction?: GroupedStatisticTableRowAction;
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver;
     valueFormatter?: (value: string | number, columnIndex: number) => string;
+    keyFormatter?: (key: string) => string;
     prettifyNames?: boolean;
     selectionEnabled?: boolean;
     selectionHeaderLabel?: string;
@@ -421,6 +422,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
         rowAction,
         nonConsolidatedColumnResolver,
         valueFormatter,
+        keyFormatter,
         prettifyNames = false,
         selectionEnabled = false,
         selectionHeaderLabel = 'Selected',
@@ -1285,7 +1287,9 @@ const MinecraftGroupedStatisticTable = forwardRef<
                     </td>
                 )}
                 <td>
-                    <span className="minecraft-grouped-statistic-child-key">{row.category}</span>
+                    <span className="minecraft-grouped-statistic-child-key">
+                        {keyFormatter ? keyFormatter(row.category) : row.category}
+                    </span>
                 </td>
                 {row.values.map((value, valueIndex) => (
                     <td key={valueIndex} className="minecraft-grouped-statistic-table-grid-numeric">
@@ -1457,7 +1461,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                                           {isExpanded ? '▾' : '▸'}
                                                       </button>
                                                       <span className="minecraft-grouped-statistic-group-key">
-                                                          {group.key}
+                                                          {keyFormatter ? keyFormatter(group.key) : group.key}
                                                       </span>
                                                   </div>
                                                   <span className="minecraft-grouped-statistic-group-meta">

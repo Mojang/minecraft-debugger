@@ -104,6 +104,10 @@ function extractEntityId(entityCategory: string): string | undefined {
     return match?.[1];
 }
 
+function formatStatKey(key: string): string {
+    return key.split('(')[0].trim();
+}
+
 function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap: Map<string, string>): string {
     // Example fullName: "System Name (4)"
     // Take anything before the first '('
@@ -539,6 +543,7 @@ const StatsTab: TabPrefab = {
                             sparklineColumnIndex={0}
                             sparklineTickRange={100}
                             sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
+                            keyFormatter={formatStatKey}
                             valueFormatter={(value, columnIndex) => {
                                 // Timing column
                                 if (columnIndex === 0) {

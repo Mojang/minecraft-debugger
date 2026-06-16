@@ -429,7 +429,7 @@ main {
 
 .minecraft-grouped-statistic-table-grid-select {
   text-align: center !important;
-  width: 72px;
+  width: 50px;
   padding: 6px 4px !important;
 }
 
@@ -442,7 +442,7 @@ main {
 .minecraft-grouped-statistic-table-grid-numeric {
   text-align: right !important;
   white-space: nowrap;
-  width: 120px;
+  width: 10%;
 }
 
 .minecraft-grouped-statistic-table-grid-sparkline {

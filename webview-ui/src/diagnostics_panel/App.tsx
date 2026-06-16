@@ -110,6 +110,7 @@ function App() {
             mergedTabs.push({ kind: 'dynamic' as const, name: descriptor.name, descriptor });
         }
     }
+    mergedTabs.sort((a, b) => a.name.localeCompare(b.name));
 
     return (
         <main>

@@ -8,6 +8,9 @@ import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { removeAllStyleElements } from '../../../util/CSPUtilities';
 
+// Set to true to generate fake data with sine wave pattern for testing without a data source
+const GenerateTestData = true;
+
 type LineChartProps = {
     title: string;
     yLabel: string;
@@ -42,6 +45,34 @@ function formatRelativeTime(latestTime: number, tick: number): string {
     return `${Math.floor(diff / 20)}s ago`;
 }
 
+const SharedTipDisplayOptions = {
+    fillOpacity: 0.5,
+    fill: 'black',
+    stroke: 'white',
+    style: {
+        color: '#ffffff',
+        background: '#333333',
+    },
+};
+
+function createInitialChartData(pointCount = 40): TrackedStat[] {
+    if(!GenerateTestData) {
+        return [];
+    }
+    const seed: TrackedStat[] = [];
+    for (let i = 0; i < pointCount; i++) {
+        const time = i + 1;
+        const value = 35 + Math.sin(i / 4) * 10 + i * 0.2;
+        seed.push({
+            time,
+            value,
+            absoluteValue: value,
+            category: 'sample',
+        });
+    }
+    return seed;
+}
+
 //chart component
 export function LineChart({
     title,
@@ -52,7 +83,7 @@ export function LineChart({
     yAxisStyle,
 }: LineChartProps): JSX.Element {
     // state
-    const [data, setData] = useState<TrackedStat[]>([]);
+    const [data, setData] = useState<TrackedStat[]>(() => createInitialChartData());
 
     // refs
     const containerRef = useRef<HTMLDivElement>(null);
@@ -129,7 +160,6 @@ export function LineChart({
                         : undefined,
                     Plot.lineY(data, { x: 'time', y: 'value' }),
                     enableFilledChart ? Plot.ruleY([0]) : undefined,
-                    Plot.crosshairX(data, { x: 'time', y: 'value' }),
                     Plot.tip(
                         data,
                         Plot.pointerX({
@@ -137,6 +167,7 @@ export function LineChart({
                             y: 'value',
                             title: (d: TrackedStat) =>
                                 `${xLabel}: ${formatRelativeTime(latestTime, d.time)}\n${yLabel}: ${formatYAxisTick(d.value)}`,
+                            ...SharedTipDisplayOptions,
                         })
                     ),
                 ],
@@ -168,7 +199,6 @@ export function LineChart({
                 },
                 marks: [
                     Plot.differenceY(data, { x: 'time', y: 'value' }),
-                    Plot.crosshairX(data, { x: 'time', y: 'value' }),
                     Plot.tip(
                         data,
                         Plot.pointerX({
@@ -176,6 +206,7 @@ export function LineChart({
                             y: 'value',
                             title: (d: TrackedStat) =>
                                 `${xLabel}: ${formatRelativeTime(latestTime, d.time)}\n${yLabel}: ${formatYAxisTick(d.value)}`,
+                            ...SharedTipDisplayOptions,
                         })
                     ),
                 ],

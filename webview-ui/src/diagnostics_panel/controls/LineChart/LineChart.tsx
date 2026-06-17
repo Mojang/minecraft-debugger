@@ -9,7 +9,7 @@ import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvi
 import { removeAllStyleElements } from '../../../util/CSPUtilities';
 
 // Set to true to generate fake data with sine wave pattern for testing without a data source
-const GenerateTestData = true;
+const GenerateTestData = false;
 
 type LineChartProps = {
     title: string;

@@ -9,6 +9,8 @@ import dynamicPropertyTab from './tabs/DynamicProperties';
 import serverScriptHandleCountsTab from './tabs/ServerScriptHandleCounts';
 import serverScriptSubscriberCountsTab from './tabs/ServerScriptSubscriberCounts';
 
+import clientTimingTab from './tabs/ClientTiming';
+import clientMemoryTab from './tabs/ClientMemory';
 import clientEntitySystemTab from './tabs/ClientEntitySystems';
 import clientProfilerScopesTab from './tabs/ClientCPUProfiler';
 
@@ -22,6 +24,8 @@ export default [
     serverBandwidthTab,
     serverScriptHandleCountsTab,
     serverScriptSubscriberCountsTab,
+    clientTimingTab,
+    clientMemoryTab,
     clientEntitySystemTab,
     clientProfilerScopesTab,
     dynamicPropertyTab,

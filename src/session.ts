@@ -961,7 +961,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         const newline = Buffer.from('\n');
         const buffer = Buffer.concat([lengthBuffer, jsonBuffer, newline]);
 
-        this._connectionSocket.write(buffer);55
+        this._connectionSocket.write(buffer);
     }
 
     private receiveDebugeeMessage(envelope: any) {

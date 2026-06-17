@@ -5,7 +5,7 @@ import { StatisticType, YAxisType } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
 import { generateRowsFromStatsPrefabs } from '../utilities';
 
-const appMemoryUsage: StatisticPrefab = {
+const AppMemoryUsage: StatisticPrefab = {
     name: 'App Memory Usage',
     reactNode: (
         <MinecraftStatisticLineChart
@@ -24,7 +24,7 @@ const appMemoryUsage: StatisticPrefab = {
     ),
 };
 
-const appMemoryFree: StatisticPrefab = {
+const AppMemoryFree: StatisticPrefab = {
     name: 'App Memory Free',
     reactNode: (
         <MinecraftStatisticLineChart
@@ -43,7 +43,7 @@ const appMemoryFree: StatisticPrefab = {
     ),
 };
 
-const javaScriptMemoryFree: StatisticPrefab = {
+const JavaScriptMemoryUsed: StatisticPrefab = {
     name: 'JavaScript Memory Used',
     reactNode: (
         <MinecraftStatisticLineChart
@@ -65,7 +65,7 @@ const javaScriptMemoryFree: StatisticPrefab = {
     ),
 };
 
-const javaScriptMemoryAllocated: StatisticPrefab = {
+const JavaScriptMemoryAllocated: StatisticPrefab = {
     name: 'JavaScript Memory Free',
     reactNode: (
         <MinecraftStatisticLineChart
@@ -87,15 +87,15 @@ const javaScriptMemoryAllocated: StatisticPrefab = {
     ),
 };
 
-const statsTab: TabPrefab = {
+const StatsTab: TabPrefab = {
     name: 'Server - Memory',
     dataSource: TabPrefabDataSource.Server,
     content: () => {
         return generateRowsFromStatsPrefabs([
-            [appMemoryUsage, appMemoryFree],
-            [javaScriptMemoryAllocated, javaScriptMemoryFree],
+            [AppMemoryUsage, AppMemoryFree],
+            [JavaScriptMemoryAllocated, JavaScriptMemoryUsed],
         ]);
     },
 };
 
-export default statsTab;
+export default StatsTab;

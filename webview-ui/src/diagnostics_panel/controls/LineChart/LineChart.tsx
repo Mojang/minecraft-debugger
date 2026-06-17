@@ -21,11 +21,25 @@ type PlotResult = ((SVGSVGElement | HTMLElement) & Plot.Plot) | undefined;
 
 function formatYAxisTick(d: d3.NumberValue): string {
     const n = d.valueOf();
-    if (n === 0) return '0';
+    if (n === 0) {
+        return '0';
+    }
     const abs = Math.abs(n);
-    if (abs >= 1000) return `${Math.round(n)}`;
-    if (abs >= 1) return `${parseFloat(n.toPrecision(4))}`;
+    if (abs >= 1000) {
+        return `${Math.round(n)}`;
+    }
+    if (abs >= 1) {
+        return `${parseFloat(n.toPrecision(4))}`;
+    }
     return `${parseFloat(n.toPrecision(3))}`;
+}
+
+function formatRelativeTime(latestTime: number, tick: number): string {
+    const diff = latestTime - tick;
+    if (diff < 20) {
+        return 'now';
+    }
+    return `${Math.floor(diff / 20)}s ago`;
 }
 
 //chart component
@@ -36,7 +50,7 @@ export function LineChart({
     statisticOptions,
     statisticDataProvider,
     yAxisStyle,
-}: LineChartProps) {
+}: LineChartProps): JSX.Element {
     // state
     const [data, setData] = useState<TrackedStat[]>([]);
 
@@ -107,26 +121,22 @@ export function LineChart({
                     // TODO: Clean up with factory?
                     enableFilledChart
                         ? Plot.areaY(data, {
-                              x: 'time',
-                              y: d => Math.max(yDomain[0], d.value),
-                              fillOpacity: 0.3,
-                              y1: yDomain[0],
-                          })
+                            x: 'time',
+                            y: d => Math.max(yDomain[0], d.value),
+                            fillOpacity: 0.3,
+                            y1: yDomain[0],
+                        })
                         : undefined,
                     Plot.lineY(data, { x: 'time', y: 'value' }),
                     enableFilledChart ? Plot.ruleY([0]) : undefined,
+                    Plot.crosshairX(data, { x: 'time', y: 'value' }),
                     Plot.tip(
                         data,
                         Plot.pointerX({
                             x: 'time',
                             y: 'value',
-                            format: {
-                                x: (d: number) => {
-                                    const diff = latestTime - d;
-                                    return diff < 20 ? 'now' : `${Math.floor(diff / 20)}s ago`;
-                                },
-                                y: (d: number) => formatYAxisTick(d),
-                            },
+                            title: (d: TrackedStat) =>
+                                `${xLabel}: ${formatRelativeTime(latestTime, d.time)}\n${yLabel}: ${formatYAxisTick(d.value)}`,
                         })
                     ),
                 ],
@@ -134,10 +144,6 @@ export function LineChart({
         };
 
         const generateDifferenceChart = (): PlotResult => {
-            const xFormat = (d: number) => {
-                const diff = latestTime - d;
-                return diff < 20 ? 'now' : `${Math.floor(diff / 20)}s ago`;
-            };
             return Plot.plot({
                 className: 'difference-chart',
                 title: title,
@@ -162,7 +168,16 @@ export function LineChart({
                 },
                 marks: [
                     Plot.differenceY(data, { x: 'time', y: 'value' }),
-                    Plot.tip(data, Plot.pointerX({ x: 'time', y: 'value', format: { x: xFormat, y: (d: number) => formatYAxisTick(d) } })),
+                    Plot.crosshairX(data, { x: 'time', y: 'value' }),
+                    Plot.tip(
+                        data,
+                        Plot.pointerX({
+                            x: 'time',
+                            y: 'value',
+                            title: (d: TrackedStat) =>
+                                `${xLabel}: ${formatRelativeTime(latestTime, d.time)}\n${yLabel}: ${formatYAxisTick(d.value)}`,
+                        })
+                    ),
                 ],
             });
         };

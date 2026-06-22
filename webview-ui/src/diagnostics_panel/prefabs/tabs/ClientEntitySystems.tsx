@@ -608,7 +608,7 @@ const StatsTab: TabPrefab = {
                                             : undefined
                                     }
                                     keyLabel="System"
-                                    valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
+                                    valueLabels={[getTimingColumnLabel(systemTimingUnit), '% Of Total']}
                                     displayMode={
                                         systemViewMode === 'grouped'
                                             ? MinecraftGroupedStatisticTableDisplayMode.Grouped
@@ -645,6 +645,7 @@ const StatsTab: TabPrefab = {
                                     sparklineColumnIndex={0}
                                     sparklineTickRange={100}
                                     sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
+                                    keyFormatter={formatStatKey}
                                     valueFormatter={(value, columnIndex) => {
                                         // Timing column
                                         if (columnIndex === 0) {
@@ -660,62 +661,6 @@ const StatsTab: TabPrefab = {
                                 />
                             </div>
                         </div>
-                        <MinecraftGroupedStatisticTable
-                            key={`system-timings-${systemViewMode}-${selectedClient}`}
-                            title="System Timings"
-                            showTitle={false}
-                            keyLabel="System"
-                            valueLabels={[getTimingColumnLabel(systemTimingUnit), '% Of Total']}
-                            displayMode={
-                                systemViewMode === 'grouped'
-                                    ? MinecraftGroupedStatisticTableDisplayMode.Grouped
-                                    : MinecraftGroupedStatisticTableDisplayMode.Flat
-                            }
-                            getGroupKey={(fullName: string) =>
-                                resolveSystemCategoryGroupKey(fullName, systemCategoryLegendMap)
-                            }
-                            groupCountLabel="systems"
-                            defaultCollapsed={true}
-                            groupColumnAggregations={[
-                                MinecraftGroupedStatisticTableColumnAggregation.Average,
-                                MinecraftGroupedStatisticTableColumnAggregation.Sum,
-                            ]}
-                            statisticDataProvider={
-                                new MultipleStatisticProvider({
-                                    statisticIds: ['time_in_ns', 'percent_of_total'],
-                                    statisticParentId: new RegExp(`${selectedClient}_client_ecs_systems`),
-                                })
-                            }
-                            statisticResolver={ParentNameStatResolver(
-                                createStatResolver({
-                                    type: StatisticType.Absolute,
-                                    tickRange: 20 * 10,
-                                    yAxisType: YAxisType.Absolute,
-                                    valueScalar: 1,
-                                }),
-                            )}
-                            defaultSortColumn="value_1"
-                            defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
-                            defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
-                            prettifyNames={false}
-                            nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
-                            sparklineColumnIndex={0}
-                            sparklineTickRange={100}
-                            sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
-                            keyFormatter={formatStatKey}
-                            valueFormatter={(value, columnIndex) => {
-                                // Timing column
-                                if (columnIndex === 0) {
-                                    return formatTimingValue(Number(value), systemTimingUnit);
-                                }
-                                // Percentage column
-                                else if (columnIndex === 1) {
-                                    return formatPercentageValue(Number(value));
-                                }
-
-                                return String(value);
-                            }}
-                        />
                     </div>
                 )}
             </div>

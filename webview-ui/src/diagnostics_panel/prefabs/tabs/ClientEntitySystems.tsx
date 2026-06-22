@@ -77,14 +77,14 @@ function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
 
 function getTimingColumnLabel(unit: TimingUnit): string {
     if (unit === 'ms') {
-        return 'Time In Milliseconds';
+        return 'Time (ms)';
     }
 
     if (unit === 'us') {
-        return 'Time In Microseconds';
+        return 'Time (µs)';
     }
 
-    return 'Time In Nanoseconds';
+    return 'Time (ns)';
 }
 
 function formatTimingValue(value: number, unit: TimingUnit): string {
@@ -97,7 +97,7 @@ function formatTimingValue(value: number, unit: TimingUnit): string {
     }
 
     if (unit === 'us') {
-        return `${ceilToDecimalPlace(value / 1_000, 1)} us`;
+        return `${ceilToDecimalPlace(value / 1_000, 1)} µs`;
     }
 
     return `${value} ns`;
@@ -134,6 +134,10 @@ function resolveEntityTypeGroupKey(fullName: string): string {
 function extractEntityId(entityCategory: string): string | undefined {
     const match = entityCategory.match(/[#:](\d+)\)\s*$/);
     return match?.[1];
+}
+
+function formatStatKey(key: string): string {
+    return key.split('(')[0].trim();
 }
 
 function resolveSystemId(fullName: string): string | undefined {
@@ -299,7 +303,7 @@ const StatsTab: TabPrefab = {
             [filterSelectionMode],
         );
 
-        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), 'Percent Of Total'];
+        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), '% Of Total'];
 
         const filteredEntityLabel = (() => {
             if (filterSelectionMode === 'filter-by-single-entity') {
@@ -604,7 +608,7 @@ const StatsTab: TabPrefab = {
                                             : undefined
                                     }
                                     keyLabel="System"
-                                    valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
+                                    valueLabels={[getTimingColumnLabel(systemTimingUnit), '% Of Total']}
                                     displayMode={
                                         systemViewMode === 'grouped'
                                             ? MinecraftGroupedStatisticTableDisplayMode.Grouped
@@ -641,6 +645,7 @@ const StatsTab: TabPrefab = {
                                     sparklineColumnIndex={0}
                                     sparklineTickRange={100}
                                     sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
+                                    keyFormatter={formatStatKey}
                                     valueFormatter={(value, columnIndex) => {
                                         // Timing column
                                         if (columnIndex === 0) {

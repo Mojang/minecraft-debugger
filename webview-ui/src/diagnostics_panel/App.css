@@ -364,7 +364,6 @@ main {
 .minecraft-entity-system-count-badge {
   display: flex;
   align-items: center;
-  height: 57px; /* Forces the Entity and Systems charts to be visually aligned */
 }
 
 .minecraft-entity-system-count-badge-content {

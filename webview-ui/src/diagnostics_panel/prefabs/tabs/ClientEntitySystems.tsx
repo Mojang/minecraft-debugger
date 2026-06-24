@@ -441,8 +441,8 @@ const StatsTab: TabPrefab = {
                                 )}
                             </div>
                         </div>
-                        <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
-                            <div style={{ flex: 1, marginRight: '5px' }}>
+                        <div className="minecraft-entity-systems-tables-container">
+                            <div className="minecraft-entity-systems-table-wrapper">
                                 <div style={{ marginTop: '10px', marginBottom: '10px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         <h2>Entity Timings</h2>

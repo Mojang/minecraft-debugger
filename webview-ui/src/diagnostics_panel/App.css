@@ -361,6 +361,18 @@ main {
   text-align: right;
 }
 
+.minecraft-entity-systems-tables-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.minecraft-entity-systems-table-wrapper {
+  flex: 1;
+  min-width: 550px;
+}
+
 .minecraft-entity-system-count-badge {
   display: flex;
   align-items: center;

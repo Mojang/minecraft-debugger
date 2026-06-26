@@ -50,13 +50,13 @@ const SharedTipDisplayOptions = {
     fill: 'black',
     stroke: 'white',
     style: {
-        color: '#ffffff',
-        background: '#333333',
+        color: 'var(--vscode-editorHoverWidget-foreground)',
+        background: 'var(--vscode-editorHoverWidget-background)',
     },
 };
 
 function createInitialChartData(pointCount = 40): TrackedStat[] {
-    if(!GenerateTestData) {
+if(!GenerateTestData) {
         return [];
     }
     const seed: TrackedStat[] = [];

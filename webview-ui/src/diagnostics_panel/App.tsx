@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { StatGroupSelectionBox } from './controls/StatGroupSelectionBox';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ReplayControls from './controls/ReplayControls';
 import { Icons } from './Icons';
 import './App.css';
@@ -18,6 +18,8 @@ import DynamicTab from './DynamicTab';
 function TabView({ tabPrefab, params }: { tabPrefab: TabPrefab; params: TabPrefabParams }) {
     return <>{tabPrefab.content(params)}</>;
 }
+
+const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.name));
 
 // A tab entry is either a hardcoded prefab or a dynamic descriptor received from the game.
 type MergedTab =
@@ -59,7 +61,6 @@ const CLIENT_SELECTION_HELP_TOOLTIP =
     'Please enable "Creator > Script Diagnostics Settings > Enable Client Diagnostics" from within the game settings.';
 
 function App() {
-    const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.name));
     const [selectedPlugin, setSelectedPlugin] = useState<string>('');
     const [selectedClient, setSelectedClient] = useState<string>('');
     const [currentTab, setCurrentTab] = useState<string>('tab-0');
@@ -97,20 +98,23 @@ function App() {
 
     // Merge schema tabs into the prefab list. Schema tabs whose name matches a prefab replace it;
     // new names are appended. Falls back to all prefabs when no schema has arrived yet.
-    const mergedTabs: MergedTab[] = sortedTabPrefabs.map(tab => ({
-        kind: 'prefab' as const,
-        name: tab.name,
-        tab,
-    }));
-    for (const descriptor of schema) {
-        const existingIndex = mergedTabs.findIndex(t => t.name === descriptor.name);
-        if (existingIndex !== -1) {
-            mergedTabs[existingIndex] = { kind: 'dynamic' as const, name: descriptor.name, descriptor };
-        } else {
-            mergedTabs.push({ kind: 'dynamic' as const, name: descriptor.name, descriptor });
+    const mergedTabs: MergedTab[] = useMemo(() => {
+        const merged: MergedTab[] = sortedTabPrefabs.map(tab => ({
+            kind: 'prefab' as const,
+            name: tab.name,
+            tab,
+        }));
+        for (const descriptor of schema) {
+            const existingIndex = merged.findIndex(t => t.name === descriptor.name);
+            if (existingIndex !== -1) {
+                merged[existingIndex] = { kind: 'dynamic' as const, name: descriptor.name, descriptor };
+            } else {
+                merged.push({ kind: 'dynamic' as const, name: descriptor.name, descriptor });
+            }
         }
-    }
-    mergedTabs.sort((a, b) => a.name.localeCompare(b.name));
+        merged.sort((a, b) => a.name.localeCompare(b.name));
+        return merged;
+    }, [schema]);
 
     return (
         <main>

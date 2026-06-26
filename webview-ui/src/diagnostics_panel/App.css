@@ -361,10 +361,21 @@ main {
   text-align: right;
 }
 
+.minecraft-entity-systems-tables-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.minecraft-entity-systems-table-wrapper {
+  flex: 1;
+  min-width: 550px;
+}
+
 .minecraft-entity-system-count-badge {
   display: flex;
   align-items: center;
-  height: 57px; /* Forces the Entity and Systems charts to be visually aligned */
 }
 
 .minecraft-entity-system-count-badge-content {
@@ -429,7 +440,7 @@ main {
 
 .minecraft-grouped-statistic-table-grid-select {
   text-align: center !important;
-  width: 72px;
+  width: 50px;
   padding: 6px 4px !important;
 }
 
@@ -437,6 +448,12 @@ main {
   text-align: center !important;
   width: 34px;
   padding: 6px 4px !important;
+}
+
+.minecraft-grouped-statistic-table-grid-numeric {
+  text-align: right !important;
+  white-space: nowrap;
+  width: 10%;
 }
 
 .minecraft-grouped-statistic-table-grid-sparkline {
@@ -470,13 +487,19 @@ main {
   display: inline-block;
   margin-right: 0;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  vertical-align: middle;
 }
 
 .minecraft-grouped-statistic-group-meta {
   display: block;
   margin-left: 0;
   color: var(--vscode-descriptionForeground);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .minecraft-grouped-statistic-toggle {
@@ -493,6 +516,11 @@ main {
 .minecraft-grouped-statistic-child-key {
   display: inline-block;
   padding-left: 18px;
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  vertical-align: middle;
 }
 
 .minecraft-grouped-statistic-row-pinned {

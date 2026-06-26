@@ -91,6 +91,7 @@ type MinecraftGroupedStatisticTableProps = {
     rowAction?: GroupedStatisticTableRowAction;
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver;
     valueFormatter?: (value: string | number, columnIndex: number) => string;
+    keyFormatter?: (key: string) => string;
     prettifyNames?: boolean;
     selectionEnabled?: boolean;
     selectionHeaderLabel?: string;
@@ -116,6 +117,27 @@ const SPARKLINE_BOUNDS_EXPAND_LERP = 0.35;
 const SPARKLINE_BOUNDS_CONTRACT_LERP = 0.12;
 const SPARKLINE_HISTORY_RETENTION_TICKS = 8;
 
+const TICKS_PER_SECOND = 20;
+const TICKS_PER_SPARKLINE_UPDATE = 12; // TODO I don't know if this is accurate or not, but it gives us the right values for now
+
+function sparklineTickRangeToSeconds(updatePoints: number): string {
+    const totalTicks = updatePoints * TICKS_PER_SPARKLINE_UPDATE;
+    const seconds = totalTicks / TICKS_PER_SECOND;
+
+    if (seconds <= 0) {
+        return '0s';
+    }
+
+    if (seconds >= 60) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.round(seconds % 60);
+
+        return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    }
+
+    // For short ranges, show one decimal place for precision
+    return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
+}
 function getRowSparklineSeriesKey(category: string): string {
     return `row:${category}`;
 }
@@ -400,6 +422,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
         rowAction,
         nonConsolidatedColumnResolver,
         valueFormatter,
+        keyFormatter,
         prettifyNames = false,
         selectionEnabled = false,
         selectionHeaderLabel = 'Selected',
@@ -1264,7 +1287,9 @@ const MinecraftGroupedStatisticTable = forwardRef<
                     </td>
                 )}
                 <td>
-                    <span className="minecraft-grouped-statistic-child-key">{row.category}</span>
+                    <span className="minecraft-grouped-statistic-child-key">
+                        {keyFormatter ? keyFormatter(row.category) : row.category}
+                    </span>
                 </td>
                 {row.values.map((value, valueIndex) => (
                     <td key={valueIndex} className="minecraft-grouped-statistic-table-grid-numeric">
@@ -1363,7 +1388,9 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                 </th>
                             ))}
                             {sparklineColumnIndex !== undefined && (
-                                <th className="minecraft-grouped-statistic-table-grid-sparkline">Trend</th>
+                                <th className="minecraft-grouped-statistic-table-grid-sparkline">
+                                    Trend ({sparklineTickRangeToSeconds(sparklineTickRange)})
+                                </th>
                             )}
                             {rowAction && (
                                 <th className="minecraft-grouped-statistic-table-grid-action">
@@ -1434,7 +1461,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                                           {isExpanded ? '▾' : '▸'}
                                                       </button>
                                                       <span className="minecraft-grouped-statistic-group-key">
-                                                          {group.key}
+                                                          {keyFormatter ? keyFormatter(group.key) : group.key}
                                                       </span>
                                                   </div>
                                                   <span className="minecraft-grouped-statistic-group-meta">

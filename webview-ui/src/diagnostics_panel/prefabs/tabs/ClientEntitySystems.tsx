@@ -25,6 +25,7 @@ import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-t
 const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
 const FILTER_MULTI_ENTITY_REQUEST = 'Filter Multi Entity System Profiler';
 const FILTER_SINGLE_ENTITY_REQUEST = 'Filter Single Entity System Profiler';
+const FILTER_BY_SYSTEM_REQUEST = 'Filter By System Entity System Profiler';
 
 const DEBUGGER_REQUEST_COMMANDS = [
     { command: START_ENTITY_SYSTEM_PROFILER_REQUEST, label: 'Start' },
@@ -35,9 +36,40 @@ const DEBUGGER_REQUEST_COMMANDS = [
 type TimingUnit = 'ns' | 'us' | 'ms';
 type EntityViewMode = 'flat' | 'grouped';
 type SystemViewMode = 'flat' | 'grouped';
-type EntitySelectionMode = 'force-all' | 'filter' | 'single-entity';
+type FilterSelectionMode = 'no-filter' | 'filter-by-entity' | 'filter-by-single-entity' | 'filter-by-system';
 
 const UNCATEGORIZED_SYSTEM_GROUP = 'INVALID CATEGORY';
+
+function getFilterSelectionModeTooltip(ecsVersion: number): string {
+    if (ecsVersion === 2) {
+        return (
+            'Select Filtering Mode:\n' +
+            '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
+            '\u2022 "Filter By Entity" allows you to select specific entities, and only show the system information for that selection.\n' +
+            '\u2022 "Filter By Single Entity" allows you to select one specific entity, and only display information for that selection.\n' +
+            '    This option has some performance benefits on the backend profiler versus multi select.\n' +
+            '\u2022 "Filter By System" allows you to select specific systems and will only show the entities and entity timing values for those systems.'
+        );
+    } else if (ecsVersion === 1) {
+        return (
+            'Select Filtering Mode:\n' +
+            '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
+            '\u2022 "Filter By Entity" allows you to select specific entities, and only show the system information for that selection.\n' +
+            '\u2022 "Filter By Single Entity" allows you to select one specific entity, and only display information for that selection.\n' +
+            '    This option has some performance benefits on the backend profiler versus multi select.'
+        );
+    } else {
+        console.error('Received unknown ECS version from client, defaulting to showing all filter options in tooltip');
+        return (
+            'Select Filtering Mode:\n' +
+            '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
+            '\u2022 "Filter By Entity" allows you to select specific entities, and only show the system information for that selection.\n' +
+            '\u2022 "Filter By Single Entity" allows you to select one specific entity, and only display information for that selection.\n' +
+            '    This option has some performance benefits on the backend profiler versus multi select.\n' +
+            '\u2022 "Filter By System" allows you to select specific systems and will only show the entities and entity timing values for those systems.'
+        );
+    }
+}
 
 function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
     return (Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces)).toFixed(decimalPlaces);
@@ -45,14 +77,14 @@ function ceilToDecimalPlace(value: number, decimalPlaces: number): string {
 
 function getTimingColumnLabel(unit: TimingUnit): string {
     if (unit === 'ms') {
-        return 'Time In Milliseconds';
+        return 'Time (ms)';
     }
 
     if (unit === 'us') {
-        return 'Time In Microseconds';
+        return 'Time (µs)';
     }
 
-    return 'Time In Nanoseconds';
+    return 'Time (ns)';
 }
 
 function formatTimingValue(value: number, unit: TimingUnit): string {
@@ -65,7 +97,7 @@ function formatTimingValue(value: number, unit: TimingUnit): string {
     }
 
     if (unit === 'us') {
-        return `${ceilToDecimalPlace(value / 1_000, 1)} us`;
+        return `${ceilToDecimalPlace(value / 1_000, 1)} µs`;
     }
 
     return `${value} ns`;
@@ -104,6 +136,17 @@ function extractEntityId(entityCategory: string): string | undefined {
     return match?.[1];
 }
 
+function formatStatKey(key: string): string {
+    return key.split('(')[0].trim();
+}
+
+function resolveSystemId(fullName: string): string | undefined {
+    // Example fullname: "System Name (4)"
+    const indexAndBracket = fullName ? fullName.split('(')[1] : undefined;
+    const index = indexAndBracket ? indexAndBracket.split(')')[0].trim() : undefined;
+    return index;
+}
+
 function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap: Map<string, string>): string {
     // Example fullName: "System Name (4)"
     // Take anything before the first '('
@@ -124,10 +167,13 @@ const StatsTab: TabPrefab = {
         const [entityViewMode, setEntityViewMode] = useState<EntityViewMode>('grouped');
         const [systemViewMode, setSystemViewMode] = useState<SystemViewMode>('grouped');
         const [systemCategoryLegendMap, setSystemCategoryLegendMap] = useState<Map<string, string>>(new Map());
-        const [selectionMode, setSelectionMode] = useState<EntitySelectionMode>('force-all');
+        const [filterSelectionMode, setFilterSelectionMode] = useState<FilterSelectionMode>('no-filter');
         const [availableEntities, setAvailableEntities] = useState<{ id: string; fullName: string }[]>([]);
         const [selectedSingleEntityId, setSelectedSingleEntityId] = useState<string | undefined>(undefined);
         const [filteredEntityCount, setFilteredEntityCount] = useState<number | undefined>(undefined);
+        const [filteredSystemCount, setFilteredSystemCount] = useState<number | undefined>(undefined);
+        const [ecsVersion, setECSVersion] = useState<number>(1);
+        const [isStarted, setIsStarted] = useState<boolean>(false);
         const entityTimingsTableRef = useRef<MinecraftGroupedStatisticTableHandle | null>(null);
         const isMountRef = useRef(true);
         const categoriesProvider = useMemo(() => {
@@ -217,12 +263,11 @@ const StatsTab: TabPrefab = {
             entityTimingsTableRef.current?.clearSelection();
             setSelectedSingleEntityId(undefined);
             setFilteredEntityCount(undefined);
+            setFilteredSystemCount(undefined);
 
-            if (selectionMode === 'force-all') {
-                setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
-                sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, { entityIds: [] });
-            }
-        }, [selectionMode]);
+            setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
+            sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, {});
+        }, [filterSelectionMode]);
 
         const handleEntitySelectionChange = useCallback(
             (snapshot: MinecraftGroupedStatisticTableSelectionSnapshot): void => {
@@ -238,24 +283,70 @@ const StatsTab: TabPrefab = {
                 setLastRequestedCommand(FILTER_MULTI_ENTITY_REQUEST);
                 sendDebuggerRequest(FILTER_MULTI_ENTITY_REQUEST, { entityIds });
             },
-            [],
+            [filterSelectionMode],
         );
 
-        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), 'Percent Of Total'];
+        const handleSystemSelectionChange = useCallback(
+            (snapshot: MinecraftGroupedStatisticTableSelectionSnapshot): void => {
+                const systemIds = Array.from(
+                    new Set(
+                        snapshot.resolvedSelectedRows
+                            .map(row => resolveSystemId(row.category))
+                            .filter((systemId): systemId is string => systemId !== undefined),
+                    ),
+                );
+
+                setFilteredSystemCount(systemIds.length);
+                setLastRequestedCommand(FILTER_BY_SYSTEM_REQUEST);
+                sendDebuggerRequest(FILTER_BY_SYSTEM_REQUEST, { systemIds });
+            },
+            [filterSelectionMode],
+        );
+
+        const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), '% Of Total'];
 
         const filteredEntityLabel = (() => {
-            if (selectionMode === 'single-entity') {
-                return selectedSingleEntityId ? 'Currently Filtered to 1 Entity' : 'Showing All Entities';
+            if (filterSelectionMode === 'filter-by-single-entity') {
+                return selectedSingleEntityId ? 'Showing System Timings For 1 Entity' : 'Showing All System Timings';
             }
-            if (selectionMode === 'filter' && filteredEntityCount !== undefined && filteredEntityCount > 0) {
-                return `Currently Filtered to ${filteredEntityCount} ${filteredEntityCount === 1 ? 'Entity' : 'Entities'}`;
+            if (
+                filterSelectionMode === 'filter-by-entity' &&
+                filteredEntityCount !== undefined &&
+                filteredEntityCount > 0
+            ) {
+                return `Showing System Timings For ${filteredEntityCount} ${filteredEntityCount === 1 ? 'Entity' : 'Entities'}`;
             }
-            return 'Showing All Entities';
+            return 'Showing All System Timings';
+        })();
+
+        const filteredSystemLabel = (() => {
+            if (
+                filterSelectionMode === 'filter-by-system' &&
+                filteredSystemCount !== undefined &&
+                filteredSystemCount > 0
+            ) {
+                return `Showing Entity Timings For ${filteredSystemCount} ${filteredSystemCount === 1 ? 'System' : 'Systems'}`;
+            }
+            return 'Showing All Entity Timings';
         })();
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
             : undefined;
+
+        useEffect(() => {
+            if (lastRequestedCommand !== START_ENTITY_SYSTEM_PROFILER_REQUEST) {
+                return;
+            }
+
+            if (lastResult?.response?.args) {
+                setECSVersion(lastResult.response.args as number);
+                console.log(`Received ECS version ${ecsVersion} from client`);
+            }
+
+            setIsStarted(lastResult?.response?.success ?? false);
+            console.log(`Entity System Profiler is started: ${isStarted}`);
+        }, [lastResult, lastRequestedCommand]);
 
         return (
             <div>
@@ -283,82 +374,37 @@ const StatsTab: TabPrefab = {
                         </div>
                     </div>
                 </div>
-                <div style={{ flexDirection: 'row', display: 'flex', width: '100%' }}>
-                    <div style={{ flex: 1, marginRight: '5px' }}>
-                        <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-                            <h2>Entity Timings</h2>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {isStarted && (
+                    <div>
+                        <div style={{ flexDirection: 'column', display: 'flex', width: '50%' }}>
+                            <div style={{ flex: 1, margin: '5px' }}>
+                                <h2>Selection Controls</h2>
                                 <div className="dropdown-container">
-                                    <label htmlFor="ecs-entity-timing-unit" style={{ marginBottom: '5px' }}>
-                                        Entity Timing Unit
+                                    <label htmlFor="ecs-filter-mode" style={{ marginBottom: '5px' }}>
+                                        Filter Mode <span style={{ opacity: 0.8 }}>🛈</span>
                                     </label>
                                     <VSCodeDropdown
-                                        id="ecs-entity-timing-unit"
-                                        value={entityTimingUnit}
-                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                            const target = event.target as HTMLSelectElement;
-                                            setEntityTimingUnit(target.value as TimingUnit);
-                                        }}
-                                    >
-                                        <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
-                                        <VSCodeOption value="us">Microseconds</VSCodeOption>
-                                        <VSCodeOption value="ms">Milliseconds</VSCodeOption>
-                                    </VSCodeDropdown>
-                                </div>
-                                <div className="dropdown-container">
-                                    <label htmlFor="ecs-entity-view-mode" style={{ marginBottom: '5px' }}>
-                                        Entity View
-                                    </label>
-                                    <VSCodeDropdown
-                                        id="ecs-entity-view-mode"
-                                        value={entityViewMode}
-                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                            const target = event.target as HTMLSelectElement;
-                                            setEntityViewMode(target.value as EntityViewMode);
-                                        }}
-                                    >
-                                        <VSCodeOption value="grouped">Grouped</VSCodeOption>
-                                        <VSCodeOption value="flat">Flat</VSCodeOption>
-                                    </VSCodeDropdown>
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
-                                <div
-                                    className="dropdown-container"
-                                    style={{ flex: 0.5 }}
-                                    title={
-                                        'Select which entities to include in System profiling:\n' +
-                                        '\u2022 "All Entities" will display system information for every entity.\n' +
-                                        '\u2022 "Filter By Selection" allows you to select specific entities, and only show the System information for that selection.\n' +
-                                        '\u2022 "Filter to Single Entity" allows you to select one specific entity, and only display information for that selection. (This comes with some in-game performance benefits as we can narrow our profiling costs.)'
-                                    }
-                                >
-                                    <label htmlFor="ecs-entity-selection-mode" style={{ marginBottom: '5px' }}>
-                                        Entity Selection Mode <span style={{ opacity: 0.8 }}>🛈</span>
-                                    </label>
-                                    <VSCodeDropdown
-                                        id="ecs-entity-selection-mode"
+                                        id="ecs-filter-mode"
                                         style={{ width: '100%' }}
-                                        value={selectionMode}
+                                        value={filterSelectionMode}
                                         onChange={(event: Event | React.FormEvent<HTMLElement>) => {
                                             const target = event.target as HTMLSelectElement;
-                                            setSelectionMode(target.value as EntitySelectionMode);
-                                            if (target.value !== 'single-entity') {
-                                                // send a new start event to get back to a clean state
-                                                setLastRequestedCommand(START_ENTITY_SYSTEM_PROFILER_REQUEST);
-                                                sendDebuggerRequest(START_ENTITY_SYSTEM_PROFILER_REQUEST, {
-                                                    entityIds: [],
-                                                });
-                                            }
+                                            setFilterSelectionMode(target.value as FilterSelectionMode);
                                         }}
+                                        title={getFilterSelectionModeTooltip(ecsVersion)}
                                     >
-                                        <VSCodeOption value="force-all">All Entities</VSCodeOption>
-                                        <VSCodeOption value="filter">Filter By Selection</VSCodeOption>
-                                        <VSCodeOption value="single-entity">Filter to Single Entity</VSCodeOption>
+                                        <VSCodeOption value="no-filter">No Filter</VSCodeOption>
+                                        <VSCodeOption value="filter-by-entity">Filter By Entity</VSCodeOption>
+                                        <VSCodeOption value="filter-by-single-entity">
+                                            Filter By Single Entity
+                                        </VSCodeOption>
+                                        {ecsVersion >= 2 && (
+                                            <VSCodeOption value="filter-by-system">Filter By System</VSCodeOption>
+                                        )}
                                     </VSCodeDropdown>
                                 </div>
-                                {selectionMode === 'single-entity' && (
-                                    <div className="dropdown-container" style={{ flex: 0.5 }}>
+                                {filterSelectionMode === 'filter-by-single-entity' && (
+                                    <div className="dropdown-container" style={{ marginTop: '10px' }}>
                                         <label htmlFor="ecs-single-entity-id" style={{ marginBottom: '5px' }}>
                                             Entity
                                         </label>
@@ -395,165 +441,228 @@ const StatsTab: TabPrefab = {
                                 )}
                             </div>
                         </div>
+                        <div className="minecraft-entity-systems-tables-container">
+                            <div className="minecraft-entity-systems-table-wrapper">
+                                <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <h2>Entity Timings</h2>
+                                        <div className="minecraft-entity-system-count-badge">
+                                            <span className="minecraft-entity-system-count-badge-content">
+                                                {filteredSystemLabel}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        <div className="dropdown-container">
+                                            <label htmlFor="ecs-entity-timing-unit" style={{ marginBottom: '5px' }}>
+                                                Entity Timing Unit
+                                            </label>
+                                            <VSCodeDropdown
+                                                id="ecs-entity-timing-unit"
+                                                value={entityTimingUnit}
+                                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                                    const target = event.target as HTMLSelectElement;
+                                                    setEntityTimingUnit(target.value as TimingUnit);
+                                                }}
+                                            >
+                                                <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
+                                                <VSCodeOption value="us">Microseconds</VSCodeOption>
+                                                <VSCodeOption value="ms">Milliseconds</VSCodeOption>
+                                            </VSCodeDropdown>
+                                        </div>
+                                        <div className="dropdown-container">
+                                            <label htmlFor="ecs-entity-view-mode" style={{ marginBottom: '5px' }}>
+                                                Entity View
+                                            </label>
+                                            <VSCodeDropdown
+                                                id="ecs-entity-view-mode"
+                                                value={entityViewMode}
+                                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                                    const target = event.target as HTMLSelectElement;
+                                                    setEntityViewMode(target.value as EntityViewMode);
+                                                }}
+                                            >
+                                                <VSCodeOption value="grouped">Grouped</VSCodeOption>
+                                                <VSCodeOption value="flat">Flat</VSCodeOption>
+                                            </VSCodeDropdown>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <MinecraftGroupedStatisticTable
-                            ref={entityTimingsTableRef}
-                            key={`entity-timings-${entityViewMode}-${selectedClient}`}
-                            title="Entity Timings"
-                            showTitle={false}
-                            selectionEnabled={selectionMode === 'filter'}
-                            selectionHeaderLabel="Filter To"
-                            onSelectionChange={selectionMode === 'filter' ? handleEntitySelectionChange : undefined}
-                            keyLabel="Entity"
-                            valueLabels={entityValueLabels}
-                            displayMode={
-                                entityViewMode === 'grouped'
-                                    ? MinecraftGroupedStatisticTableDisplayMode.Grouped
-                                    : MinecraftGroupedStatisticTableDisplayMode.Flat
-                            }
-                            groupColumnAggregations={[
-                                MinecraftGroupedStatisticTableColumnAggregation.Average,
-                                MinecraftGroupedStatisticTableColumnAggregation.Sum,
-                            ]}
-                            getGroupKey={resolveEntityTypeGroupKey}
-                            groupCountLabel="entities"
-                            defaultCollapsed={true}
-                            defaultSortColumn="value_1"
-                            defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
-                            defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
-                            statisticDataProvider={
-                                new MultipleStatisticProvider({
-                                    statisticIds: ['time_in_ns', 'percent_of_total'],
-                                    statisticParentId: new RegExp(`${selectedClient}_client_ecs_entities`),
-                                })
-                            }
-                            statisticResolver={ParentNameStatResolver(
-                                createStatResolver({
-                                    type: StatisticType.Absolute,
-                                    tickRange: 20 * 10,
-                                    yAxisType: YAxisType.Absolute,
-                                    valueScalar: 1,
-                                }),
-                            )}
-                            nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
-                            sparklineColumnIndex={0}
-                            sparklineTickRange={100}
-                            sparklineValueFormatter={value => formatTimingValue(value, entityTimingUnit)}
-                            valueFormatter={(value, columnIndex) => {
-                                // Timing column
-                                if (columnIndex === 0) {
-                                    return formatTimingValue(Number(value), entityTimingUnit);
-                                }
-                                // Percentage column
-                                else if (columnIndex === 1) {
-                                    return formatPercentageValue(Number(value));
-                                }
+                                <MinecraftGroupedStatisticTable
+                                    ref={entityTimingsTableRef}
+                                    key={`entity-timings-${entityViewMode}-${selectedClient}`}
+                                    title="Entity Timings"
+                                    showTitle={false}
+                                    selectionEnabled={filterSelectionMode === 'filter-by-entity'}
+                                    selectionHeaderLabel="Filter To"
+                                    onSelectionChange={
+                                        filterSelectionMode === 'filter-by-entity'
+                                            ? handleEntitySelectionChange
+                                            : undefined
+                                    }
+                                    keyLabel="Entity"
+                                    valueLabels={entityValueLabels}
+                                    displayMode={
+                                        entityViewMode === 'grouped'
+                                            ? MinecraftGroupedStatisticTableDisplayMode.Grouped
+                                            : MinecraftGroupedStatisticTableDisplayMode.Flat
+                                    }
+                                    groupColumnAggregations={[
+                                        MinecraftGroupedStatisticTableColumnAggregation.Average,
+                                        MinecraftGroupedStatisticTableColumnAggregation.Sum,
+                                    ]}
+                                    getGroupKey={resolveEntityTypeGroupKey}
+                                    groupCountLabel="entities"
+                                    defaultCollapsed={true}
+                                    defaultSortColumn="value_1"
+                                    defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
+                                    defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
+                                    statisticDataProvider={
+                                        new MultipleStatisticProvider({
+                                            statisticIds: ['time_in_ns', 'percent_of_total'],
+                                            statisticParentId: new RegExp(`${selectedClient}_client_ecs_entities`),
+                                        })
+                                    }
+                                    statisticResolver={ParentNameStatResolver(
+                                        createStatResolver({
+                                            type: StatisticType.Absolute,
+                                            tickRange: 20 * 10,
+                                            yAxisType: YAxisType.Absolute,
+                                            valueScalar: 1,
+                                        }),
+                                    )}
+                                    nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
+                                    sparklineColumnIndex={0}
+                                    sparklineTickRange={100}
+                                    sparklineValueFormatter={value => formatTimingValue(value, entityTimingUnit)}
+                                    valueFormatter={(value, columnIndex) => {
+                                        // Timing column
+                                        if (columnIndex === 0) {
+                                            return formatTimingValue(Number(value), entityTimingUnit);
+                                        }
+                                        // Percentage column
+                                        else if (columnIndex === 1) {
+                                            return formatPercentageValue(Number(value));
+                                        }
 
-                                return String(value);
-                            }}
-                        />
-                    </div>
-                    <div style={{ flex: 1, marginRight: '5px' }}>
-                        <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-                            <h2>System Timings</h2>
-                            <div className="minecraft-entity-system-count-badge">
-                                <span className="minecraft-entity-system-count-badge-content">
-                                    {filteredEntityLabel}
-                                </span>
+                                        return String(value);
+                                    }}
+                                />
                             </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                <div className="dropdown-container">
-                                    <label htmlFor="ecs-system-timing-unit" style={{ marginBottom: '5px' }}>
-                                        System Timing Unit
-                                    </label>
-                                    <VSCodeDropdown
-                                        id="ecs-system-timing-unit"
-                                        value={systemTimingUnit}
-                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                            const target = event.target as HTMLSelectElement;
-                                            setSystemTimingUnit(target.value as TimingUnit);
-                                        }}
-                                    >
-                                        <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
-                                        <VSCodeOption value="us">Microseconds</VSCodeOption>
-                                        <VSCodeOption value="ms">Milliseconds</VSCodeOption>
-                                    </VSCodeDropdown>
+                            <div style={{ flex: 1, marginRight: '5px' }}>
+                                <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        <h2>System Timings</h2>
+                                        <div className="minecraft-entity-system-count-badge">
+                                            <span className="minecraft-entity-system-count-badge-content">
+                                                {filteredEntityLabel}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        <div className="dropdown-container">
+                                            <label htmlFor="ecs-system-timing-unit" style={{ marginBottom: '5px' }}>
+                                                System Timing Unit
+                                            </label>
+                                            <VSCodeDropdown
+                                                id="ecs-system-timing-unit"
+                                                value={systemTimingUnit}
+                                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                                    const target = event.target as HTMLSelectElement;
+                                                    setSystemTimingUnit(target.value as TimingUnit);
+                                                }}
+                                            >
+                                                <VSCodeOption value="ns">Nanoseconds</VSCodeOption>
+                                                <VSCodeOption value="us">Microseconds</VSCodeOption>
+                                                <VSCodeOption value="ms">Milliseconds</VSCodeOption>
+                                            </VSCodeDropdown>
+                                        </div>
+                                        <div className="dropdown-container">
+                                            <label htmlFor="ecs-system-view-mode" style={{ marginBottom: '5px' }}>
+                                                System View
+                                            </label>
+                                            <VSCodeDropdown
+                                                id="ecs-system-view-mode"
+                                                value={systemViewMode}
+                                                onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                                    const target = event.target as HTMLSelectElement;
+                                                    setSystemViewMode(target.value as SystemViewMode);
+                                                }}
+                                            >
+                                                <VSCodeOption value="grouped">Grouped</VSCodeOption>
+                                                <VSCodeOption value="flat">Flat</VSCodeOption>
+                                            </VSCodeDropdown>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="dropdown-container">
-                                    <label htmlFor="ecs-system-view-mode" style={{ marginBottom: '5px' }}>
-                                        System View
-                                    </label>
-                                    <VSCodeDropdown
-                                        id="ecs-system-view-mode"
-                                        value={systemViewMode}
-                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
-                                            const target = event.target as HTMLSelectElement;
-                                            setSystemViewMode(target.value as SystemViewMode);
-                                        }}
-                                    >
-                                        <VSCodeOption value="grouped">Grouped</VSCodeOption>
-                                        <VSCodeOption value="flat">Flat</VSCodeOption>
-                                    </VSCodeDropdown>
-                                </div>
+                                <MinecraftGroupedStatisticTable
+                                    key={`system-timings-${systemViewMode}-${selectedClient}`}
+                                    title="System Timings"
+                                    showTitle={false}
+                                    selectionEnabled={filterSelectionMode === 'filter-by-system'}
+                                    selectionHeaderLabel="Filter To"
+                                    onSelectionChange={
+                                        filterSelectionMode === 'filter-by-system'
+                                            ? handleSystemSelectionChange
+                                            : undefined
+                                    }
+                                    keyLabel="System"
+                                    valueLabels={[getTimingColumnLabel(systemTimingUnit), '% Of Total']}
+                                    displayMode={
+                                        systemViewMode === 'grouped'
+                                            ? MinecraftGroupedStatisticTableDisplayMode.Grouped
+                                            : MinecraftGroupedStatisticTableDisplayMode.Flat
+                                    }
+                                    getGroupKey={(fullName: string) =>
+                                        resolveSystemCategoryGroupKey(fullName, systemCategoryLegendMap)
+                                    }
+                                    groupCountLabel="systems"
+                                    defaultCollapsed={true}
+                                    groupColumnAggregations={[
+                                        MinecraftGroupedStatisticTableColumnAggregation.Average,
+                                        MinecraftGroupedStatisticTableColumnAggregation.Sum,
+                                    ]}
+                                    statisticDataProvider={
+                                        new MultipleStatisticProvider({
+                                            statisticIds: ['time_in_ns', 'percent_of_total'],
+                                            statisticParentId: new RegExp(`${selectedClient}_client_ecs_systems`),
+                                        })
+                                    }
+                                    statisticResolver={ParentNameStatResolver(
+                                        createStatResolver({
+                                            type: StatisticType.Absolute,
+                                            tickRange: 20 * 10,
+                                            yAxisType: YAxisType.Absolute,
+                                            valueScalar: 1,
+                                        }),
+                                    )}
+                                    defaultSortColumn="value_1"
+                                    defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
+                                    defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
+                                    prettifyNames={false}
+                                    nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
+                                    sparklineColumnIndex={0}
+                                    sparklineTickRange={100}
+                                    sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
+                                    keyFormatter={formatStatKey}
+                                    valueFormatter={(value, columnIndex) => {
+                                        // Timing column
+                                        if (columnIndex === 0) {
+                                            return formatTimingValue(Number(value), systemTimingUnit);
+                                        }
+                                        // Percentage column
+                                        else if (columnIndex === 1) {
+                                            return formatPercentageValue(Number(value));
+                                        }
+
+                                        return String(value);
+                                    }}
+                                />
                             </div>
                         </div>
-                        <MinecraftGroupedStatisticTable
-                            key={`system-timings-${systemViewMode}-${selectedClient}`}
-                            title="System Timings"
-                            showTitle={false}
-                            keyLabel="System"
-                            valueLabels={[getTimingColumnLabel(systemTimingUnit), 'Percent Of Total']}
-                            displayMode={
-                                systemViewMode === 'grouped'
-                                    ? MinecraftGroupedStatisticTableDisplayMode.Grouped
-                                    : MinecraftGroupedStatisticTableDisplayMode.Flat
-                            }
-                            getGroupKey={(fullName: string) =>
-                                resolveSystemCategoryGroupKey(fullName, systemCategoryLegendMap)
-                            }
-                            groupCountLabel="systems"
-                            defaultCollapsed={true}
-                            groupColumnAggregations={[
-                                MinecraftGroupedStatisticTableColumnAggregation.Average,
-                                MinecraftGroupedStatisticTableColumnAggregation.Sum,
-                            ]}
-                            statisticDataProvider={
-                                new MultipleStatisticProvider({
-                                    statisticIds: ['time_in_ns', 'percent_of_total'],
-                                    statisticParentId: new RegExp(`${selectedClient}_client_ecs_systems`),
-                                })
-                            }
-                            statisticResolver={ParentNameStatResolver(
-                                createStatResolver({
-                                    type: StatisticType.Absolute,
-                                    tickRange: 20 * 10,
-                                    yAxisType: YAxisType.Absolute,
-                                    valueScalar: 1,
-                                }),
-                            )}
-                            defaultSortColumn="value_1"
-                            defaultSortOrder={MinecraftGroupedStatisticTableSortOrder.Descending}
-                            defaultSortType={MinecraftGroupedStatisticTableSortType.Numerical}
-                            prettifyNames={false}
-                            nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
-                            sparklineColumnIndex={0}
-                            sparklineTickRange={100}
-                            sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
-                            valueFormatter={(value, columnIndex) => {
-                                // Timing column
-                                if (columnIndex === 0) {
-                                    return formatTimingValue(Number(value), systemTimingUnit);
-                                }
-                                // Percentage column
-                                else if (columnIndex === 1) {
-                                    return formatPercentageValue(Number(value));
-                                }
-
-                                return String(value);
-                            }}
-                        />
                     </div>
-                </div>
+                )}
             </div>
         );
     },

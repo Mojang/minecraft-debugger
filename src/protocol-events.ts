@@ -2,7 +2,7 @@
 
 import { LogLevel } from '@vscode/debugadapter/lib/logger';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { StatMessageModel } from './stats/stats-provider';
+import { DiagnosticsTabDescriptor, StatMessageModel } from './stats/stats-provider';
 
 // protocol version history
 // 1 - initial version
@@ -13,6 +13,7 @@ import { StatMessageModel } from './stats/stats-provider';
 // 6 - breakpoints as request, MC can reject
 // 7 - support for debugger requests, MC can reject or respond with args
 // 8 - New serialization tech (use Cereal)
+// 9 - Added support for MC C++/native driven stat descriptors/schemas for UI display
 
 export enum ProtocolVersion {
     _Unknown = 0,
@@ -24,9 +25,10 @@ export enum ProtocolVersion {
     SupportBreakpointsAsRequest = 6,
     SupportDebuggerRequests = 7,
     SupportCerealSerialization = 8,
+    SupportNativeDescriptors = 9,
 }
 
-export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportCerealSerialization;
+export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportNativeDescriptors;
 
 // -------------------------------------------------------------------------
 // Interfaces for event message payloads (received from the debugee)
@@ -38,9 +40,9 @@ export enum IncomingEventType {
     Notification = 'NotificationEvent',
     Protocol = 'ProtocolEvent',
     Stat2 = 'StatEvent2',
-    Schema = 'SchemaEvent',
     ProfilerCapture = 'ProfilerCapture',
     DebuggeeResponse = 'debuggee-response',
+    DiagnosticsDescriptor = 'SchemaEvent',
 }
 
 export interface PluginDetails {
@@ -97,6 +99,11 @@ export type StatEventMessage = StatMessageModel & {
     type: IncomingEventType.Stat2;
 };
 
+export interface DiagnosticsDescriptorMessage {
+    type: IncomingEventType.DiagnosticsDescriptor;
+    descriptors: DiagnosticsTabDescriptor[];
+}
+
 export type IncomingDebuggeeMessage =
     | ProtocolCapabilities
     | ProfilerCapture
@@ -105,7 +112,8 @@ export type IncomingDebuggeeMessage =
     | PrintEventMessage
     | NotificationEventMessage
     | StatEventMessage
-    | DebuggeeResponseEnvelope;
+    | DebuggeeResponseEnvelope
+    | DiagnosticsDescriptorMessage;
 
 
 // -------------------------------------------------------------------------
@@ -252,6 +260,7 @@ export class DebuggeeEventRegistry {
             handler(eventMessage);
             return true;
         }
+        console.warn(`No handler found for incoming event type: ${eventMessage.type}`);
         return false;
     }
 }

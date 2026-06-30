@@ -5,7 +5,7 @@ import { StatisticType, YAxisType, createStatResolver } from '../../StatisticRes
 import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
 import { generateRowsFromStatsPrefabs } from '../utilities';
 
-const serverTickTimings: StatisticPrefab = {
+const ServerTickTimings: StatisticPrefab = {
     name: 'Server Tick Timings',
     reactNode: (
         <MinecraftStatisticStackedLineChart
@@ -33,7 +33,7 @@ const serverTickTimings: StatisticPrefab = {
     ),
 };
 
-const commandsRan: StatisticPrefab = {
+const CommandsRan: StatisticPrefab = {
     name: 'Commands Ran',
     reactNode: (
         <MinecraftStatisticStackedLineChart
@@ -53,12 +53,12 @@ const commandsRan: StatisticPrefab = {
     ),
 };
 
-const statsTab: TabPrefab = {
+const StatsTab: TabPrefab = {
     name: 'Server - Timings',
     dataSource: TabPrefabDataSource.Server,
     content: () => {
-        return generateRowsFromStatsPrefabs([[serverTickTimings], [commandsRan]]);
+        return generateRowsFromStatsPrefabs([[ServerTickTimings], [CommandsRan]]);
     },
 };
 
-export default statsTab;
+export default StatsTab;

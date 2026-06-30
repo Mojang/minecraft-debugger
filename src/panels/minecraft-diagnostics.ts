@@ -5,7 +5,7 @@ import { EventEmitter } from 'stream';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
 import { DebuggerRequestHandler } from '../requests/debugger-request-handler';
-import { StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
+import { DiagnosticsTabDescriptor, StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
 
 export class MinecraftDiagnosticsPanel {
     private static activeDiagnosticsPanels: MinecraftDiagnosticsPanel[] = [];
@@ -116,6 +116,13 @@ export class MinecraftDiagnosticsPanel {
             onNotification: (message: string) => {
                 window.showInformationMessage(message);
             },
+            onSchemaReceived: (schema: DiagnosticsTabDescriptor[]) => {
+                const message = {
+                    type: 'diagnostics-schema',
+                    schema: schema,
+                };
+                this._panel.webview.postMessage(message);
+            }
         };
 
         this._statsTracker.addStatListener(this._statsCallback);

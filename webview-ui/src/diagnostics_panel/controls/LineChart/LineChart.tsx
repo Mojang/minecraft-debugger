@@ -8,6 +8,9 @@ import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { removeAllStyleElements } from '../../../util/CSPUtilities';
 
+// Set to true to generate fake data with sine wave pattern for testing without a data source
+const GenerateTestData = false;
+
 type LineChartProps = {
     title: string;
     yLabel: string;
@@ -21,11 +24,53 @@ type PlotResult = ((SVGSVGElement | HTMLElement) & Plot.Plot) | undefined;
 
 function formatYAxisTick(d: d3.NumberValue): string {
     const n = d.valueOf();
-    if (n === 0) return '0';
+    if (n === 0) {
+        return '0';
+    }
     const abs = Math.abs(n);
-    if (abs >= 1000) return `${Math.round(n)}`;
-    if (abs >= 1) return `${parseFloat(n.toPrecision(4))}`;
+    if (abs >= 1000) {
+        return `${Math.round(n)}`;
+    }
+    if (abs >= 1) {
+        return `${parseFloat(n.toPrecision(4))}`;
+    }
     return `${parseFloat(n.toPrecision(3))}`;
+}
+
+function formatRelativeTime(latestTime: number, tick: number): string {
+    const diff = latestTime - tick;
+    if (diff < 20) {
+        return 'now';
+    }
+    return `${Math.floor(diff / 20)}s ago`;
+}
+
+const SharedTipDisplayOptions = {
+    fillOpacity: 0.5,
+    fill: 'black',
+    stroke: 'white',
+    style: {
+        color: 'var(--vscode-editorHoverWidget-foreground)',
+        background: 'var(--vscode-editorHoverWidget-background)',
+    },
+};
+
+function createInitialChartData(pointCount = 40): TrackedStat[] {
+if(!GenerateTestData) {
+        return [];
+    }
+    const seed: TrackedStat[] = [];
+    for (let i = 0; i < pointCount; i++) {
+        const time = i + 1;
+        const value = 35 + Math.sin(i / 4) * 10 + i * 0.2;
+        seed.push({
+            time,
+            value,
+            absoluteValue: value,
+            category: 'sample',
+        });
+    }
+    return seed;
 }
 
 //chart component
@@ -36,9 +81,9 @@ export function LineChart({
     statisticOptions,
     statisticDataProvider,
     yAxisStyle,
-}: LineChartProps) {
+}: LineChartProps): JSX.Element {
     // state
-    const [data, setData] = useState<TrackedStat[]>([]);
+    const [data, setData] = useState<TrackedStat[]>(() => createInitialChartData());
 
     // refs
     const containerRef = useRef<HTMLDivElement>(null);
@@ -86,13 +131,11 @@ export function LineChart({
                 x: {
                     //domain: [0, _maxDataPoints - 1],
                     grid: true,
-                    tickFormat: function (d: d3.NumberValue, i: number) {
+                    tickFormat: function (d: d3.NumberValue, _i: number) {
                         const tickDifference = latestTime - d.valueOf();
-
                         if (tickDifference < 20) {
                             return 'now';
                         }
-
                         // Assume 20 ticks per second
                         return Math.floor(tickDifference / 20) + 's';
                     },
@@ -109,40 +152,40 @@ export function LineChart({
                     // TODO: Clean up with factory?
                     enableFilledChart
                         ? Plot.areaY(data, {
-                              x: 'time',
-                              y: d => Math.max(yDomain[0], d.value),
-                              fillOpacity: 0.3,
-                              y1: yDomain[0],
-                          })
+                            x: 'time',
+                            y: d => Math.max(yDomain[0], d.value),
+                            fillOpacity: 0.3,
+                            y1: yDomain[0],
+                        })
                         : undefined,
                     Plot.lineY(data, { x: 'time', y: 'value' }),
                     enableFilledChart ? Plot.ruleY([0]) : undefined,
-                    Plot.crosshairX(data, { x: 'time', y: 'value' }),
+                    Plot.tip(
+                        data,
+                        Plot.pointerX({
+                            x: 'time',
+                            y: 'value',
+                            title: (d: TrackedStat) =>
+                                `${xLabel}: ${formatRelativeTime(latestTime, d.time)}\n${yLabel}: ${formatYAxisTick(d.value)}`,
+                            ...SharedTipDisplayOptions,
+                        })
+                    ),
                 ],
             });
         };
 
         const generateDifferenceChart = (): PlotResult => {
-            return Plot.differenceY(data, {
-                x: 'time',
-                y: 'value',
-                //positiveFill: "red",
-                //negativeFill: "blue",
-                tip: true,
-            }).plot({
+            return Plot.plot({
                 className: 'difference-chart',
                 title: title,
                 marginLeft: 50, // Y Axis labels were getting cut off
                 x: {
                     grid: true,
-                    tickFormat: function (d: d3.NumberValue, i: number) {
+                    tickFormat: function (d: d3.NumberValue) {
                         const tickDifference = latestTime - d.valueOf();
-
                         if (tickDifference < 20) {
                             return 'now';
                         }
-
-                        // Assume 20 ticks per second
                         return Math.floor(tickDifference / 20) + 's';
                     },
                     label: xLabel,
@@ -154,6 +197,19 @@ export function LineChart({
                     label: yLabel,
                     tickFormat: formatYAxisTick,
                 },
+                marks: [
+                    Plot.differenceY(data, { x: 'time', y: 'value' }),
+                    Plot.tip(
+                        data,
+                        Plot.pointerX({
+                            x: 'time',
+                            y: 'value',
+                            title: (d: TrackedStat) =>
+                                `${xLabel}: ${formatRelativeTime(latestTime, d.time)}\n${yLabel}: ${formatYAxisTick(d.value)}`,
+                            ...SharedTipDisplayOptions,
+                        })
+                    ),
+                ],
             });
         };
 

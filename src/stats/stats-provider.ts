@@ -26,16 +26,45 @@ export interface StatMessageModel {
     stats: StatDataModel[];
 }
 
+export type DiagnosticsDataSource = 'server' | 'client' | 'server_script';
+
+export type DiagnosticsDisplayType =
+    | 'line_chart'
+    | 'stacked_line_chart'
+    | 'stacked_bar_chart'
+    | 'table'
+    | 'multi_column_table'
+    | 'dynamic_properties_table';
+
+// Mirrors ScriptDiagnosticsDescriptor from C++. Sent once on connect via SchemaEvent.
+export interface DiagnosticsTabDescriptor {
+    name: string;
+    stat_group_id: string;
+    data_source: DiagnosticsDataSource;
+    display_type: DiagnosticsDisplayType;
+    title?: string;
+    y_label?: string;
+    tick_range?: number;
+    value_scalar?: number;
+    target_value?: number;
+    key_label?: string;
+    value_labels?: string[];
+    statistic_id?: string;
+    statistic_ids?: string[];
+}
+
 export interface StatsListener {
     onStatUpdated?: (stat: StatData) => void;
     onSpeedUpdated?: (speed: number) => void;
     onPauseUpdated?: (paused: boolean) => void;
     onStopped?: () => void;
     onNotification?: (message: string) => void;
+    onSchemaReceived?: (schema: DiagnosticsTabDescriptor[]) => void;
 }
 
 export class StatsProvider {
     protected _statListeners: StatsListener[];
+    private _cachedSchema: DiagnosticsTabDescriptor[] | undefined;
 
     constructor(public readonly name: string, public readonly uniqueId: string) {
         this._statListeners = [];
@@ -45,6 +74,13 @@ export class StatsProvider {
         for (const stat of stats.stats) {
             this._fireStatUpdated(stat, stats.tick);
         }
+    }
+
+    public setSchema(schema: DiagnosticsTabDescriptor[]): void {
+        this._cachedSchema = schema;
+        this._statListeners.forEach((listener: StatsListener) => {
+            listener.onSchemaReceived?.(schema);
+        });
     }
 
     public start(): void {
@@ -74,6 +110,12 @@ export class StatsProvider {
 
     public addStatListener(listener: StatsListener): void {
         this._statListeners.push(listener);
+
+        // If we have a cached schema from diagnostics previously sent when the page was no active, 
+        // send it to the new listener immediately
+        if (this._cachedSchema !== undefined) {
+            listener.onSchemaReceived?.(this._cachedSchema);
+        }
     }
 
     public removeStatListener(listener: StatsListener): void {

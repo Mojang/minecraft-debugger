@@ -22,7 +22,7 @@ export default function MinecraftStatisticLineChart({
     xLabel = 'Time',
     yAxisStyle,
     statisticDataProvider,
-}: MinecraftStatisticLineChartProps) {
+}: MinecraftStatisticLineChartProps): JSX.Element {
     const [_statisticOptions, _setStatisticOptions] = useState<StatisticOptions>(statisticOptions);
 
     const yAxisResolverChanged = useCallback((selectedType: YAxisType): void => {

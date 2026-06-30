@@ -68,9 +68,18 @@ export type MinecraftGroupedStatisticTableSelectionSnapshot = {
     resolvedSelectedRows: GroupedStatisticTableRow[];
 };
 
+export type MinecraftGroupedStatisticTableExportRow = {
+    rowKey: string;
+    groupKey: string;
+    row: GroupedStatisticTableRow;
+    trendValues: number[];
+};
+
 export type MinecraftGroupedStatisticTableHandle = {
     getSelectionSnapshot: () => MinecraftGroupedStatisticTableSelectionSnapshot;
+    getRowsForExport: () => MinecraftGroupedStatisticTableExportRow[];
     clearSelection: () => void;
+    clearTrendData: () => void;
 };
 
 type MinecraftGroupedStatisticTableProps = {
@@ -119,6 +128,8 @@ const SPARKLINE_HISTORY_RETENTION_TICKS = 8;
 
 const TICKS_PER_SECOND = 20;
 const TICKS_PER_SPARKLINE_UPDATE = 12; // TODO I don't know if this is accurate or not, but it gives us the right values for now
+
+export const SPARKLINE_SAMPLE_INTERVAL_SECONDS = TICKS_PER_SPARKLINE_UPDATE / TICKS_PER_SECOND;
 
 function sparklineTickRangeToSeconds(updatePoints: number): string {
     const totalTicks = updatePoints * TICKS_PER_SPARKLINE_UPDATE;
@@ -733,17 +744,49 @@ const MinecraftGroupedStatisticTable = forwardRef<
         };
     }, [deselectedRowsInSelectedGroups, groupedRowsByKey, rowGroupLookup, rowLookup, selectedGroups, selectedRows]);
 
+    const createExportRow = useCallback(
+        (rowKey: string): MinecraftGroupedStatisticTableExportRow | undefined => {
+            const row = rowLookup.get(rowKey);
+            const groupKey = rowGroupLookup.get(rowKey);
+
+            if (!row || !groupKey) {
+                return undefined;
+            }
+
+            return {
+                rowKey,
+                groupKey,
+                row,
+                trendValues: [...(rowHistoryRef.current.get(row.category) ?? [])],
+            };
+        },
+        [rowGroupLookup, rowLookup],
+    );
+
+    const rowsForExport = useMemo((): MinecraftGroupedStatisticTableExportRow[] => {
+        return Array.from(rowLookup.keys())
+            .sort((left, right) => left.localeCompare(right))
+            .map(rowKey => createExportRow(rowKey))
+            .filter((row): row is MinecraftGroupedStatisticTableExportRow => row !== undefined);
+    }, [createExportRow, rowLookup]);
+
     useImperativeHandle(
         ref,
         () => ({
             getSelectionSnapshot: () => selectionSnapshot,
+            getRowsForExport: () => rowsForExport,
             clearSelection: () => {
                 setSelectedGroups(new Set());
                 setSelectedRows(new Set());
                 setDeselectedRowsInSelectedGroups(new Set());
             },
+            clearTrendData: () => {
+                rowHistoryRef.current.clear();
+                rowHistoryMissingTickCountRef.current.clear();
+                sparklineBoundsRef.current.clear();
+            },
         }),
-        [selectionSnapshot],
+        [selectionSnapshot, rowsForExport],
     );
 
     const prevSelectionRowKeysRef = useRef<string[]>([]);
@@ -1036,6 +1079,24 @@ const MinecraftGroupedStatisticTable = forwardRef<
         rowHistoryMissingTickCountRef.current.clear();
         sparklineBoundsRef.current.clear();
     }, [sparklineColumnIndex]);
+
+    useEffect(() => {
+        if (sparklineTickRange <= 0) {
+            rowHistoryRef.current.clear();
+            rowHistoryMissingTickCountRef.current.clear();
+            sparklineBoundsRef.current.clear();
+            return;
+        }
+
+        rowHistoryRef.current.forEach((history, category) => {
+            if (history.length <= sparklineTickRange) {
+                return;
+            }
+
+            const trimmedHistory = history.slice(history.length - sparklineTickRange);
+            rowHistoryRef.current.set(category, trimmedHistory);
+        });
+    }, [sparklineTickRange]);
 
     useEffect(() => {
         if (!selectionEnabled || !defaultSelectAllGroups || hasInitializedDefaultSelection) {

@@ -1,11 +1,19 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from 'vscode';
+import { Disposable, Webview, WebviewPanel, window, workspace, Uri, ViewColumn } from 'vscode';
 import { EventEmitter } from 'stream';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
 import { DebuggerRequestHandler } from '../requests/debugger-request-handler';
 import { DiagnosticsTabDescriptor, StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
+
+type ExportDataMessage = {
+    type: 'export-data';
+    format: 'csv';
+    mimeType?: string;
+    suggestedFileName?: string;
+    content?: string;
+};
 
 export class MinecraftDiagnosticsPanel {
     private static activeDiagnosticsPanels: MinecraftDiagnosticsPanel[] = [];
@@ -37,7 +45,7 @@ export class MinecraftDiagnosticsPanel {
         this._panel.webview.html = this._getWebviewContent(
             this._panel.webview,
             extensionUri,
-            statsTracker.manualControl()
+            statsTracker.manualControl(),
         );
 
         // Handle events from the webview panel
@@ -48,7 +56,7 @@ export class MinecraftDiagnosticsPanel {
                     this._panel.webview.html = this._getWebviewContent(
                         this._panel.webview,
                         extensionUri,
-                        statsTracker.manualControl()
+                        statsTracker.manualControl(),
                     );
                     break;
                 case 'pause':
@@ -73,6 +81,9 @@ export class MinecraftDiagnosticsPanel {
                     break;
                 case 'debugger-request':
                     this._debuggerRequestHandler.handleDebuggerRequest(message.request, message.args);
+                    break;
+                case 'export-data':
+                    void this.handleExportDataMessage(message as ExportDataMessage);
                     break;
                 default:
                     console.error('Unknown message type:', message.type);
@@ -128,10 +139,39 @@ export class MinecraftDiagnosticsPanel {
         this._statsTracker.addStatListener(this._statsCallback);
     }
 
+    private async handleExportDataMessage(message: ExportDataMessage): Promise<void> {
+        if (typeof message.content !== 'string') {
+            console.error('Received export-data message without a valid content string.');
+            return;
+        }
+
+        const suggestedFileName =
+            typeof message.suggestedFileName === 'string' && message.suggestedFileName.trim() !== ''
+                ? message.suggestedFileName
+                : 'diagnostics-export.csv';
+        const workspaceFolderUri = workspace.workspaceFolders?.[0]?.uri;
+
+        const outputUri = await window.showSaveDialog({
+            title: 'Export Diagnostics Data',
+            saveLabel: 'Export',
+            defaultUri: workspaceFolderUri ? Uri.joinPath(workspaceFolderUri, suggestedFileName) : undefined,
+            filters: {
+                'CSV Files': ['csv'],
+            },
+        });
+
+        if (!outputUri) {
+            return;
+        }
+
+        await workspace.fs.writeFile(outputUri, Buffer.from(message.content, 'utf8'));
+        window.showInformationMessage(`Exported diagnostics data to ${outputUri.fsPath}.`);
+    }
+
     public static render(extensionUri: Uri, statsTracker: StatsProvider, eventEmitter: EventEmitter): void {
         const statsTrackerId = statsTracker.uniqueId;
         const existingPanel = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.find(
-            panel => panel._statsTracker.uniqueId === statsTrackerId
+            panel => panel._statsTracker.uniqueId === statsTrackerId,
         );
         if (existingPanel) {
             existingPanel._panel.reveal(ViewColumn.One);
@@ -147,10 +187,16 @@ export class MinecraftDiagnosticsPanel {
                         Uri.joinPath(extensionUri, 'out'),
                         Uri.joinPath(extensionUri, 'webview-ui/build'),
                     ],
-                }
+                },
             );
             MinecraftDiagnosticsPanel.activeDiagnosticsPanels.push(
-                new MinecraftDiagnosticsPanel(panel, extensionUri, statsTracker, eventEmitter, new DebuggerRequestHandler(panel.webview)),
+                new MinecraftDiagnosticsPanel(
+                    panel,
+                    extensionUri,
+                    statsTracker,
+                    eventEmitter,
+                    new DebuggerRequestHandler(panel.webview),
+                ),
             );
         }
     }
@@ -163,7 +209,7 @@ export class MinecraftDiagnosticsPanel {
 
         // Remove the current panel from the active panel list
         MinecraftDiagnosticsPanel.activeDiagnosticsPanels = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.filter(
-            panel => panel !== this
+            panel => panel !== this,
         );
 
         // Dispose of the current webview panel

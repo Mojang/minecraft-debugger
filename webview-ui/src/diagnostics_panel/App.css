@@ -385,6 +385,18 @@ main {
   background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 33%, var(--vscode-editor-background));
 }
 
+.minecraft-entity-system-general-controls {
+  padding-top: 16px;
+}
+
+.minecraft-entity-system-export-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+}
+
 .minecraft-grouped-statistic-table-root {
   width: 100%;
 }

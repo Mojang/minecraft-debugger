@@ -3,12 +3,14 @@
 import { ParentNameStatResolver, StatisticType, YAxisType, createStatResolver } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from '../TabPrefab';
 import MinecraftGroupedStatisticTable, {
+    MinecraftGroupedStatisticTableExportRow,
     MinecraftGroupedStatisticTableColumnAggregation,
     MinecraftGroupedStatisticTableDisplayMode,
     MinecraftGroupedStatisticTableHandle,
     MinecraftGroupedStatisticTableSelectionSnapshot,
     MinecraftGroupedStatisticTableSortOrder,
     MinecraftGroupedStatisticTableSortType,
+    SPARKLINE_SAMPLE_INTERVAL_SECONDS,
 } from '../../controls/MinecraftGroupedStatisticTable';
 import {
     DebuggerRequestResultMessage,
@@ -21,6 +23,10 @@ import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResul
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
+import { CsvCellValue, TableCsvExporter } from '../../exporters/TableCsvExporter';
+import { sendExportDataRequest } from '../../utilities/exportData';
+
+type DiagnosticsExportTableType = 'entity' | 'system';
 
 const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
 const FILTER_MULTI_ENTITY_REQUEST = 'Filter Multi Entity System Profiler';
@@ -37,8 +43,96 @@ type TimingUnit = 'ns' | 'us' | 'ms';
 type EntityViewMode = 'flat' | 'grouped';
 type SystemViewMode = 'flat' | 'grouped';
 type FilterSelectionMode = 'no-filter' | 'filter-by-entity' | 'filter-by-single-entity' | 'filter-by-system';
+type TrendDurationOption = { label: string; points: number };
 
 const UNCATEGORIZED_SYSTEM_GROUP = 'INVALID CATEGORY';
+const DEFAULT_TREND_DURATION_POINTS = 100;
+const TREND_DURATION_OPTIONS: ReadonlyArray<TrendDurationOption> = [
+    { label: '15 seconds', points: 25 },
+    { label: '30 seconds', points: 50 },
+    { label: '1 minute', points: 100 },
+    { label: '2 minutes', points: 200 },
+    { label: '5 minutes', points: 500 },
+    { label: '10 minutes', points: 1000 },
+];
+
+const EXPORT_CSV_HEADERS = [
+    'TimingUnit',
+    'GroupKey',
+    'Category',
+    'SampleIndex',
+    'ElapsedSeconds',
+    'TrendValue',
+] as const;
+
+type ExportCsvHeader = (typeof EXPORT_CSV_HEADERS)[number];
+type ExportCsvRow = Record<ExportCsvHeader, CsvCellValue>;
+
+function convertTimingValueFromNs(value: number, unit: TimingUnit): number {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+
+    if (unit === 'ms') {
+        return Number((value / 1_000_000).toFixed(3));
+    }
+
+    if (unit === 'us') {
+        return Number((value / 1_000).toFixed(1));
+    }
+
+    return value;
+}
+
+function buildExportRows(
+    tableRows: MinecraftGroupedStatisticTableExportRow[],
+    timingUnit: TimingUnit,
+    sampleIntervalSeconds: number,
+): ExportCsvRow[] {
+    const rows: ExportCsvRow[] = [];
+
+    tableRows.forEach(tableRow => {
+        if (tableRow.trendValues.length === 0) {
+            rows.push({
+                TimingUnit: timingUnit,
+                GroupKey: tableRow.groupKey,
+                Category: tableRow.row.category,
+                SampleIndex: '',
+                ElapsedSeconds: '',
+                TrendValue: '',
+            });
+            return;
+        }
+
+        tableRow.trendValues.forEach((trendValue, sampleIndex) => {
+            rows.push({
+                TimingUnit: timingUnit,
+                GroupKey: tableRow.groupKey,
+                Category: tableRow.row.category,
+                SampleIndex: sampleIndex,
+                ElapsedSeconds: Number((sampleIndex * sampleIntervalSeconds).toFixed(3)),
+                TrendValue: convertTimingValueFromNs(trendValue, timingUnit),
+            });
+        });
+    });
+
+    return rows;
+}
+
+function formatExportTimestamp(now: Date): string {
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+
+    return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+}
+
+function buildExportFileName(tableType: DiagnosticsExportTableType, now: Date): string {
+    return `${tableType}-trends-${formatExportTimestamp(now)}.csv`;
+}
 
 function getFilterSelectionModeTooltip(ecsVersion: number): string {
     if (ecsVersion === 2) {
@@ -174,8 +268,11 @@ const StatsTab: TabPrefab = {
         const [filteredSystemCount, setFilteredSystemCount] = useState<number | undefined>(undefined);
         const [ecsVersion, setECSVersion] = useState<number>(1);
         const [isStarted, setIsStarted] = useState<boolean>(false);
+        const [trendDurationPoints, setTrendDurationPoints] = useState<number>(DEFAULT_TREND_DURATION_POINTS);
         const entityTimingsTableRef = useRef<MinecraftGroupedStatisticTableHandle | null>(null);
+        const systemTimingsTableRef = useRef<MinecraftGroupedStatisticTableHandle | null>(null);
         const isMountRef = useRef(true);
+        const csvExporter = useMemo(() => new TableCsvExporter(), []);
         const categoriesProvider = useMemo(() => {
             if (!selectedClient) {
                 return undefined;
@@ -304,6 +401,20 @@ const StatsTab: TabPrefab = {
         );
 
         const entityValueLabels = [getTimingColumnLabel(entityTimingUnit), '% Of Total'];
+        const systemValueLabels = [getTimingColumnLabel(systemTimingUnit), '% Of Total'];
+        const selectedTrendDurationLabel =
+            TREND_DURATION_OPTIONS.find(option => option.points === trendDurationPoints)?.label ?? 'Custom';
+
+        const clearProfilerData = useCallback((): void => {
+            entityTimingsTableRef.current?.clearSelection();
+            entityTimingsTableRef.current?.clearTrendData();
+            systemTimingsTableRef.current?.clearSelection();
+            systemTimingsTableRef.current?.clearTrendData();
+
+            setSelectedSingleEntityId(undefined);
+            setFilteredEntityCount(undefined);
+            setFilteredSystemCount(undefined);
+        }, []);
 
         const filteredEntityLabel = (() => {
             if (filterSelectionMode === 'filter-by-single-entity') {
@@ -348,10 +459,39 @@ const StatsTab: TabPrefab = {
             console.log(`Entity System Profiler is started: ${isStarted}`);
         }, [lastResult, lastRequestedCommand]);
 
+        const exportTableData = useCallback(
+            (tableType: DiagnosticsExportTableType): void => {
+                const tableHandle =
+                    tableType === 'entity' ? entityTimingsTableRef.current : systemTimingsTableRef.current;
+                if (!tableHandle) {
+                    console.warn(`No table handle available for ${tableType} export.`);
+                    return;
+                }
+
+                const tableRows = tableHandle.getRowsForExport();
+                const timingUnit = tableType === 'entity' ? entityTimingUnit : systemTimingUnit;
+                const exportRows = buildExportRows(tableRows, timingUnit, SPARKLINE_SAMPLE_INTERVAL_SECONDS);
+
+                const now = new Date();
+                const csvContent = csvExporter.exportRows(EXPORT_CSV_HEADERS, exportRows);
+
+                sendExportDataRequest({
+                    format: csvExporter.format,
+                    mimeType: csvExporter.mimeType,
+                    suggestedFileName: buildExportFileName(tableType, now),
+                    content: csvContent,
+                });
+            },
+            [csvExporter, entityTimingUnit, systemTimingUnit],
+        );
+
         return (
             <div>
                 <div style={{ flexDirection: 'column', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, margin: '5px' }}>
+                        <div style={{ marginTop: '20px' }}>
+                            <DebuggerRequestResultBanner lastResult={lastResult} />
+                        </div>
                         <h2>Entity System Profiler Controls</h2>
                         {DEBUGGER_REQUEST_COMMANDS.map(command => {
                             const inFlight = isDebuggerRequestInFlight(command.command);
@@ -361,6 +501,11 @@ const StatsTab: TabPrefab = {
                                     disabled={inFlight}
                                     onClick={() => {
                                         setLastRequestedCommand(command.command);
+
+                                        if (command.command === 'Clear Entity System Profiler') {
+                                            clearProfilerData();
+                                        }
+
                                         sendDebuggerRequest(command.command);
                                     }}
                                     style={{ margin: '5px' }}
@@ -369,16 +514,8 @@ const StatsTab: TabPrefab = {
                                 </VSCodeButton>
                             );
                         })}
-                        <div style={{ marginTop: '20px' }}>
-                            <DebuggerRequestResultBanner lastResult={lastResult} />
-                        </div>
-                    </div>
-                </div>
-                {isStarted && (
-                    <div>
-                        <div style={{ flexDirection: 'column', display: 'flex', width: '50%' }}>
-                            <div style={{ flex: 1, margin: '5px' }}>
-                                <h2>Selection Controls</h2>
+                        {isStarted && (
+                            <div className="minecraft-entity-system-general-controls">
                                 <div className="dropdown-container">
                                     <label htmlFor="ecs-filter-mode" style={{ marginBottom: '5px' }}>
                                         Filter Mode <span style={{ opacity: 0.8 }}>🛈</span>
@@ -439,8 +576,50 @@ const StatsTab: TabPrefab = {
                                         </VSCodeDropdown>
                                     </div>
                                 )}
+                                <div className="dropdown-container" style={{ marginTop: '10px' }}>
+                                    <label htmlFor="ecs-trend-duration" style={{ marginBottom: '5px' }}>
+                                        Trend Duration
+                                    </label>
+                                    <VSCodeDropdown
+                                        id="ecs-trend-duration"
+                                        style={{ width: '100%' }}
+                                        value={`${trendDurationPoints}`}
+                                        onChange={(event: Event | React.FormEvent<HTMLElement>) => {
+                                            const target = event.target as HTMLSelectElement;
+                                            const selectedPoints = Number.parseInt(target.value, 10);
+
+                                            if (!Number.isFinite(selectedPoints)) {
+                                                return;
+                                            }
+
+                                            setTrendDurationPoints(selectedPoints);
+                                        }}
+                                    >
+                                        {TREND_DURATION_OPTIONS.map(option => (
+                                            <VSCodeOption key={option.points} value={`${option.points}`}>
+                                                {option.label}
+                                            </VSCodeOption>
+                                        ))}
+                                    </VSCodeDropdown>
+                                    <span style={{ opacity: 0.75, fontSize: '12px', marginTop: '4px' }}>
+                                        Showing latest {selectedTrendDurationLabel} in chart and export data.
+                                    </span>
+                                </div>
+
+                                <div className="minecraft-entity-system-export-actions">
+                                    <VSCodeButton onClick={() => exportTableData('entity')} disabled={!isStarted}>
+                                        Export Entity CSV
+                                    </VSCodeButton>
+                                    <VSCodeButton onClick={() => exportTableData('system')} disabled={!isStarted}>
+                                        Export System CSV
+                                    </VSCodeButton>
+                                </div>
                             </div>
-                        </div>
+                        )}
+                    </div>
+                </div>
+                {isStarted && (
+                    <div>
                         <div className="minecraft-entity-systems-tables-container">
                             <div className="minecraft-entity-systems-table-wrapper">
                                 <div style={{ marginTop: '10px', marginBottom: '10px' }}>
@@ -534,7 +713,7 @@ const StatsTab: TabPrefab = {
                                     )}
                                     nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                                     sparklineColumnIndex={0}
-                                    sparklineTickRange={100}
+                                    sparklineTickRange={trendDurationPoints}
                                     sparklineValueFormatter={value => formatTimingValue(value, entityTimingUnit)}
                                     valueFormatter={(value, columnIndex) => {
                                         // Timing column
@@ -550,7 +729,7 @@ const StatsTab: TabPrefab = {
                                     }}
                                 />
                             </div>
-                            <div style={{ flex: 1, marginRight: '5px' }}>
+                            <div className="minecraft-entity-systems-table-wrapper">
                                 <div style={{ marginTop: '10px', marginBottom: '10px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                         <h2>System Timings</h2>
@@ -597,6 +776,7 @@ const StatsTab: TabPrefab = {
                                     </div>
                                 </div>
                                 <MinecraftGroupedStatisticTable
+                                    ref={systemTimingsTableRef}
                                     key={`system-timings-${systemViewMode}-${selectedClient}`}
                                     title="System Timings"
                                     showTitle={false}
@@ -608,7 +788,7 @@ const StatsTab: TabPrefab = {
                                             : undefined
                                     }
                                     keyLabel="System"
-                                    valueLabels={[getTimingColumnLabel(systemTimingUnit), '% Of Total']}
+                                    valueLabels={systemValueLabels}
                                     displayMode={
                                         systemViewMode === 'grouped'
                                             ? MinecraftGroupedStatisticTableDisplayMode.Grouped
@@ -643,7 +823,7 @@ const StatsTab: TabPrefab = {
                                     prettifyNames={false}
                                     nonConsolidatedColumnResolver={event => resolveEcsColumn(event.id)}
                                     sparklineColumnIndex={0}
-                                    sparklineTickRange={100}
+                                    sparklineTickRange={trendDurationPoints}
                                     sparklineValueFormatter={value => formatTimingValue(value, systemTimingUnit)}
                                     keyFormatter={formatStatKey}
                                     valueFormatter={(value, columnIndex) => {

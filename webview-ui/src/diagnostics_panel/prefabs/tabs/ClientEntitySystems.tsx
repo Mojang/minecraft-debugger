@@ -23,7 +23,7 @@ import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResul
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
-import { CsvExportRow, TableCsvExporter } from '../../exporters/TableCsvExporter';
+import { CsvCellValue, TableCsvExporter } from '../../exporters/TableCsvExporter';
 import { sendExportDataRequest } from '../../utilities/exportData';
 
 type DiagnosticsExportTableType = 'entity' | 'system';
@@ -57,13 +57,16 @@ const TREND_DURATION_OPTIONS: ReadonlyArray<TrendDurationOption> = [
 ];
 
 const EXPORT_CSV_HEADERS = [
-    'timingUnit',
-    'groupKey',
-    'category',
-    'sampleIndex',
-    'elapsedSeconds',
-    'trendValue',
+    'TimingUnit',
+    'GroupKey',
+    'Category',
+    'SampleIndex',
+    'ElapsedSeconds',
+    'TrendValue',
 ] as const;
+
+type ExportCsvHeader = (typeof EXPORT_CSV_HEADERS)[number];
+type ExportCsvRow = Record<ExportCsvHeader, CsvCellValue>;
 
 function convertTimingValueFromNs(value: number, unit: TimingUnit): number {
     if (!Number.isFinite(value)) {
@@ -85,30 +88,30 @@ function buildExportRows(
     tableRows: MinecraftGroupedStatisticTableExportRow[],
     timingUnit: TimingUnit,
     sampleIntervalSeconds: number,
-): CsvExportRow[] {
-    const rows: CsvExportRow[] = [];
+): ExportCsvRow[] {
+    const rows: ExportCsvRow[] = [];
 
     tableRows.forEach(tableRow => {
         if (tableRow.trendValues.length === 0) {
             rows.push({
-                timingUnit,
-                groupKey: tableRow.groupKey,
-                category: tableRow.row.category,
-                sampleIndex: '',
-                elapsedSeconds: '',
-                trendValue: '',
+                TimingUnit: timingUnit,
+                GroupKey: tableRow.groupKey,
+                Category: tableRow.row.category,
+                SampleIndex: '',
+                ElapsedSeconds: '',
+                TrendValue: '',
             });
             return;
         }
 
         tableRow.trendValues.forEach((trendValue, sampleIndex) => {
             rows.push({
-                timingUnit,
-                groupKey: tableRow.groupKey,
-                category: tableRow.row.category,
-                sampleIndex,
-                elapsedSeconds: Number((sampleIndex * sampleIntervalSeconds).toFixed(3)),
-                trendValue: convertTimingValueFromNs(trendValue, timingUnit),
+                TimingUnit: timingUnit,
+                GroupKey: tableRow.groupKey,
+                Category: tableRow.row.category,
+                SampleIndex: sampleIndex,
+                ElapsedSeconds: Number((sampleIndex * sampleIntervalSeconds).toFixed(3)),
+                TrendValue: convertTimingValueFromNs(trendValue, timingUnit),
             });
         });
     });
@@ -470,7 +473,7 @@ const StatsTab: TabPrefab = {
                 const exportRows = buildExportRows(tableRows, timingUnit, SPARKLINE_SAMPLE_INTERVAL_SECONDS);
 
                 const now = new Date();
-                const csvContent = csvExporter.exportRows([...EXPORT_CSV_HEADERS], exportRows);
+                const csvContent = csvExporter.exportRows(EXPORT_CSV_HEADERS, exportRows);
 
                 sendExportDataRequest({
                     format: csvExporter.format,

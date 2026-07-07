@@ -1,6 +1,8 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-export type CsvExportRow = Record<string, string | number>;
+export type CsvCellValue = string | number;
+
+export type CsvExportRow = Record<string, CsvCellValue>;
 
 export type DiagnosticsExportFormat = 'csv';
 
@@ -8,7 +10,7 @@ export interface CsvExporter {
     readonly format: 'csv';
     readonly fileExtension: string;
     readonly mimeType: string;
-    exportRows(headers: string[], rows: CsvExportRow[]): string;
+    exportRows<THeader extends string>(headers: readonly THeader[], rows: Array<Record<THeader, CsvCellValue>>): string;
 }
 
 function escapeCsvValue(value: string | number): string {
@@ -21,7 +23,7 @@ function escapeCsvValue(value: string | number): string {
     return `"${serialized.replace(/"/g, '""')}"`;
 }
 
-function toCsvRow(values: (string | number)[]): string {
+function toCsvRow(values: readonly (string | number)[]): string {
     return values.map(escapeCsvValue).join(',');
 }
 
@@ -32,7 +34,10 @@ export class TableCsvExporter implements CsvExporter {
 
     public readonly mimeType = 'text/csv';
 
-    public exportRows(headers: string[], rows: CsvExportRow[]): string {
+    public exportRows<THeader extends string>(
+        headers: readonly THeader[],
+        rows: Array<Record<THeader, CsvCellValue>>,
+    ): string {
         const csvLines: string[] = [toCsvRow(headers)];
 
         rows.forEach(row => {

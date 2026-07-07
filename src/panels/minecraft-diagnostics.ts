@@ -7,14 +7,6 @@ import { getNonce } from '../utilities/getNonce';
 import { DebuggerRequestHandler } from '../requests/debugger-request-handler';
 import { DiagnosticsTabDescriptor, StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
 
-type ExportDataMessage = {
-    type: 'export-data';
-    format: 'csv';
-    mimeType?: string;
-    suggestedFileName?: string;
-    content?: string;
-};
-
 export class MinecraftDiagnosticsPanel {
     private static activeDiagnosticsPanels: MinecraftDiagnosticsPanel[] = [];
 
@@ -83,7 +75,7 @@ export class MinecraftDiagnosticsPanel {
                     this._debuggerRequestHandler.handleDebuggerRequest(message.request, message.args);
                     break;
                 case 'export-data':
-                    void this.handleExportDataMessage(message as ExportDataMessage);
+                    void this.handleExportDataMessage(message);
                     break;
                 default:
                     console.error('Unknown message type:', message.type);
@@ -133,13 +125,13 @@ export class MinecraftDiagnosticsPanel {
                     schema: schema,
                 };
                 this._panel.webview.postMessage(message);
-            }
+            },
         };
 
         this._statsTracker.addStatListener(this._statsCallback);
     }
 
-    private async handleExportDataMessage(message: ExportDataMessage): Promise<void> {
+    private async handleExportDataMessage(message: any): Promise<void> {
         if (typeof message.content !== 'string') {
             console.error('Received export-data message without a valid content string.');
             return;

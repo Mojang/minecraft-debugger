@@ -7,6 +7,10 @@ type SparklineCellProps = {
     formatValue?: (value: number) => string;
     displayedMin?: number;
     displayedMax?: number;
+    showYAxisTicks?: boolean;
+    yAxisTickCount?: number;
+    yAxisLabelFormatter?: (value: number) => string;
+    lineStrokeWidth?: number;
 };
 
 function formatSparklineLabelValue(value: number, formatValue?: (value: number) => string): string {
@@ -47,6 +51,10 @@ export function SparklineCell({
     formatValue,
     displayedMin,
     displayedMax,
+    showYAxisTicks = false,
+    yAxisTickCount = 4,
+    yAxisLabelFormatter,
+    lineStrokeWidth = 1.5,
 }: SparklineCellProps): JSX.Element {
     if (values.length === 0) {
         return <svg width={width} height={height} style={{ display: 'block' }} />;
@@ -60,11 +68,22 @@ export function SparklineCell({
     const max = displayedMax ?? rawMax;
     const min = displayedMin ?? rawMin;
     const range = max - min || 1;
+    const yAxisWidth = showYAxisTicks ? 50 : 0;
+    const chartLeft = yAxisWidth;
+    const chartRight = width;
+    const topPadding = showYAxisTicks ? 6 : 2;
+    const bottomPadding = showYAxisTicks ? 6 : 2;
+    const chartTop = topPadding;
+    const chartBottom = height - bottomPadding;
+    const chartWidth = Math.max(1, chartRight - chartLeft);
+    const chartHeight = Math.max(1, chartBottom - chartTop);
+    const horizontalDivisor = Math.max(1, values.length - 1);
+    const normalizedTickCount = Math.max(2, yAxisTickCount);
 
     const points = values
         .map((v, i) => {
-            const x = (i / (values.length - 1)) * width;
-            const y = height - ((v - min) / range) * (height - 4) - 2;
+            const x = chartLeft + (i / horizontalDivisor) * chartWidth;
+            const y = chartBottom - ((v - min) / range) * chartHeight;
             return `${x},${y}`;
         })
         .join(' ');
@@ -77,12 +96,42 @@ export function SparklineCell({
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <svg width={width} height={height} style={{ display: 'block' }}>
+                {showYAxisTicks &&
+                    Array.from({ length: normalizedTickCount }).map((_, index) => {
+                        const ratio = index / (normalizedTickCount - 1);
+                        const tickValue = max - ratio * range;
+                        const tickY = chartTop + ratio * chartHeight;
+                        const tickLabel = formatSparklineLabelValue(tickValue, yAxisLabelFormatter || formatValue);
+
+                        return (
+                            <g key={`sparkline-y-tick-${index}`}>
+                                <line
+                                    x1={chartLeft}
+                                    y1={tickY}
+                                    x2={chartRight}
+                                    y2={tickY}
+                                    stroke="var(--vscode-editorGroup-border)"
+                                    strokeWidth="1"
+                                    opacity="0.35"
+                                />
+                                <text
+                                    x={chartLeft - 4}
+                                    y={tickY + 3}
+                                    textAnchor="end"
+                                    fontSize="9"
+                                    fill="var(--vscode-descriptionForeground)"
+                                >
+                                    {tickLabel}
+                                </text>
+                            </g>
+                        );
+                    })}
                 {values.length >= 2 && (
                     <polyline
                         points={points}
                         fill="none"
                         stroke="var(--vscode-charts-blue)"
-                        strokeWidth="1.5"
+                        strokeWidth={lineStrokeWidth}
                         strokeLinejoin="round"
                         strokeLinecap="round"
                     />

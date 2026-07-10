@@ -60,6 +60,19 @@ type GroupedStatisticTableRowAction = {
     width?: string;
 };
 
+export type GroupedStatisticTableRowDetailsContext = {
+    sparklineHistory: number[];
+    sparklineDisplayedMin: number;
+    sparklineDisplayedMax: number;
+    sparklineTickRange: number;
+};
+
+export type GroupedStatisticTableRowDetailsRenderer = (
+    row: GroupedStatisticTableRow,
+    groupKey: string,
+    context: GroupedStatisticTableRowDetailsContext,
+) => JSX.Element;
+
 type NonConsolidatedColumnResolver = (event: StatisticUpdatedMessage, valueLabels: string[]) => number | undefined;
 
 export type MinecraftGroupedStatisticTableSelectionSnapshot = {
@@ -109,6 +122,7 @@ type MinecraftGroupedStatisticTableProps = {
     sparklineColumnIndex?: number;
     sparklineTickRange?: number;
     sparklineValueFormatter?: (value: number) => string;
+    rowDetailsRenderer?: GroupedStatisticTableRowDetailsRenderer;
 };
 
 const sortOrderOptions = [
@@ -333,6 +347,10 @@ function getGroupExpansionKey(groupKey: string, isPinnedSection: boolean, isSpli
     return `${groupKey}_${isPinnedSection ? 'pinned' : 'unpinned'}`;
 }
 
+function getRowDetailExpansionKey(groupKey: string, rowCategory: string): string {
+    return `detail:${getRowPinKey(groupKey, rowCategory)}`;
+}
+
 function buildGroupedStatisticTableGroup(
     key: string,
     rows: GroupedStatisticTableRow[],
@@ -442,6 +460,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
         sparklineColumnIndex = 0,
         sparklineTickRange = 0,
         sparklineValueFormatter,
+        rowDetailsRenderer,
     }: MinecraftGroupedStatisticTableProps,
     ref,
 ): JSX.Element {
@@ -466,6 +485,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
     const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [deselectedRowsInSelectedGroups, setDeselectedRowsInSelectedGroups] = useState<Set<string>>(new Set());
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
     const [hasInitializedDefaultSelection, setHasInitializedDefaultSelection] = useState<boolean>(false);
     const nonConsolidatedTickCounterRef = useRef(0);
     const nonConsolidatedLastEventTimeRef = useRef<number | undefined>(undefined);
@@ -704,6 +724,17 @@ const MinecraftGroupedStatisticTable = forwardRef<
             });
         },
         [selectedGroups],
+    );
+
+    const onToggleExpandedRow = useCallback(
+        (groupKey: string, rowCategory: string): void => {
+            const expansionKey = getRowDetailExpansionKey(groupKey, rowCategory);
+
+            setExpandedRows(previousExpandedRows => {
+                return handleSetToggle(previousExpandedRows, expansionKey);
+            });
+        },
+        [handleSetToggle],
     );
 
     const selectionSnapshot = useMemo((): MinecraftGroupedStatisticTableSelectionSnapshot => {
@@ -995,11 +1026,13 @@ const MinecraftGroupedStatisticTable = forwardRef<
     useEffect(() => {
         const validGroupKeys = new Set<string>();
         const validRowKeys = new Set<string>();
+        const validExpandedRowKeys = new Set<string>();
 
         data.forEach(row => {
             const groupKey = groupKeyResolver(row.category);
             validGroupKeys.add(groupKey);
             validRowKeys.add(getRowPinKey(groupKey, row.category));
+            validExpandedRowKeys.add(getRowDetailExpansionKey(groupKey, row.category));
         });
 
         const handleUpdateSet = (set: Set<string>, validKeys: Set<string>): Set<string> => {
@@ -1036,6 +1069,10 @@ const MinecraftGroupedStatisticTable = forwardRef<
 
         setDeselectedRowsInSelectedGroups(previousDeselectedRows => {
             return handleUpdateSet(previousDeselectedRows, validRowKeys);
+        });
+
+        setExpandedRows(previousExpandedRows => {
+            return handleUpdateSet(previousExpandedRows, validExpandedRowKeys);
         });
 
         const validCategories = new Set(data.map(row => row.category));
@@ -1319,17 +1356,27 @@ const MinecraftGroupedStatisticTable = forwardRef<
         });
     }, [defaultCollapsed, groupedData, isGroupedMode]);
 
-    const renderLeafRow = (row: GroupedStatisticTableRow, rowKey: string, groupKey: string): JSX.Element => {
+    const totalColumnCount =
+        2 +
+        valueLabels.length +
+        (selectionEnabled ? 1 : 0) +
+        (sparklineColumnIndex !== undefined ? 1 : 0) +
+        (rowAction ? 1 : 0);
+
+    const renderLeafRow = (row: GroupedStatisticTableRow, rowKey: string, groupKey: string): JSX.Element[] => {
         const rowPinKey = getRowPinKey(groupKey, row.category);
+        const rowExpansionKey = getRowDetailExpansionKey(groupKey, row.category);
         const isPinned = pinnedRows.has(rowPinKey);
         const isSelected = isRowSelected(groupKey, rowPinKey);
+        const canExpandRow = rowDetailsRenderer !== undefined;
+        const isRowExpanded = canExpandRow && expandedRows.has(rowExpansionKey);
         const sparklineHistory = rowHistoryRef.current.get(row.category) ?? [];
         const sparklineBounds = getSmoothedSparklineBounds(getRowSparklineSeriesKey(row.category), sparklineHistory);
 
-        return (
+        const rows: JSX.Element[] = [
             <tr
                 key={rowKey}
-                className={`minecraft-grouped-statistic-child-row${isPinned ? ' minecraft-grouped-statistic-row-pinned' : ''}${isSelected ? ' minecraft-grouped-statistic-row-selected' : ''}`}
+                className={`minecraft-grouped-statistic-child-row${isPinned ? ' minecraft-grouped-statistic-row-pinned' : ''}${isSelected ? ' minecraft-grouped-statistic-row-selected' : ''}${isRowExpanded ? ' minecraft-grouped-statistic-row-expanded' : ''}`}
             >
                 <td className="minecraft-grouped-statistic-table-grid-pin">
                     <VSCodeCheckbox
@@ -1348,9 +1395,28 @@ const MinecraftGroupedStatisticTable = forwardRef<
                     </td>
                 )}
                 <td>
-                    <span className="minecraft-grouped-statistic-child-key">
-                        {keyFormatter ? keyFormatter(row.category) : row.category}
-                    </span>
+                    <div className="minecraft-grouped-statistic-child-label">
+                        {canExpandRow && (
+                            <button
+                                type="button"
+                                className="minecraft-grouped-statistic-toggle"
+                                onClick={() => onToggleExpandedRow(groupKey, row.category)}
+                                aria-expanded={isRowExpanded}
+                                aria-label={
+                                    isRowExpanded
+                                        ? `Collapse details for ${row.category}`
+                                        : `Expand details for ${row.category}`
+                                }
+                            >
+                                {isRowExpanded ? '▾' : '▸'}
+                            </button>
+                        )}
+                        <span
+                            className={`minecraft-grouped-statistic-child-key${canExpandRow ? ' minecraft-grouped-statistic-child-key-expandable' : ''}`}
+                        >
+                            {keyFormatter ? keyFormatter(row.category) : row.category}
+                        </span>
+                    </div>
                 </td>
                 {row.values.map((value, valueIndex) => (
                     <td key={valueIndex} className="minecraft-grouped-statistic-table-grid-numeric">
@@ -1380,8 +1446,31 @@ const MinecraftGroupedStatisticTable = forwardRef<
                         </VSCodeButton>
                     </td>
                 )}
-            </tr>
+            </tr>,
+        ];
+
+        if (!isRowExpanded || !rowDetailsRenderer) {
+            return rows;
+        }
+
+        rows.push(
+            <tr
+                key={`${rowKey}-details`}
+                className="minecraft-grouped-statistic-detail-row"
+                aria-label={`Details for ${row.category}`}
+            >
+                <td colSpan={totalColumnCount}>
+                    {rowDetailsRenderer(row, groupKey, {
+                        sparklineHistory,
+                        sparklineDisplayedMin: sparklineBounds.min,
+                        sparklineDisplayedMax: sparklineBounds.max,
+                        sparklineTickRange,
+                    })}
+                </td>
+            </tr>,
         );
+
+        return rows;
     };
 
     return (
@@ -1599,7 +1688,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
 
                                   return [
                                       ...rows,
-                                      ...group.rows.map((row, rowIndex) =>
+                                      ...group.rows.flatMap((row, rowIndex) =>
                                           renderLeafRow(
                                               row,
                                               `group-${group.expansionKey}-${groupIndex}-row-${row.category}-${rowIndex}`,
@@ -1608,7 +1697,7 @@ const MinecraftGroupedStatisticTable = forwardRef<
                                       ),
                                   ];
                               })
-                            : sortedFlatData.map((row, rowIndex) =>
+                            : sortedFlatData.flatMap((row, rowIndex) =>
                                   renderLeafRow(
                                       row,
                                       `flat-row-${row.category}-${rowIndex}`,

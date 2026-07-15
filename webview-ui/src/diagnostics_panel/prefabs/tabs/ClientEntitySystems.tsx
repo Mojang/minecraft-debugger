@@ -3,6 +3,8 @@
 import { ParentNameStatResolver, StatisticType, YAxisType, createStatResolver } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from '../TabPrefab';
 import MinecraftGroupedStatisticTable, {
+    GroupedStatisticTableRow,
+    GroupedStatisticTableRowDetailsContext,
     MinecraftGroupedStatisticTableExportRow,
     MinecraftGroupedStatisticTableColumnAggregation,
     MinecraftGroupedStatisticTableDisplayMode,
@@ -25,6 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 import { CsvCellValue, TableCsvExporter } from '../../exporters/TableCsvExporter';
 import { sendExportDataRequest } from '../../utilities/exportData';
+import { SparklineCell } from '../../controls/SparklineCell';
 
 type DiagnosticsExportTableType = 'entity' | 'system';
 
@@ -67,6 +70,14 @@ const EXPORT_CSV_HEADERS = [
 
 type ExportCsvHeader = (typeof EXPORT_CSV_HEADERS)[number];
 type ExportCsvRow = Record<ExportCsvHeader, CsvCellValue>;
+type OptionalEntityStats = {
+    positionX?: number;
+    positionY?: number;
+    positionZ?: number;
+    dimension?: string;
+};
+
+const OPTIONAL_ENTITY_STAT_IDS = ['position_x', 'position_y', 'position_z', 'dimension'] as const;
 
 function convertTimingValueFromNs(value: number, unit: TimingUnit): number {
     if (!Number.isFinite(value)) {
@@ -135,7 +146,7 @@ function buildExportFileName(tableType: DiagnosticsExportTableType, now: Date): 
 }
 
 function getFilterSelectionModeTooltip(ecsVersion: number): string {
-    if (ecsVersion === 2) {
+    if (ecsVersion === 2 || ecsVersion === 3) {
         return (
             'Select Filtering Mode:\n' +
             '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
@@ -230,6 +241,72 @@ function extractEntityId(entityCategory: string): string | undefined {
     return match?.[1];
 }
 
+function resolveLatestNumericEventValue(event: StatisticUpdatedMessage): number | undefined {
+    if (event.values.length > 0) {
+        const value = event.values[event.values.length - 1];
+        return Number.isFinite(value) ? value : undefined;
+    }
+
+    const rows = event.children_string_values || [];
+    for (const row of rows) {
+        for (let index = row.length - 1; index >= 0; index -= 1) {
+            const numericValue = Number.parseFloat(row[index]);
+            if (Number.isFinite(numericValue)) {
+                return numericValue;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+function resolveLatestStringEventValue(event: StatisticUpdatedMessage): string | undefined {
+    const rows = event.children_string_values || [];
+
+    for (const row of rows) {
+        for (let index = row.length - 1; index >= 0; index -= 1) {
+            const value = row[index]?.trim();
+            if (value && Number.isNaN(Number.parseFloat(value))) {
+                return value;
+            }
+        }
+    }
+
+    if (event.values.length > 0) {
+        return String(event.values[event.values.length - 1]);
+    }
+
+    return undefined;
+}
+
+function formatOptionalCoordinate(value: number | undefined): string {
+    if (value === undefined || !Number.isFinite(value)) {
+        return 'N/A';
+    }
+
+    return value.toFixed(2);
+}
+
+function formatOptionalDimension(value: string | undefined): string {
+    if (!value || value.trim().length === 0) {
+        return 'N/A';
+    }
+
+    return value;
+}
+
+function formatSparklineDurationFromPoints(points: number): string {
+    const totalSeconds = points * SPARKLINE_SAMPLE_INTERVAL_SECONDS;
+
+    if (totalSeconds >= 60) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.round(totalSeconds % 60);
+        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    }
+
+    return totalSeconds < 10 ? `${totalSeconds.toFixed(1)}s` : `${Math.round(totalSeconds)}s`;
+}
+
 function formatStatKey(key: string): string {
     return key.split('(')[0].trim();
 }
@@ -263,6 +340,9 @@ const StatsTab: TabPrefab = {
         const [systemCategoryLegendMap, setSystemCategoryLegendMap] = useState<Map<string, string>>(new Map());
         const [filterSelectionMode, setFilterSelectionMode] = useState<FilterSelectionMode>('no-filter');
         const [availableEntities, setAvailableEntities] = useState<{ id: string; fullName: string }[]>([]);
+        const [optionalEntityStatsById, setOptionalEntityStatsById] = useState<Map<string, OptionalEntityStats>>(
+            new Map(),
+        );
         const [selectedSingleEntityId, setSelectedSingleEntityId] = useState<string | undefined>(undefined);
         const [filteredEntityCount, setFilteredEntityCount] = useState<number | undefined>(undefined);
         const [filteredSystemCount, setFilteredSystemCount] = useState<number | undefined>(undefined);
@@ -290,6 +370,17 @@ const StatsTab: TabPrefab = {
 
             return new MultipleStatisticProvider({
                 statisticIds: ['time_in_ns'],
+                statisticParentId: new RegExp(`${selectedClient}_client_ecs_entities`),
+            });
+        }, [selectedClient]);
+
+        const optionalEntityStatsProvider = useMemo(() => {
+            if (!selectedClient) {
+                return undefined;
+            }
+
+            return new MultipleStatisticProvider({
+                statisticIds: [...OPTIONAL_ENTITY_STAT_IDS],
                 statisticParentId: new RegExp(`${selectedClient}_client_ecs_entities`),
             });
         }, [selectedClient]);
@@ -352,6 +443,73 @@ const StatsTab: TabPrefab = {
         }, [entityIdsProvider]);
 
         useEffect(() => {
+            setOptionalEntityStatsById(new Map());
+
+            if (!optionalEntityStatsProvider) {
+                return;
+            }
+
+            const eventHandler = (event: StatisticUpdatedMessage): void => {
+                const entityId = extractEntityId(event.group_name);
+                if (!entityId) {
+                    return;
+                }
+
+                setOptionalEntityStatsById(previousStats => {
+                    const nextStats = new Map(previousStats);
+                    const existing = nextStats.get(entityId) ?? {};
+
+                    switch (event.id) {
+                        case 'position_x': {
+                            const numericValue = resolveLatestNumericEventValue(event);
+                            nextStats.set(entityId, {
+                                ...existing,
+                                positionX: numericValue,
+                            });
+                            break;
+                        }
+                        case 'position_y': {
+                            const numericValue = resolveLatestNumericEventValue(event);
+                            nextStats.set(entityId, {
+                                ...existing,
+                                positionY: numericValue,
+                            });
+                            break;
+                        }
+                        case 'position_z': {
+                            const numericValue = resolveLatestNumericEventValue(event);
+                            nextStats.set(entityId, {
+                                ...existing,
+                                positionZ: numericValue,
+                            });
+                            break;
+                        }
+                        case 'dimension': {
+                            const dimensionValue = resolveLatestStringEventValue(event);
+                            nextStats.set(entityId, {
+                                ...existing,
+                                dimension: dimensionValue,
+                            });
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+
+                    return nextStats;
+                });
+            };
+
+            optionalEntityStatsProvider.registerWindowListener(window);
+            optionalEntityStatsProvider.addSubscriber(eventHandler);
+
+            return () => {
+                optionalEntityStatsProvider.removeSubscriber(eventHandler);
+                optionalEntityStatsProvider.unregisterWindowListener(window);
+            };
+        }, [optionalEntityStatsProvider]);
+
+        useEffect(() => {
             if (isMountRef.current) {
                 isMountRef.current = false;
                 return;
@@ -411,6 +569,7 @@ const StatsTab: TabPrefab = {
             systemTimingsTableRef.current?.clearSelection();
             systemTimingsTableRef.current?.clearTrendData();
 
+            setOptionalEntityStatsById(new Map());
             setSelectedSingleEntityId(undefined);
             setFilteredEntityCount(undefined);
             setFilteredSystemCount(undefined);
@@ -483,6 +642,66 @@ const StatsTab: TabPrefab = {
                 });
             },
             [csvExporter, entityTimingUnit, systemTimingUnit],
+        );
+
+        const renderEntityRowDetails = useCallback(
+            (
+                row: GroupedStatisticTableRow,
+                _groupKey: string,
+                context: GroupedStatisticTableRowDetailsContext,
+            ): JSX.Element => {
+                const entityId = extractEntityId(row.category);
+                const optionalStats = entityId ? optionalEntityStatsById.get(entityId) : undefined;
+
+                return (
+                    <div className="minecraft-entity-row-details">
+                        <div className="minecraft-entity-row-details-grid">
+                            <div className="minecraft-entity-row-details-item">
+                                <span className="minecraft-entity-row-details-label">Position X</span>
+                                <span className="minecraft-entity-row-details-value">
+                                    {formatOptionalCoordinate(optionalStats?.positionX)}
+                                </span>
+                            </div>
+                            <div className="minecraft-entity-row-details-item">
+                                <span className="minecraft-entity-row-details-label">Position Y</span>
+                                <span className="minecraft-entity-row-details-value">
+                                    {formatOptionalCoordinate(optionalStats?.positionY)}
+                                </span>
+                            </div>
+                            <div className="minecraft-entity-row-details-item">
+                                <span className="minecraft-entity-row-details-label">Position Z</span>
+                                <span className="minecraft-entity-row-details-value">
+                                    {formatOptionalCoordinate(optionalStats?.positionZ)}
+                                </span>
+                            </div>
+                            <div className="minecraft-entity-row-details-item">
+                                <span className="minecraft-entity-row-details-label">Dimension</span>
+                                <span className="minecraft-entity-row-details-value">
+                                    {formatOptionalDimension(optionalStats?.dimension)}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="minecraft-entity-row-details-chart">
+                            <div className="minecraft-entity-row-details-chart-title">
+                                Trend ({formatSparklineDurationFromPoints(context.sparklineTickRange)})
+                            </div>
+                            <SparklineCell
+                                values={context.sparklineHistory}
+                                width={400}
+                                height={92}
+                                formatValue={value => formatTimingValue(value, entityTimingUnit)}
+                                displayedMin={context.sparklineDisplayedMin}
+                                displayedMax={context.sparklineDisplayedMax}
+                                showYAxisTicks={true}
+                                yAxisTickCount={5}
+                                yAxisLabelFormatter={value => formatTimingValue(value, entityTimingUnit)}
+                                lineStrokeWidth={2}
+                            />
+                        </div>
+                    </div>
+                );
+            },
+            [entityTimingUnit, optionalEntityStatsById],
         );
 
         return (
@@ -715,6 +934,7 @@ const StatsTab: TabPrefab = {
                                     sparklineColumnIndex={0}
                                     sparklineTickRange={trendDurationPoints}
                                     sparklineValueFormatter={value => formatTimingValue(value, entityTimingUnit)}
+                                    rowDetailsRenderer={ecsVersion >= 3 ? renderEntityRowDetails : undefined}
                                     valueFormatter={(value, columnIndex) => {
                                         // Timing column
                                         if (columnIndex === 0) {

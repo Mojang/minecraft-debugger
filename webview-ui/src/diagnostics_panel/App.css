@@ -535,6 +535,71 @@ main {
   vertical-align: middle;
 }
 
+.minecraft-grouped-statistic-child-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.minecraft-grouped-statistic-child-key-expandable {
+  padding-left: 0;
+}
+
+.minecraft-grouped-statistic-row-expanded {
+  border-bottom: none;
+}
+
+.minecraft-grouped-statistic-detail-row {
+  background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 10%, var(--vscode-editor-background));
+}
+
+.minecraft-grouped-statistic-detail-row td {
+  padding: 10px 14px !important;
+}
+
+.minecraft-entity-row-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.minecraft-entity-row-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.minecraft-entity-row-details-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.minecraft-entity-row-details-label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.minecraft-entity-row-details-value {
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.minecraft-entity-row-details-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.minecraft-entity-row-details-chart-title {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+}
+
 .minecraft-grouped-statistic-row-pinned {
   background: color-mix(in srgb, var(--vscode-list-highlightForeground) 12%, var(--vscode-editor-background));
 }

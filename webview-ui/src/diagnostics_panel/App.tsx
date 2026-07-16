@@ -9,8 +9,8 @@ import tabPrefabs from './prefabs';
 import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from './prefabs/TabPrefab';
 import { handleDebuggerRequestResult } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
-import { DiagnosticsTabDescriptor } from './DiagnosticsSchema';
 import DynamicTab from './DynamicTab';
+import { DiagnosticsTabDescriptor } from '../../../src/diagnostics-schema';
 
 // Wraps each tab's content() as a proper React component so that any hooks
 // inside the content function are correctly isolated and not called conditionally
@@ -175,7 +175,7 @@ function App() {
                                     )}
                                     <TabView tabPrefab={tab.tab} params={{ selectedClient, selectedPlugin, onRunCommand }} />
                                 </>
-                            ) : (
+                            ) : (!tab.descriptor.is_empty_tab && (
                                 <>
                                     {tab.descriptor.data_source === 'client' && (
                                         <StatGroupSelectionBox
@@ -198,7 +198,7 @@ function App() {
                                         selectedPlugin={selectedPlugin}
                                     />
                                 </>
-                            )}
+                            ))}
                         </div>
                     ))}
                 </div>

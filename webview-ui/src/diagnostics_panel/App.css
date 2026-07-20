@@ -397,6 +397,50 @@ main {
   padding-top: 16px;
 }
 
+.minecraft-entity-system-csv-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 70%, transparent);
+}
+
+.minecraft-entity-system-csv-dialog {
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  padding: 20px;
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px var(--vscode-widget-shadow);
+}
+
+.minecraft-entity-system-csv-dialog h3 {
+  margin: 0 0 8px;
+}
+
+.minecraft-entity-system-csv-dialog p {
+  margin: 0 0 16px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.minecraft-entity-system-csv-dialog-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.minecraft-entity-system-csv-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
 .minecraft-grouped-statistic-table-root {
   width: 100%;
 }

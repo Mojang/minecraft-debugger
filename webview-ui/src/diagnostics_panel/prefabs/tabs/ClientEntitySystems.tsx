@@ -24,7 +24,7 @@ import {
 import { DebuggerRequestResultBanner } from '../../controls/DebuggerRequestResult';
 import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../../StatisticProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { VSCodeButton, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
+import { VSCodeButton, VSCodeCheckbox, VSCodeDropdown, VSCodeOption } from '@vscode/webview-ui-toolkit/react';
 import { CsvCellValue, TableCsvExporter } from '../../exporters/TableCsvExporter';
 import { sendExportDataRequest } from '../../utilities/exportData';
 import { SparklineCell } from '../../controls/SparklineCell';
@@ -35,6 +35,7 @@ const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
 const FILTER_MULTI_ENTITY_REQUEST = 'Filter Multi Entity System Profiler';
 const FILTER_SINGLE_ENTITY_REQUEST = 'Filter Single Entity System Profiler';
 const FILTER_BY_SYSTEM_REQUEST = 'Filter By System Entity System Profiler';
+const REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST = 'Request CSV Entity System Profiler';
 
 const DEBUGGER_REQUEST_COMMANDS = [
     { command: START_ENTITY_SYSTEM_PROFILER_REQUEST, label: 'Start' },
@@ -145,8 +146,12 @@ function buildExportFileName(tableType: DiagnosticsExportTableType, now: Date): 
     return `${tableType}-trends-${formatExportTimestamp(now)}.csv`;
 }
 
+function buildEntitySystemMatrixCsvFileName(now: Date): string {
+    return `entity-system-profiler-${formatExportTimestamp(now)}.csv`;
+}
+
 function getFilterSelectionModeTooltip(ecsVersion: number): string {
-    if (ecsVersion === 2 || ecsVersion === 3) {
+    if (ecsVersion >= 2) {
         return (
             'Select Filtering Mode:\n' +
             '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
@@ -349,6 +354,11 @@ const StatsTab: TabPrefab = {
         const [ecsVersion, setECSVersion] = useState<number>(1);
         const [isStarted, setIsStarted] = useState<boolean>(false);
         const [trendDurationPoints, setTrendDurationPoints] = useState<number>(DEFAULT_TREND_DURATION_POINTS);
+        const [isEntitySystemMatrixCsvExportPending, setIsEntitySystemMatrixCsvExportPending] =
+            useState<boolean>(false);
+        const [isEntitySystemMatrixCsvDialogOpen, setIsEntitySystemMatrixCsvDialogOpen] = useState<boolean>(false);
+        const [groupEntitySystemMatrixCsvEntities, setGroupEntitySystemMatrixCsvEntities] = useState<boolean>(false);
+        const [groupEntitySystemMatrixCsvSystems, setGroupEntitySystemMatrixCsvSystems] = useState<boolean>(false);
         const entityTimingsTableRef = useRef<MinecraftGroupedStatisticTableHandle | null>(null);
         const systemTimingsTableRef = useRef<MinecraftGroupedStatisticTableHandle | null>(null);
         const isMountRef = useRef(true);
@@ -603,6 +613,7 @@ const StatsTab: TabPrefab = {
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
             : undefined;
+        const entitySystemMatrixCsvResult = getDebuggerRequestResult(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST);
 
         useEffect(() => {
             if (lastRequestedCommand !== START_ENTITY_SYSTEM_PROFILER_REQUEST) {
@@ -617,6 +628,51 @@ const StatsTab: TabPrefab = {
             setIsStarted(lastResult?.response?.success ?? false);
             console.log(`Entity System Profiler is started: ${isStarted}`);
         }, [lastResult, lastRequestedCommand]);
+
+        useEffect(() => {
+            if (
+                !isEntitySystemMatrixCsvExportPending ||
+                isDebuggerRequestInFlight(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST)
+            ) {
+                return;
+            }
+
+            setIsEntitySystemMatrixCsvExportPending(false);
+
+            if (
+                entitySystemMatrixCsvResult?.response?.success !== true ||
+                typeof entitySystemMatrixCsvResult.response.args !== 'string'
+            ) {
+                return;
+            }
+
+            sendExportDataRequest({
+                format: csvExporter.format,
+                mimeType: csvExporter.mimeType,
+                suggestedFileName: buildEntitySystemMatrixCsvFileName(new Date()),
+                content: entitySystemMatrixCsvResult.response.args,
+            });
+        }, [entitySystemMatrixCsvResult, csvExporter, isEntitySystemMatrixCsvExportPending]);
+
+        const openEntitySystemMatrixCsvDialog = useCallback((): void => {
+            setIsEntitySystemMatrixCsvDialogOpen(true);
+        }, []);
+
+        const closeEntitySystemMatrixCsvDialog = useCallback((): void => {
+            setIsEntitySystemMatrixCsvDialogOpen(false);
+        }, []);
+
+        const requestEntitySystemMatrixCsv = useCallback((): void => {
+            setIsEntitySystemMatrixCsvExportPending(true);
+            setIsEntitySystemMatrixCsvDialogOpen(false);
+            setLastRequestedCommand(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST);
+            sendDebuggerRequest(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST, {
+                csvArgs: {
+                    groupEntities: groupEntitySystemMatrixCsvEntities,
+                    groupSystems: groupEntitySystemMatrixCsvSystems,
+                },
+            });
+        }, [groupEntitySystemMatrixCsvEntities, groupEntitySystemMatrixCsvSystems]);
 
         const exportTableData = useCallback(
             (tableType: DiagnosticsExportTableType): void => {
@@ -832,6 +888,17 @@ const StatsTab: TabPrefab = {
                                     <VSCodeButton onClick={() => exportTableData('system')} disabled={!isStarted}>
                                         Export System CSV
                                     </VSCodeButton>
+                                    {ecsVersion >= 4 && (
+                                        <VSCodeButton
+                                            onClick={openEntitySystemMatrixCsvDialog}
+                                            disabled={
+                                                !isStarted ||
+                                                isDebuggerRequestInFlight(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST)
+                                            }
+                                        >
+                                            Export Entity System Matrix CSV
+                                        </VSCodeButton>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -1059,6 +1126,44 @@ const StatsTab: TabPrefab = {
                                         return String(value);
                                     }}
                                 />
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {isEntitySystemMatrixCsvDialogOpen && (
+                    <div className="minecraft-entity-system-csv-dialog-backdrop">
+                        <div
+                            className="minecraft-entity-system-csv-dialog"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="ecs-client-csv-dialog-title"
+                        >
+                            <h3 id="ecs-client-csv-dialog-title">Export Entity System Matrix CSV</h3>
+                            <p>Select which data should be grouped in the CSV.</p>
+                            <div className="minecraft-entity-system-csv-dialog-options">
+                                <VSCodeCheckbox
+                                    checked={groupEntitySystemMatrixCsvEntities}
+                                    onChange={() =>
+                                        setGroupEntitySystemMatrixCsvEntities(currentValue => !currentValue)
+                                    }
+                                >
+                                    Group Entities
+                                </VSCodeCheckbox>
+                                <VSCodeCheckbox
+                                    checked={groupEntitySystemMatrixCsvSystems}
+                                    onChange={() => setGroupEntitySystemMatrixCsvSystems(currentValue => !currentValue)}
+                                >
+                                    Group Systems
+                                </VSCodeCheckbox>
+                            </div>
+                            <div className="minecraft-entity-system-csv-dialog-actions">
+                                <VSCodeButton onClick={closeEntitySystemMatrixCsvDialog}>Cancel</VSCodeButton>
+                                <VSCodeButton
+                                    onClick={requestEntitySystemMatrixCsv}
+                                    disabled={isDebuggerRequestInFlight(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST)}
+                                >
+                                    Export CSV
+                                </VSCodeButton>
                             </div>
                         </div>
                     </div>

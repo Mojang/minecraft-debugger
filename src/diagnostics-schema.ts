@@ -1,4 +1,5 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
+
 // TypeScript mirror of ScriptDiagnosticsDescriptor (C++) and its Cereal based wire format.
 
 export type DiagnosticsDataSource = 'server' | 'client' | 'server_script';
@@ -26,4 +27,5 @@ export interface DiagnosticsTabDescriptor {
     value_labels?: string[];
     statistic_id?: string;
     statistic_ids?: string[];
+    is_empty_tab?: boolean;
 }

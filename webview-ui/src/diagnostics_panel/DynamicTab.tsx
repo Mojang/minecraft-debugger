@@ -5,7 +5,6 @@
 // and renders the matching control — no new tab files needed for new diagnostics.
 
 import { useMemo } from 'react';
-import { DiagnosticsTabDescriptor } from './DiagnosticsSchema';
 import {
     SimpleStatisticProvider,
     MultipleStatisticProvider,
@@ -18,6 +17,7 @@ import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStac
 import MinecraftStatisticTable from './controls/MinecraftStatisticTable';
 import MinecraftMultiColumnStatisticTable from './controls/MinecraftMultiColumnStatisticTable';
 import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
+import { DiagnosticsTabDescriptor } from '../../../src/diagnostics-schema';
 
 type DynamicTabProps = {
     descriptor: DiagnosticsTabDescriptor;

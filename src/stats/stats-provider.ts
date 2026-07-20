@@ -1,5 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
+import { DiagnosticsTabDescriptor } from "../diagnostics-schema";
+
 export interface StatData {
     name: string;
     parent_name: string;
@@ -24,33 +26,6 @@ export interface StatMessageModel {
     tick: number;
     type: string;
     stats: StatDataModel[];
-}
-
-export type DiagnosticsDataSource = 'server' | 'client' | 'server_script';
-
-export type DiagnosticsDisplayType =
-    | 'line_chart'
-    | 'stacked_line_chart'
-    | 'stacked_bar_chart'
-    | 'table'
-    | 'multi_column_table'
-    | 'dynamic_properties_table';
-
-// Mirrors ScriptDiagnosticsDescriptor from C++. Sent once on connect via SchemaEvent.
-export interface DiagnosticsTabDescriptor {
-    name: string;
-    stat_group_id: string;
-    data_source: DiagnosticsDataSource;
-    display_type: DiagnosticsDisplayType;
-    title?: string;
-    y_label?: string;
-    tick_range?: number;
-    value_scalar?: number;
-    target_value?: number;
-    key_label?: string;
-    value_labels?: string[];
-    statistic_id?: string;
-    statistic_ids?: string[];
 }
 
 export interface StatsListener {
@@ -164,7 +139,7 @@ export class StatsProvider {
     }
 
     private _fireStatUpdated(stat: StatDataModel, tick: number, parent?: StatData) {
-        const statId = stat.name.toLowerCase();
+        const statId = stat.name;
 
         const statData: StatData = {
             ...stat,

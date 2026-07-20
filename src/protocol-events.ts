@@ -2,7 +2,8 @@
 
 import { LogLevel } from '@vscode/debugadapter/lib/logger';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { DiagnosticsTabDescriptor, StatMessageModel } from './stats/stats-provider';
+import { StatMessageModel } from './stats/stats-provider';
+import { DiagnosticsTabDescriptor } from './diagnostics-schema';
 
 // protocol version history
 // 1 - initial version
@@ -14,6 +15,7 @@ import { DiagnosticsTabDescriptor, StatMessageModel } from './stats/stats-provid
 // 7 - support for debugger requests, MC can reject or respond with args
 // 8 - New serialization tech (use Cereal)
 // 9 - Added support for MC C++/native driven stat descriptors/schemas for UI display
+// 10 - Added is_empty_tab to DiagnosticsTabDescriptor
 
 export enum ProtocolVersion {
     _Unknown = 0,
@@ -26,9 +28,10 @@ export enum ProtocolVersion {
     SupportDebuggerRequests = 7,
     SupportCerealSerialization = 8,
     SupportNativeDescriptors = 9,
+    SupportEmptyTabs = 10,
 }
 
-export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportNativeDescriptors;
+export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportEmptyTabs;
 
 // -------------------------------------------------------------------------
 // Interfaces for event message payloads (received from the debugee)

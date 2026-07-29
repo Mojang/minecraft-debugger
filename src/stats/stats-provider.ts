@@ -58,6 +58,10 @@ export class StatsProvider {
         });
     }
 
+    public clearSchema(): void {
+        this.setSchema([]);
+    }
+
     public start(): void {
         throw new Error('Method not implemented.');
     }

@@ -385,7 +385,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         args: IAttachRequestArguments,
     ): Promise<void> {
         this.closeSession();
-
+        this._statsProvider.clearSchema();
         this.resolveEnvironmentVariables(args);
 
         const host = args.host || 'localhost';
@@ -878,6 +878,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
     private terminateSession(reason: string, logLevel: LogLevel = LogLevel.Log) {
         this.closeServer();
         this.closeSession();
+        this._statsProvider.clearSchema();
 
         this._connected = false;
         this._clientProtocolVersion = ProtocolVersion._Unknown;

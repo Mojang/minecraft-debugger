@@ -179,16 +179,9 @@ export interface ResumeMessage {
     type: OutgoingEventType.Resume;
 }
 
-export interface RequestLegacyMessage {
-    type: OutgoingEventType.Request;
-    request: { request_seq: number; command: string; args: unknown };
-}
-
 export interface RequestMessage {
     type: OutgoingEventType.Request;
-    request_seq: number;
-    command: string;
-    args: unknown;
+    request: { request_seq: number; command: string; args: unknown };
 }
 
 export interface BreakpointsLegacyMessage {
@@ -228,7 +221,6 @@ export type OutgoingDebuggeeMessage =
     | StopProfilerMessage
     | StopOnExceptionMessage
     | ResumeMessage
-    | RequestLegacyMessage
     | RequestMessage
     | BreakpointsLegacyMessage
     | BreakpointsMessage

@@ -58,7 +58,6 @@ import {
     StoppedEventMessage,
     ThreadEventMessage,
     DebuggeeResponseEnvelope,
-    RequestLegacyMessage,
     DiagnosticsDescriptorMessage,
 } from './protocol-events';
 import { SourceMaps } from './source-maps';
@@ -921,27 +920,16 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this.sendDebuggeeMessage(this.makeRequestPayload(requestSeq, response.command, args));
     }
 
-    private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage | RequestLegacyMessage {
-        if (this._clientProtocolVersion >= ProtocolVersion.SupportCerealSerialization) {
-            const envelope: RequestMessage = {
-                type: OutgoingEventType.Request,
+    private makeRequestPayload(requestSeq: number, responseCommand: string, args: unknown): RequestMessage {
+        const envelope: RequestMessage = {
+            type: OutgoingEventType.Request,
+            request: {
                 request_seq: requestSeq,
                 command: responseCommand,
                 args,
-            };
-            return envelope;
-        }
-        else {
-            const envelope: RequestLegacyMessage = {
-                type: OutgoingEventType.Request,
-                request: {
-                    request_seq: requestSeq,
-                    command: responseCommand,
-                    args,
-                },
-            };
-            return envelope;
-        }
+            },
+        };
+        return envelope;
     }
 
     public sendDebuggeeMessage(envelope: OutgoingDebuggeeMessage): void {

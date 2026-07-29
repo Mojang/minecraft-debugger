@@ -5,7 +5,8 @@ import { EventEmitter } from 'stream';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
 import { DebuggerRequestHandler } from '../requests/debugger-request-handler';
-import { DiagnosticsTabDescriptor, StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
+import { StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
+import { DiagnosticsTabDescriptor } from '../diagnostics-schema';
 
 export class MinecraftDiagnosticsPanel {
     private static activeDiagnosticsPanels: MinecraftDiagnosticsPanel[] = [];

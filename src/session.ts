@@ -172,6 +172,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this._eventEmitter.on('start-profiler', this.onStartProfiler.bind(this));
         this._eventEmitter.on('stop-profiler', this.onStopProfiler.bind(this));
         this._eventEmitter.on('request-debugger-status', this.onRequestDebuggerStatus.bind(this));
+        this._eventEmitter.on('set-diagnostics-active', this.onSetDiagnosticsActive.bind(this));
+        this._eventEmitter.on('sync-diagnostics-tabs', this.onSyncDiagnosticsTabs.bind(this));
     }
 
     // Use this to register new events that are handled from the debugee (Minecraft)
@@ -212,6 +214,8 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         this._eventEmitter.removeAllListeners('start-profiler');
         this._eventEmitter.removeAllListeners('stop-profiler');
         this._eventEmitter.removeAllListeners('request-debugger-status');
+        this._eventEmitter.removeAllListeners('set-diagnostics-active');
+        this._eventEmitter.removeAllListeners('sync-diagnostics-tabs');
 
         if (this._sourceFileWatcher) {
             this._sourceFileWatcher.dispose();
@@ -275,6 +279,40 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
                 },
             });
         }
+    }
+
+    private onSetDiagnosticsActive(tabName: unknown, active: unknown): void {
+        if (typeof tabName !== 'string' || tabName.trim() === '' || typeof active !== 'boolean') {
+            return;
+        }
+
+        this.sendDiagnosticsSetActive(tabName, active);
+    }
+
+    private onSyncDiagnosticsTabs(tabStates: unknown): void {
+        if (tabStates === null || typeof tabStates !== 'object' || Array.isArray(tabStates)) {
+            return;
+        }
+
+        for (const [tabName, active] of Object.entries(tabStates)) {
+            if (typeof active !== 'boolean' || tabName.trim() === '') {
+                continue;
+            }
+
+            this.sendDiagnosticsSetActive(tabName, active);
+        }
+    }
+
+    private sendDiagnosticsSetActive(tabName: string, active: boolean): void {
+        if (this._clientProtocolVersion < ProtocolVersion.SupportDiagnosticsSetActive) {
+            return;
+        }
+
+        this.sendDebuggeeMessage({
+            type: OutgoingEventType.DiagnosticsSetActive,
+            tab_name: tabName,
+            active,
+        });
     }
 
     private writeProfilerCaptureToFile(

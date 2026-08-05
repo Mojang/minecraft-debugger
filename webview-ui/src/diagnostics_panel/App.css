@@ -23,6 +23,11 @@ main {
   border-right: 1px solid var(--vscode-editorGroup-border);
 }
 
+.vertical-tab-row {
+  display: flex;
+  align-items: stretch;
+}
+
 .vertical-tab-item {
   background: transparent;
   border: none;
@@ -35,11 +40,45 @@ main {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+
+.diagnostics-tab-toggle {
+  border: none;
+  border-left: 1px solid var(--vscode-editorGroup-border);
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 10px;
+  min-width: 34px;
+}
+
+.diagnostics-tab-toggle:hover:not(:disabled) {
+  background-color: var(--vscode-list-hoverBackground);
+  color: var(--vscode-list-hoverForeground);
+}
+
+.diagnostics-tab-toggle:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.diagnostics-tab-disabled {
+  color: var(--vscode-descriptionForeground);
+  padding: 24px;
 }
 
 .vertical-tab-item:hover {
   background-color: var(--vscode-list-hoverBackground);
   color: var(--vscode-list-hoverForeground);
+}
+
+.vertical-tab-item.disabled {
+  color: var(--vscode-descriptionForeground);
+}
+
+.vertical-tab-item.disabled:hover {
+  color: var(--vscode-descriptionForeground);
 }
 
 .vertical-tab-item.active {

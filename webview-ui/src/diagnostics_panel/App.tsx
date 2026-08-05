@@ -63,9 +63,13 @@ const CLIENT_SELECTION_HELP_TOOLTIP =
 function App() {
     const [selectedPlugin, setSelectedPlugin] = useState<string>('');
     const [selectedClient, setSelectedClient] = useState<string>('');
-    const [currentTab, setCurrentTab] = useState<string>('tab-0');
+    const [currentTab, setCurrentTab] = useState<string>(sortedTabPrefabs[0]?.name ?? '');
     const [paused, setPaused] = useState<boolean>(true);
     const [speed, setSpeed] = useState<string>('');
+    const [enabledTabs, setEnabledTabs] = useState<Record<string, boolean>>(
+        window.initialParams.diagnosticsTabStates ?? {},
+    );
+    const [pendingTabs, setPendingTabs] = useState<Record<string, boolean>>({});
     // Dynamic schema received from the game on connect. Merged into the prefab tab list.
     const [schema, setSchema] = useState<DiagnosticsTabDescriptor[]>([]);
 
@@ -88,6 +92,13 @@ function App() {
                 handleDebuggerRequestResult(message);
             } else if (message.type === 'diagnostics-schema') {
                 setSchema(message.schema as DiagnosticsTabDescriptor[]);
+            } else if (message.type === 'diagnostics-tab-state' && typeof message.tabName === 'string') {
+                setEnabledTabs(previous => ({ ...previous, [message.tabName]: message.active === true }));
+                setPendingTabs(previous => {
+                    const next = { ...previous };
+                    delete next[message.tabName];
+                    return next;
+                });
             }
         };
         window.addEventListener('message', handleMessage);
@@ -116,6 +127,22 @@ function App() {
         return merged;
     }, [schema]);
 
+    useEffect(() => {
+        if (!window.initialParams.showReplayControls) {
+            const states = Object.fromEntries(mergedTabs.map(tab => [tab.name, enabledTabs[tab.name] === true]));
+            vscode.postMessage({ type: 'sync-diagnostics-tabs', states });
+        }
+    }, [mergedTabs]);
+
+    const setTabActive = (tabName: string, active: boolean) => {
+        if (window.initialParams.showReplayControls || pendingTabs[tabName] !== undefined) {
+            return;
+        }
+
+        setPendingTabs(previous => ({ ...previous, [tabName]: active }));
+        vscode.postMessage({ type: 'set-diagnostics-active', tabName, active });
+    };
+
     return (
         <main>
             {window.initialParams.showReplayControls && (
@@ -132,73 +159,107 @@ function App() {
             )}
             <div className="vertical-tabs-container">
                 <div className="vertical-tab-list">
-                    {mergedTabs.map((tab, index) => (
-                        <button
-                            key={`tab-${index}`}
-                            className={`vertical-tab-item${currentTab === `tab-${index}` ? ' active' : ''}`}
-                            onClick={() => setCurrentTab(`tab-${index}`)}
-                        >
-                            {tab.name}
-                        </button>
+                    {mergedTabs.map(tab => (
+                        <div className="vertical-tab-row" key={tab.name}>
+                            <button
+                                className={`vertical-tab-item${currentTab === tab.name ? ' active' : ''}${
+                                    !window.initialParams.showReplayControls && enabledTabs[tab.name] !== true
+                                        ? ' disabled'
+                                        : ''
+                                }`}
+                                onClick={() => setCurrentTab(tab.name)}
+                            >
+                                {tab.name}
+                            </button>
+                            {!window.initialParams.showReplayControls && (
+                                <button
+                                    className="diagnostics-tab-toggle"
+                                    aria-label={`${enabledTabs[tab.name] === true ? 'Disable' : 'Enable'} ${tab.name}`}
+                                    title={`${enabledTabs[tab.name] === true ? 'Disable' : 'Enable'} ${tab.name}`}
+                                    disabled={pendingTabs[tab.name] !== undefined}
+                                    onClick={event => {
+                                        event.stopPropagation();
+                                        setTabActive(tab.name, enabledTabs[tab.name] !== true);
+                                    }}
+                                >
+                                    {pendingTabs[tab.name] !== undefined
+                                        ? '…'
+                                        : enabledTabs[tab.name] === true
+                                            ? Icons.enabled
+                                            : Icons.disabled}
+                                </button>
+                            )}
+                        </div>
                     ))}
                 </div>
                 <div className="vertical-tab-content">
-                    {mergedTabs.map((tab, index) => (
+                    {mergedTabs.map(tab => (
                         <div
-                            key={`view-${index}`}
+                            key={tab.name}
                             style={{
-                                display: currentTab === `tab-${index}` ? 'flex' : 'none',
+                                display: currentTab === tab.name ? 'flex' : 'none',
                                 flexDirection: 'column',
                                 flex: 1,
                             }}
                         >
-                            {tab.kind === 'prefab' ? (
-                                <>
-                                    {tab.tab.dataSource === TabPrefabDataSource.Client ? (
-                                        <StatGroupSelectionBox
-                                            labelName="Client"
-                                            statParentId="client_stats"
-                                            onChange={handleClientSelection}
-                                            helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
+                            {window.initialParams.showReplayControls || enabledTabs[tab.name] === true ? (
+                                tab.kind === 'prefab' ? (
+                                    <>
+                                        {tab.tab.dataSource === TabPrefabDataSource.Client ? (
+                                            <StatGroupSelectionBox
+                                                labelName="Client"
+                                                statParentId="client_stats"
+                                                onChange={handleClientSelection}
+                                                helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
+                                            />
+                                        ) : (
+                                            <div />
+                                        )}
+                                        {tab.tab.dataSource === TabPrefabDataSource.ServerScript ? (
+                                            <StatGroupSelectionBox
+                                                labelName="Script Plugin"
+                                                statParentId="handle_counts"
+                                                onChange={handlePluginSelection}
+                                            />
+                                        ) : (
+                                            <div />
+                                        )}
+                                        <TabView
+                                            tabPrefab={tab.tab}
+                                            params={{ selectedClient, selectedPlugin, onRunCommand }}
                                         />
-                                    ) : (
-                                        <div />
-                                    )}
-                                    {tab.tab.dataSource === TabPrefabDataSource.ServerScript ? (
-                                        <StatGroupSelectionBox
-                                            labelName="Script Plugin"
-                                            statParentId="handle_counts"
-                                            onChange={handlePluginSelection}
-                                        />
-                                    ) : (
-                                        <div />
-                                    )}
-                                    <TabView tabPrefab={tab.tab} params={{ selectedClient, selectedPlugin, onRunCommand }} />
-                                </>
-                            ) : (!tab.descriptor.is_empty_tab && (
-                                <>
-                                    {tab.descriptor.data_source === 'client' && (
-                                        <StatGroupSelectionBox
-                                            labelName="Client"
-                                            statParentId="client_stats"
-                                            onChange={handleClientSelection}
-                                            helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
-                                        />
-                                    )}
-                                    {tab.descriptor.data_source === 'server_script' && (
-                                        <StatGroupSelectionBox
-                                            labelName="Script Plugin"
-                                            statParentId="handle_counts"
-                                            onChange={handlePluginSelection}
-                                        />
-                                    )}
-                                    <DynamicTab
-                                        descriptor={tab.descriptor}
-                                        selectedClient={selectedClient}
-                                        selectedPlugin={selectedPlugin}
-                                    />
-                                </>
-                            ))}
+                                    </>
+                                ) : (
+                                    !tab.descriptor.is_empty_tab && (
+                                        <>
+                                            {tab.descriptor.data_source === 'client' && (
+                                                <StatGroupSelectionBox
+                                                    labelName="Client"
+                                                    statParentId="client_stats"
+                                                    onChange={handleClientSelection}
+                                                    helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
+                                                />
+                                            )}
+                                            {tab.descriptor.data_source === 'server_script' && (
+                                                <StatGroupSelectionBox
+                                                    labelName="Script Plugin"
+                                                    statParentId="handle_counts"
+                                                    onChange={handlePluginSelection}
+                                                />
+                                            )}
+                                            <DynamicTab
+                                                descriptor={tab.descriptor}
+                                                selectedClient={selectedClient}
+                                                selectedPlugin={selectedPlugin}
+                                            />
+                                        </>
+                                    )
+                                )
+                            ) : (
+                                <div className="diagnostics-tab-disabled">
+                                    Enable this tab to start receiving its diagnostics data.
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

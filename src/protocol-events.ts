@@ -16,6 +16,7 @@ import { DiagnosticsTabDescriptor } from './diagnostics-schema';
 // 8 - New serialization tech (use Cereal)
 // 9 - Added support for MC C++/native driven stat descriptors/schemas for UI display
 // 10 - Added is_empty_tab to DiagnosticsTabDescriptor
+// 11 - Added per-tab diagnostics activation
 
 export enum ProtocolVersion {
     _Unknown = 0,
@@ -29,9 +30,10 @@ export enum ProtocolVersion {
     SupportCerealSerialization = 8,
     SupportNativeDescriptors = 9,
     SupportEmptyTabs = 10,
+    SupportDiagnosticsSetActive = 11,
 }
 
-export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportEmptyTabs;
+export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportDiagnosticsSetActive;
 
 // -------------------------------------------------------------------------
 // Interfaces for event message payloads (received from the debugee)
@@ -131,7 +133,8 @@ export enum OutgoingEventType {
     Resume = 'resume',
     Request = 'request',
     Breakpoints = 'breakpoints',
-    DebuggerRequest = 'debugger-request'
+    DebuggerRequest = 'debugger-request',
+    DiagnosticsSetActive = 'diagnostics-set-active',
 }
 
 export interface ProtocolResponse {
@@ -182,6 +185,12 @@ export interface ResumeMessage {
     type: OutgoingEventType.Resume;
 }
 
+export interface DiagnosticsSetActiveMessage {
+    type: OutgoingEventType.DiagnosticsSetActive;
+    tab_name: string;
+    active: boolean;
+}
+
 export interface RequestMessage {
     type: OutgoingEventType.Request;
     request: { request_seq: number; command: string; args: unknown };
@@ -224,6 +233,7 @@ export type OutgoingDebuggeeMessage =
     | StopProfilerMessage
     | StopOnExceptionMessage
     | ResumeMessage
+    | DiagnosticsSetActiveMessage
     | RequestMessage
     | BreakpointsLegacyMessage
     | BreakpointsMessage

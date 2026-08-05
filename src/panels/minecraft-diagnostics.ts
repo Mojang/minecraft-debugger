@@ -1,12 +1,15 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { Disposable, Webview, WebviewPanel, window, workspace, Uri, ViewColumn } from 'vscode';
+import { Disposable, Memento, Webview, WebviewPanel, window, workspace, Uri, ViewColumn } from 'vscode';
 import { EventEmitter } from 'stream';
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
 import { DebuggerRequestHandler } from '../requests/debugger-request-handler';
 import { StatData, StatsListener, StatsProvider } from '../stats/stats-provider';
 import { DiagnosticsTabDescriptor } from '../diagnostics-schema';
+
+const DIAGNOSTICS_TAB_STATES_KEY = 'minecraftDiagnosticsTabStates';
+type DiagnosticsTabStates = Record<string, boolean>;
 
 export class MinecraftDiagnosticsPanel {
     private static activeDiagnosticsPanels: MinecraftDiagnosticsPanel[] = [];
@@ -24,6 +27,7 @@ export class MinecraftDiagnosticsPanel {
         statsTracker: StatsProvider,
         eventEmitter: EventEmitter,
         debuggerRequestHandler: DebuggerRequestHandler,
+        private readonly _globalState: Memento,
     ) {
         this._panel = panel;
         this._statsTracker = statsTracker;
@@ -39,6 +43,7 @@ export class MinecraftDiagnosticsPanel {
             this._panel.webview,
             extensionUri,
             statsTracker.manualControl(),
+            this.getDiagnosticsTabStates(),
         );
 
         // Handle events from the webview panel
@@ -50,6 +55,7 @@ export class MinecraftDiagnosticsPanel {
                         this._panel.webview,
                         extensionUri,
                         statsTracker.manualControl(),
+                        this.getDiagnosticsTabStates(),
                     );
                     break;
                 case 'pause':
@@ -74,6 +80,12 @@ export class MinecraftDiagnosticsPanel {
                     break;
                 case 'debugger-request':
                     this._debuggerRequestHandler.handleDebuggerRequest(message.request, message.args);
+                    break;
+                case 'set-diagnostics-active':
+                    this.handleDiagnosticsActiveMessage(message);
+                    break;
+                case 'sync-diagnostics-tabs':
+                    this._eventEmitter.emit('sync-diagnostics-tabs', message.states);
                     break;
                 case 'export-data':
                     void this.handleExportDataMessage(message);
@@ -132,6 +144,33 @@ export class MinecraftDiagnosticsPanel {
         this._statsTracker.addStatListener(this._statsCallback);
     }
 
+    private getDiagnosticsTabStates(): DiagnosticsTabStates {
+        const states = this._globalState.get<DiagnosticsTabStates>(DIAGNOSTICS_TAB_STATES_KEY, {});
+        if (states === null || typeof states !== 'object' || Array.isArray(states)) {
+            return {};
+        }
+
+        return Object.fromEntries(
+            Object.entries(states).filter(([tabName, active]) => tabName.trim() !== '' && typeof active === 'boolean'),
+        );
+    }
+
+    private handleDiagnosticsActiveMessage(message: any): void {
+        if (typeof message.tabName !== 'string' || message.tabName.trim() === '' || typeof message.active !== 'boolean') {
+            return;
+        }
+
+        const states = this.getDiagnosticsTabStates();
+        states[message.tabName] = message.active;
+        void this._globalState.update(DIAGNOSTICS_TAB_STATES_KEY, states);
+        this._eventEmitter.emit('set-diagnostics-active', message.tabName, message.active);
+        this._panel.webview.postMessage({
+            type: 'diagnostics-tab-state',
+            tabName: message.tabName,
+            active: message.active,
+        });
+    }
+
     private async handleExportDataMessage(message: any): Promise<void> {
         if (typeof message.content !== 'string') {
             console.error('Received export-data message without a valid content string.');
@@ -161,7 +200,12 @@ export class MinecraftDiagnosticsPanel {
         window.showInformationMessage(`Exported diagnostics data to ${outputUri.fsPath}.`);
     }
 
-    public static render(extensionUri: Uri, statsTracker: StatsProvider, eventEmitter: EventEmitter): void {
+    public static render(
+        extensionUri: Uri,
+        statsTracker: StatsProvider,
+        eventEmitter: EventEmitter,
+        globalState: Memento,
+    ): void {
         const statsTrackerId = statsTracker.uniqueId;
         const existingPanel = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.find(
             panel => panel._statsTracker.uniqueId === statsTrackerId,
@@ -189,6 +233,7 @@ export class MinecraftDiagnosticsPanel {
                     statsTracker,
                     eventEmitter,
                     new DebuggerRequestHandler(panel.webview),
+                    globalState,
                 ),
             );
         }
@@ -217,7 +262,12 @@ export class MinecraftDiagnosticsPanel {
         }
     }
 
-    private _getWebviewContent(webview: Webview, extensionUri: Uri, showReplayControls: boolean) {
+    private _getWebviewContent(
+        webview: Webview,
+        extensionUri: Uri,
+        showReplayControls: boolean,
+        diagnosticsTabStates: DiagnosticsTabStates,
+    ) {
         // The CSS file from the React build output
         const stylesUri = getUri(webview, extensionUri, ['webview-ui', 'build', 'assets', 'diagnosticsPanel.css']);
         // The JS file from the React build output
@@ -231,11 +281,11 @@ export class MinecraftDiagnosticsPanel {
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
                 <link rel="stylesheet" type="text/css" href="${stylesUri}">
                 <title>Minecraft Diagnostics</title>
                 <script nonce="${nonce}">
-                    window.initialParams = { showReplayControls: ${showReplayControls} };
+                    window.initialParams = ${JSON.stringify({ showReplayControls, diagnosticsTabStates })};
                 </script>
             </head>
             <body>

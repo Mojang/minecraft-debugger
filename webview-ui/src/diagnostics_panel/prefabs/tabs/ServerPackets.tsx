@@ -6,8 +6,13 @@ import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
 import { generateRowsFromStatsPrefabs } from '../utilities';
 import MinecraftStatisticStackedBarChart from '../../controls/MinecraftStatisticStackedBarChart';
 
+const PACKETS_COLLECTOR = 'packets';
+const NETWORKING_PACKETS_DETAILS_COLLECTOR = 'networking_packets_details';
+const NETWORKING_PACKETS_DETAILS_PATTERN = new RegExp(`${NETWORKING_PACKETS_DETAILS_COLLECTOR}_.*`);
+
 const packetsReceivedLineChart: StatisticPrefab = {
     name: 'Packets Received (Line)',
+    collectorName: PACKETS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticLineChart
             title="Packets Received"
@@ -15,7 +20,7 @@ const packetsReceivedLineChart: StatisticPrefab = {
             statisticDataProvider={
                 new SimpleStatisticProvider({
                     statisticId: 'received',
-                    statisticParentId: 'packets',
+                    statisticParentId: PACKETS_COLLECTOR,
                 })
             }
             statisticOptions={{
@@ -29,13 +34,14 @@ const packetsReceivedLineChart: StatisticPrefab = {
 
 const packetsReceivedStackedLineChart: StatisticPrefab = {
     name: 'Packets Recieved (Stack)',
+    collectorName: NETWORKING_PACKETS_DETAILS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticStackedBarChart
             title="Packets Received"
             yLabel="Number Of Packets"
             statisticDataProvider={
                 new RegexStatisticProvider({
-                    statisticParentId: /networking_packets_details_.*/,
+                    statisticParentId: NETWORKING_PACKETS_DETAILS_PATTERN,
                     statisticId: 'received',
                     ignoredValues: [0],
                 })
@@ -53,6 +59,7 @@ const packetsReceivedStackedLineChart: StatisticPrefab = {
 
 const packetsSentLineChart: StatisticPrefab = {
     name: 'Packets Sent (Line)',
+    collectorName: PACKETS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticLineChart
             title="Packets Sent"
@@ -60,7 +67,7 @@ const packetsSentLineChart: StatisticPrefab = {
             statisticDataProvider={
                 new SimpleStatisticProvider({
                     statisticId: 'sent',
-                    statisticParentId: 'packets',
+                    statisticParentId: PACKETS_COLLECTOR,
                 })
             }
             statisticOptions={{
@@ -74,13 +81,14 @@ const packetsSentLineChart: StatisticPrefab = {
 
 const packetsSentStackedLineChart: StatisticPrefab = {
     name: 'Packets Sent (Stack)',
+    collectorName: NETWORKING_PACKETS_DETAILS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticStackedBarChart
             title="Packets Sent"
             yLabel="Number Of Packets"
             statisticDataProvider={
                 new RegexStatisticProvider({
-                    statisticParentId: /networking_packets_details_.*/,
+                    statisticParentId: NETWORKING_PACKETS_DETAILS_PATTERN,
                     statisticId: 'sent',
                     ignoredValues: [0],
                 })
@@ -99,6 +107,12 @@ const packetsSentStackedLineChart: StatisticPrefab = {
 const statsTab: TabPrefab = {
     name: 'Server - Packets',
     dataSource: TabPrefabDataSource.Server,
+    collectors: [
+        packetsReceivedLineChart,
+        packetsReceivedStackedLineChart,
+        packetsSentLineChart,
+        packetsSentStackedLineChart,
+    ],
     content: () => {
         return generateRowsFromStatsPrefabs([
             [packetsReceivedLineChart, packetsSentLineChart],

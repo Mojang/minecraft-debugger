@@ -156,14 +156,20 @@ export class MinecraftDiagnosticsPanel {
     }
 
     private handleDiagnosticsActiveMessage(message: any): void {
-        if (typeof message.tabName !== 'string' || message.tabName.trim() === '' || typeof message.active !== 'boolean') {
+        if (
+            typeof message.tabName !== 'string' ||
+            message.tabName.trim() === '' ||
+            !Array.isArray(message.collectorNames) ||
+            message.collectorNames.some((name: unknown) => typeof name !== 'string' || name.trim() === '') ||
+            typeof message.active !== 'boolean'
+        ) {
             return;
         }
 
         const states = this.getDiagnosticsTabStates();
         states[message.tabName] = message.active;
         void this._globalState.update(DIAGNOSTICS_TAB_STATES_KEY, states);
-        this._eventEmitter.emit('set-diagnostics-active', message.tabName, message.active);
+        this._eventEmitter.emit('set-diagnostics-active', message.collectorNames, message.active);
         this._panel.webview.postMessage({
             type: 'diagnostics-tab-state',
             tabName: message.tabName,

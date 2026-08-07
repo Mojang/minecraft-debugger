@@ -281,36 +281,34 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
         }
     }
 
-    private onSetDiagnosticsActive(tabName: unknown, active: unknown): void {
-        if (typeof tabName !== 'string' || tabName.trim() === '' || typeof active !== 'boolean') {
-            return;
-        }
-
-        this.sendDiagnosticsSetActive(tabName, active);
+    private onSetDiagnosticsActive(collectorNames: string[], active: boolean): void {
+        this.sendDiagnosticsSetActive(collectorNames, active);
     }
 
-    private onSyncDiagnosticsTabs(tabStates: unknown): void {
-        if (tabStates === null || typeof tabStates !== 'object' || Array.isArray(tabStates)) {
-            return;
+    private onSyncDiagnosticsTabs(collectorStates: Record<string, boolean>): void {
+        const activeCollectors = Object.entries(collectorStates)
+            .filter(([, active]) => active)
+            .map(([collectorName]) => collectorName);
+        const inactiveCollectors = Object.entries(collectorStates)
+            .filter(([, active]) => !active)
+            .map(([collectorName]) => collectorName);
+
+        if (activeCollectors.length > 0) {
+            this.sendDiagnosticsSetActive(activeCollectors, true);
         }
-
-        for (const [tabName, active] of Object.entries(tabStates)) {
-            if (typeof active !== 'boolean' || tabName.trim() === '') {
-                continue;
-            }
-
-            this.sendDiagnosticsSetActive(tabName, active);
+        if (inactiveCollectors.length > 0) {
+            this.sendDiagnosticsSetActive(inactiveCollectors, false);
         }
     }
 
-    private sendDiagnosticsSetActive(tabName: string, active: boolean): void {
+    private sendDiagnosticsSetActive(collectorNames: string[], active: boolean): void {
         if (this._clientProtocolVersion < ProtocolVersion.SupportDiagnosticsSetActive) {
             return;
         }
 
         this.sendDebuggeeMessage({
             type: OutgoingEventType.DiagnosticsSetActive,
-            tab_name: tabName,
+            collector_names: collectorNames,
             active,
         });
     }

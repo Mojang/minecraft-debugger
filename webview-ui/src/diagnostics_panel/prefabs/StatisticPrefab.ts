@@ -4,5 +4,6 @@ import { ReactNode } from 'react';
 
 export interface StatisticPrefab {
     name: string;
+    collectorName: string;
     reactNode: ReactNode;
 }

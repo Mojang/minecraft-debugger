@@ -23,8 +23,8 @@ const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.n
 
 // A tab entry is either a hardcoded prefab or a dynamic descriptor received from the game.
 type MergedTab =
-    | { kind: 'prefab'; name: string; tab: TabPrefab }
-    | { kind: 'dynamic'; name: string; descriptor: DiagnosticsTabDescriptor };
+    | { kind: 'prefab'; name: string; tab: TabPrefab; collectorNames: string[] }
+    | { kind: 'dynamic'; name: string; descriptor: DiagnosticsTabDescriptor; collectorNames: string[] };
 
 declare global {
     interface Window {
@@ -114,13 +114,24 @@ function App() {
             kind: 'prefab' as const,
             name: tab.name,
             tab,
+            collectorNames: (tab.collectors?.map(collector => collector.collectorName).filter(collectorName => collectorName !== undefined) ?? [])
         }));
         for (const descriptor of schema) {
             const existingIndex = merged.findIndex(t => t.name === descriptor.name);
             if (existingIndex !== -1) {
-                merged[existingIndex] = { kind: 'dynamic' as const, name: descriptor.name, descriptor };
+                merged[existingIndex] = {
+                    kind: 'dynamic' as const,
+                    name: descriptor.name,
+                    descriptor,
+                    collectorNames: [descriptor.stat_group_id],
+                };
             } else {
-                merged.push({ kind: 'dynamic' as const, name: descriptor.name, descriptor });
+                merged.push({
+                    kind: 'dynamic' as const,
+                    name: descriptor.name,
+                    descriptor,
+                    collectorNames: [descriptor.stat_group_id],
+                });
             }
         }
         merged.sort((a, b) => a.name.localeCompare(b.name));
@@ -129,7 +140,12 @@ function App() {
 
     useEffect(() => {
         if (!window.initialParams.showReplayControls) {
-            const states = Object.fromEntries(mergedTabs.map(tab => [tab.name, enabledTabs[tab.name] === true]));
+            const states: Record<string, boolean> = {};
+            for (const tab of mergedTabs) {
+                for (const collectorName of tab.collectorNames) {
+                    states[collectorName] = states[collectorName] === true || enabledTabs[tab.name] === true;
+                }
+            }
             vscode.postMessage({ type: 'sync-diagnostics-tabs', states });
         }
     }, [mergedTabs]);
@@ -140,7 +156,14 @@ function App() {
         }
 
         setPendingTabs(previous => ({ ...previous, [tabName]: active }));
-        vscode.postMessage({ type: 'set-diagnostics-active', tabName, active });
+
+        const tab = mergedTabs.find(candidate => candidate.name === tabName);
+        vscode.postMessage({
+            type: 'set-diagnostics-active',
+            tabName,
+            collectorNames: tab?.collectorNames ?? [],
+            active,
+        });
     };
 
     return (

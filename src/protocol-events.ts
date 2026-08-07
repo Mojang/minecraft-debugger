@@ -187,10 +187,9 @@ export interface ResumeMessage {
 
 export interface DiagnosticsSetActiveMessage {
     type: OutgoingEventType.DiagnosticsSetActive;
-    tab_name: string;
+    collector_names: string[];
     active: boolean;
 }
-
 export interface RequestMessage {
     type: OutgoingEventType.Request;
     request: { request_seq: number; command: string; args: unknown };

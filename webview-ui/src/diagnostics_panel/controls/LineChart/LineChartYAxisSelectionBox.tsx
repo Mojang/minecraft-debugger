@@ -24,8 +24,8 @@ export default function LineChartYAxisSelectionBox({ onChange, defaultValue }: L
     }, []);
 
     return (
-        <div className="dropdown-container">
-            <label htmlFor="my-dropdown">Y Axis Style</label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+            <span>Y Axis Style</span>
             <VSCodeDropdown id="my-dropdown" onChange={_onChange}>
                 {options.map(option => {
                     return (
@@ -35,6 +35,6 @@ export default function LineChartYAxisSelectionBox({ onChange, defaultValue }: L
                     );
                 })}
             </VSCodeDropdown>
-        </div>
+        </label>
     );
 }

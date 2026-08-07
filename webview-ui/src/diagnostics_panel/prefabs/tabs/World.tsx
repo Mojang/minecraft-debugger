@@ -2,7 +2,7 @@ import MinecraftStatisticLineChart from '../../controls/MinecraftStatisticLineCh
 import MinecraftStatisticStackedLineChart from '../../controls/MinecraftStatisticStackedLineChart';
 import { StatisticPrefab } from '../StatisticPrefab';
 import { SimpleStatisticProvider, NestedStatisticProvider } from '../../StatisticProvider';
-import { StatisticType, YAxisType, NestedStatResolver, createStatResolver } from '../../StatisticResolver';
+import { StatisticType, YAxisType, NestedStatResolver, createStatResolver, YAxisStyle } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
 import { generateRowsFromStatsPrefabs } from '../utilities';
 
@@ -36,6 +36,8 @@ const loadedChunks: StatisticPrefab = {
                 })
             )}
             yLabel="Number of Chunks"
+            yAxisStyle={YAxisStyle.SquareRoot}
+            showSectionLabels
         />
     ),
 };

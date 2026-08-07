@@ -5,6 +5,7 @@ import * as Plot from '@observablehq/plot';
 import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver, TrackedStat, YAxisStyle } from '../StatisticResolver';
 import { removeAllStyleElements } from '../../util/CSPUtilities';
+import YAxisStyleDropdown from './YAxisStyleDropdown';
 
 type MinecraftStatisticStackedLineChartProps = {
     title: string;
@@ -17,6 +18,7 @@ type MinecraftStatisticStackedLineChartProps = {
     statisticDataProvider: StatisticProvider;
     statisticResolver: StatisticResolver;
     yAxisStyle?: YAxisStyle;
+    showSectionLabels?: boolean;
 };
 
 export default function MinecraftStatisticStackedLineChart({
@@ -28,9 +30,11 @@ export default function MinecraftStatisticStackedLineChart({
     statisticResolver,
     catageoryLabels,
     yAxisStyle,
+    showSectionLabels = false,
 }: MinecraftStatisticStackedLineChartProps) {
     // states
     const [data, setData] = useState<TrackedStat[]>([]);
+    const [selectedYAxisStyle, setSelectedYAxisStyle] = useState<YAxisStyle>(yAxisStyle ?? YAxisStyle.Linear);
 
     // refs
     const containerRef = useRef<HTMLDivElement>(null);
@@ -68,6 +72,20 @@ export default function MinecraftStatisticStackedLineChart({
         statisticDataProvider.addSubscriber(eventHandler);
 
         const latestTime = data.length !== 0 ? data[data.length - 1].time : 0;
+        const latestData = data.filter(d => d.time === latestTime);
+        let sectionStart = 0;
+        const sectionLabels = latestData.map(stat => {
+            const sectionHeight = Math.max(0, stat.value);
+            const label = catageoryLabels?.[stat.category ?? ''] ?? stat.category ?? '';
+            const result = {
+                category: stat.category,
+                label,
+                time: stat.time,
+                y: sectionStart + sectionHeight / 2,
+            };
+            sectionStart += sectionHeight;
+            return result;
+        });
 
         const plot = Plot.plot({
             className: 'minecraft-statistic-stacked-line-chart',
@@ -98,7 +116,7 @@ export default function MinecraftStatisticStackedLineChart({
                     return Math.floor(tickDifference / 20) + 's';
                 },
             },
-            y: { grid: true, label: yLabel, type: yAxisStyle },
+            y: { grid: true, label: yLabel, type: selectedYAxisStyle },
             marks: [
                 Plot.areaY(data, {
                     x: 'time',
@@ -109,6 +127,20 @@ export default function MinecraftStatisticStackedLineChart({
                         fontSize: 12,
                     },
                 }),
+                showSectionLabels
+                    ? Plot.text(sectionLabels, {
+                          x: 'time',
+                          y: 'y',
+                          text: 'label',
+                          fill: 'category',
+                          textAnchor: 'end',
+                          dx: -6,
+                          fontSize: 11,
+                          stroke: 'var(--vscode-editor-background)',
+                          strokeWidth: 3,
+                          paintOrder: 'stroke',
+                      })
+                    : undefined,
                 Plot.ruleY([0]),
                 targetValue ? Plot.ruleY([targetValue]) : undefined,
             ],
@@ -130,7 +162,12 @@ export default function MinecraftStatisticStackedLineChart({
                 plot.remove();
             }
         };
-    }, [data, statisticDataProvider]);
+    }, [data, selectedYAxisStyle, statisticDataProvider]);
 
-    return <div ref={containerRef} />;
+    return (
+        <div>
+            <YAxisStyleDropdown value={selectedYAxisStyle} onChange={setSelectedYAxisStyle} />
+            <div ref={containerRef} />
+        </div>
+    );
 }

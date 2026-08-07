@@ -42,8 +42,6 @@ const loadedChunks: StatisticPrefab = {
                     yAxisType: YAxisType.Absolute,
                 })
             )}
-            yAxisStyle={YAxisStyle.SquareRoot}
-            showSectionLabels
             yLabel="Number of Chunks"
         />
     ),

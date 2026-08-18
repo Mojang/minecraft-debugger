@@ -13,14 +13,12 @@ const Y_AXIS_STYLE_LABELS: Record<YAxisStyle, string> = {
     [YAxisStyle.SquareRoot]: 'Square Root',
     [YAxisStyle.Pow]: 'Power',
     [YAxisStyle.Logarithmic]: 'Logarithmic',
-    [YAxisStyle.SymLog]: 'Symmetric Logarithmic',
-    [YAxisStyle.Time]: 'Time',
-    [YAxisStyle.UTC]: 'UTC',
+    [YAxisStyle.SymLog]: 'Symmetric Logarithmic'
 };
 
 export default function YAxisStyleDropdown({ value, onChange }: YAxisStyleDropdownProps) {
     return (
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+        <label className="axis-selection-label">
             <span>Y Axis Scale</span>
             <VSCodeDropdown
                 value={value}

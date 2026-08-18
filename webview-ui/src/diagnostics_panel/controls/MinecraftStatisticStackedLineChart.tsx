@@ -73,18 +73,28 @@ export default function MinecraftStatisticStackedLineChart({
 
         const latestTime = data.length !== 0 ? data[data.length - 1].time : 0;
         const latestData = data.filter(d => d.time === latestTime);
+
         let sectionStart = 0;
-        const sectionLabels = latestData.map(stat => {
+        const sectionLabels = latestData.flatMap(stat => {
             const sectionHeight = Math.max(0, stat.value);
-            const label = catageoryLabels?.[stat.category ?? ''] ?? stat.category ?? '';
-            const result = {
-                category: stat.category,
-                label,
-                time: stat.time,
-                y: sectionStart + sectionHeight / 2,
-            };
+            const y = sectionStart + sectionHeight / 2;
             sectionStart += sectionHeight;
-            return result;
+
+            if (stat.category === null || stat.category === undefined) {
+                console.warn(
+                    `Skipping section labels for ${stat} because it is missing a value category.`
+                );
+                return [];
+            }
+
+            return [
+                {
+                    category: stat.category,
+                    label: catageoryLabels?.[stat.category] ?? stat.category,
+                    time: stat.time,
+                    y,
+                },
+            ];
         });
 
         const plot = Plot.plot({
@@ -129,17 +139,13 @@ export default function MinecraftStatisticStackedLineChart({
                 }),
                 showSectionLabels
                     ? Plot.text(sectionLabels, {
-                          x: 'time',
-                          y: 'y',
-                          text: 'label',
-                          fill: 'category',
-                          textAnchor: 'end',
-                          dx: -6,
-                          fontSize: 11,
-                          stroke: 'var(--vscode-editor-background)',
-                          strokeWidth: 3,
-                          paintOrder: 'stroke',
-                      })
+                        className: 'minecraft-statistic-stacked-line-chart-section-label',
+                        x: 'time',
+                        y: 'y',
+                        text: 'label',
+                        fill: 'category',
+                        dx: -6,
+                    })
                     : undefined,
                 Plot.ruleY([0]),
                 targetValue ? Plot.ruleY([targetValue]) : undefined,

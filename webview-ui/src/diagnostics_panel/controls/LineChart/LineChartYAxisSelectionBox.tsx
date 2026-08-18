@@ -17,14 +17,14 @@ export default function LineChartYAxisSelectionBox({ onChange, defaultValue }: L
     const options = useMemo(() => Object.values(YAxisType), []);
 
     const _onChange = useCallback((e: Event | React.FormEvent<HTMLElement>): void => {
-        const selectedOption = (e.target as HTMLSelectElement).value as YAxisType;
+        const selectedOption = (e.target as HTMLSelectElement).value as YAxisType; 
 
         onChange(selectedOption);
         setSelectedResolver(selectedOption);
     }, []);
 
     return (
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+        <label className="axis-selection-label">
             <span>Y Axis Style</span>
             <VSCodeDropdown id="my-dropdown" onChange={_onChange}>
                 {options.map(option => {

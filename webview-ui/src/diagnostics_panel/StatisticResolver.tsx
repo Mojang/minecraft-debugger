@@ -15,9 +15,7 @@ export enum YAxisStyle {
     SquareRoot = 'sqrt',
     Pow = 'pow',
     Logarithmic = 'log',
-    SymLog = 'symlog',
-    Time = 'time',
-    UTC = 'utc',
+    SymLog = 'symlog'
 }
 
 export type TrackedStat = {

@@ -117,6 +117,13 @@ main {
   gap: 6px;
 }
 
+.axis-selection-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
 .stat-group-selection-help {
   margin: 8px 0px 2px 8px;
   display: inline-flex;
@@ -211,6 +218,14 @@ main {
 
 .minecraft-statistic-stacked-line-chart-figure tspan {
   fill: var(--vscode-editor-background);
+}
+
+.minecraft-statistic-stacked-line-chart-section-label {
+  text-anchor: end;
+  font-size: 11px;
+  stroke: var(--vscode-editor-background);
+  stroke-width: 3;
+  paint-order: stroke;
 }
 
 .minecraft-statistic-stacked-line-chart-swatches {

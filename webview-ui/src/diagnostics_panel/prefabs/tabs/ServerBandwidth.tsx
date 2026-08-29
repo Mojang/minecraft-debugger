@@ -5,8 +5,11 @@ import { StatisticType, YAxisType } from '../../StatisticResolver';
 import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
 import { generateRowsFromStatsPrefabs } from '../utilities';
 
+const PACKETS_COLLECTOR = 'packets';
+
 const packetDataReceived: StatisticPrefab = {
     name: 'Packet Data Received',
+    collectorName: PACKETS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticLineChart
             title="Data Received"
@@ -14,7 +17,7 @@ const packetDataReceived: StatisticPrefab = {
             statisticDataProvider={
                 new SimpleStatisticProvider({
                     statisticId: 'received_bytes',
-                    statisticParentId: 'packets',
+                    statisticParentId: PACKETS_COLLECTOR,
                 })
             }
             statisticOptions={{
@@ -29,6 +32,7 @@ const packetDataReceived: StatisticPrefab = {
 
 const packetDataSent: StatisticPrefab = {
     name: 'Packet Data Sent',
+    collectorName: PACKETS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticLineChart
             title="Data Sent"
@@ -36,7 +40,7 @@ const packetDataSent: StatisticPrefab = {
             statisticDataProvider={
                 new SimpleStatisticProvider({
                     statisticId: 'sent_bytes',
-                    statisticParentId: 'packets',
+                    statisticParentId: PACKETS_COLLECTOR,
                 })
             }
             statisticOptions={{
@@ -52,6 +56,7 @@ const packetDataSent: StatisticPrefab = {
 const statsTab: TabPrefab = {
     name: 'Server - Bandwidth',
     dataSource: TabPrefabDataSource.Server,
+    collectors: [packetDataReceived, packetDataSent],
     content: () => {
         return generateRowsFromStatsPrefabs([[packetDataReceived, packetDataSent]]);
     },

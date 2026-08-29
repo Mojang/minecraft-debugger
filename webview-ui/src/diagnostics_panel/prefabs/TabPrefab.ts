@@ -1,3 +1,5 @@
+import type { StatisticPrefab } from './StatisticPrefab';
+
 export type TabPrefabParams = {
     selectedClient: string;
     selectedPlugin: string;
@@ -13,5 +15,6 @@ export enum TabPrefabDataSource {
 export interface TabPrefab {
     name: string;
     dataSource: TabPrefabDataSource;
+    collectors?: StatisticPrefab[];
     content: (params: TabPrefabParams) => JSX.Element;
 }

@@ -79,7 +79,7 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
     const liveDiagnosticsCommand = vscode.commands.registerCommand('minecraft-debugger.liveDiagnostics', () => {
-        MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider, eventEmitter);
+        MinecraftDiagnosticsPanel.render(context.extensionUri, liveStatsProvider, eventEmitter, context.globalState);
     });
 
     const replayDiagnosticsCommand = vscode.commands.registerCommand(
@@ -98,7 +98,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
             const replayStats = new ReplayStatsProvider(fileUri[0].fsPath);
-            MinecraftDiagnosticsPanel.render(context.extensionUri, replayStats, eventEmitter);
+            MinecraftDiagnosticsPanel.render(context.extensionUri, replayStats, eventEmitter, context.globalState);
         },
     );
 

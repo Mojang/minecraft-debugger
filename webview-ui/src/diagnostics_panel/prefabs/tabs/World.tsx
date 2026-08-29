@@ -6,13 +6,19 @@ import { StatisticType, YAxisType, NestedStatResolver, createStatResolver, YAxis
 import { TabPrefab, TabPrefabDataSource } from '../TabPrefab';
 import { generateRowsFromStatsPrefabs } from '../utilities';
 
+const ENTITIES_COLLECTOR = 'entities';
+const CHUNKS_COLLECTOR = 'chunks';
+
 const entityCount: StatisticPrefab = {
     name: 'Entity Count',
+    collectorName: ENTITIES_COLLECTOR,
     reactNode: (
         <MinecraftStatisticLineChart
             title="Entities"
             yLabel="Number of Entities"
-            statisticDataProvider={new SimpleStatisticProvider({ statisticId: 'entities', statisticParentId: '' })}
+            statisticDataProvider={
+                new SimpleStatisticProvider({ statisticId: 'entities', statisticParentId: ENTITIES_COLLECTOR })
+            }
             statisticOptions={{
                 type: StatisticType.Absolute,
                 yAxisType: YAxisType.Absolute,
@@ -24,6 +30,7 @@ const entityCount: StatisticPrefab = {
 
 const loadedChunks: StatisticPrefab = {
     name: 'Loaded Chunks',
+    collectorName: CHUNKS_COLLECTOR,
     reactNode: (
         <MinecraftStatisticStackedLineChart
             title="Chunks Loaded"
@@ -45,6 +52,7 @@ const loadedChunks: StatisticPrefab = {
 const statsTab: TabPrefab = {
     name: 'World',
     dataSource: TabPrefabDataSource.Server,
+    collectors: [entityCount, loadedChunks],
     content: () => {
         return generateRowsFromStatsPrefabs([[entityCount], [loadedChunks]]);
     },

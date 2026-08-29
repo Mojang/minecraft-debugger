@@ -1,5 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
+import type { StatisticPrefab } from './prefabs/StatisticPrefab';
+
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
     should_aggregate: boolean;
@@ -61,25 +63,38 @@ export class StatisticProvider {
 
 interface SimpleStatisticProviderOptions {
     statisticId: string;
-    statisticParentId: string | RegExp;
+    statisticParentId: string | RegExp | StatisticPrefab;
 }
 export class SimpleStatisticProvider extends StatisticProvider {
     constructor(private options: SimpleStatisticProviderOptions) {
         super();
     }
 
+    private getStatisticParentId(): string | RegExp | undefined {
+        if (typeof this.options.statisticParentId === 'object' && !(this.options.statisticParentId instanceof RegExp)) {
+            return this.options.statisticParentId.collectorName;
+        }
+        return this.options.statisticParentId;
+    }
+
     protected _handleEvent(event: StatisticUpdatedMessage) {
+        const statisticParentId = this.getStatisticParentId();
+
+        if (statisticParentId === undefined) {
+            return;
+        }
+
         // Check event type
         if (event.id !== this.options.statisticId) {
             return;
         }
 
         // Check for wrong group
-        if (this.options.statisticParentId instanceof RegExp) {
-            if (!this.options.statisticParentId.test(event.group_full_id)) {
+        if (statisticParentId instanceof RegExp) {
+            if (!statisticParentId.test(event.group_full_id)) {
                 return;
             }
-        } else if (event.group !== this.options.statisticParentId) {
+        } else if (event.group !== statisticParentId && !(event.group === '' && event.id === statisticParentId)) {
             return;
         }
 
@@ -93,7 +108,7 @@ export class SimpleStatisticProvider extends StatisticProvider {
 
 interface MultipleStatisticProviderOptions {
     statisticIds?: string[]; // If not included, all stats will be included
-    statisticParentId: string | RegExp;
+    statisticParentId: string | RegExp | StatisticPrefab;
     valuesFilter?: (event: StatisticUpdatedMessage) => boolean;
 }
 // Used for things like stacked bar charts
@@ -103,17 +118,23 @@ export class MultipleStatisticProvider extends StatisticProvider {
     }
 
     protected _handleEvent(event: StatisticUpdatedMessage) {
+        const statisticParentId =
+            typeof this.options.statisticParentId === 'object' &&
+            !(this.options.statisticParentId instanceof RegExp)
+                ? this.options.statisticParentId.collectorName
+                : this.options.statisticParentId;
+
         // Check event type
         if (this.options.statisticIds !== undefined && this.options.statisticIds.indexOf(event.id) === -1) {
             return;
         }
 
         // Check for wrong group
-        if (this.options.statisticParentId instanceof RegExp) {
-            if (!this.options.statisticParentId.test(event.group_full_id)) {
+        if (statisticParentId instanceof RegExp) {
+            if (!statisticParentId.test(event.group_full_id)) {
                 return;
             }
-        } else if (event.group !== this.options.statisticParentId) {
+        } else if (event.group !== statisticParentId) {
             return;
         }
 

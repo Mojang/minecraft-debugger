@@ -1,6 +1,15 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
+import buttonDisabled from '../../../icons/button_disabled.png';
+import buttonEnabled from '../../../icons/button_enabled.png';
+
 export const Icons = {
+    enabled: (
+        <img src={buttonEnabled} width="25" height="14" alt="Enabled" />
+    ),
+    disabled: (
+        <img src={buttonDisabled} width="25" height="14" alt="Disabled" />
+    ),
     restart: (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path

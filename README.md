@@ -182,9 +182,9 @@ Add shortcuts for your favorite Minecraft commands.
 After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create performance captures of your actively running add-on.
 
 #### Diagnostics Window
-When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnost performance issues.
+When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnose performance issues.
 
-To open this view, run the command `Minecraft Diagnostics: Show Live Stats` or click the sidebar icon for the exension ![image](/icons/creeper_icon.png) and click the "Show Live Diagnostics" button.
+To open this view, run the command `Minecraft Diagnostics: Show Live Stats` or click the sidebar icon for the extension ![image](/icons/creeper_icon.png) and click the "Show Live Diagnostics" button.
 
 The server statistics it displays currently are:
 - Number of entities in the level (all dimensions)
@@ -196,10 +196,20 @@ The server statistics it displays currently are:
 - Network packet bandwidth usage
 - Network packet packet count (all and specific packet counts)
 - Entity handle counts per scripting pack (useful for detecting handle leaks)
+- Client side performance data (FPS, memory, entity systems, CPU profiling)
+
+NOTE: Client side performance data requires the "Enabled client diagnostics" creator setting to be enabled in Minecraft:
+<img width="1267" height="110" alt="image" src="https://github.com/user-attachments/assets/00078db7-1374-403c-9c3f-7fe5a9cb5a7a" />
+
 
 
 Example diagnostics view
 ![image](https://github.com/Mojang/minecraft-debugger/assets/1000311/fcafd4da-6017-4348-86df-571974b50012)
+
+We now also support pushing your own custom live diagnostics into the debugger from Minecraft via scripting. 
+The API is available [here](https://learn.microsoft.com/en-us/minecraft/creator/scriptapi/minecraft/debug-utilities/diagnosticsmanager?view=minecraft-bedrock-experimental) inside the `@minecraft/debug-utilities` module.
+Please see examples and further documentation [here](https://learn.microsoft.com/en-us/minecraft/creator/documents/scripting/developer-tools?view=minecraft-bedrock-stable).
+
 
 
 ## Feedback

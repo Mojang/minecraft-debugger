@@ -196,6 +196,11 @@ The server statistics it displays currently are:
 - Network packet bandwidth usage
 - Network packet packet count (all and specific packet counts)
 - Entity handle counts per scripting pack (useful for detecting handle leaks)
+- Client side performance data (FPS, memory, entity systems, CPU profiling)
+
+NOTE: Client side performance data requires the "Enabled client diagnostics" creator setting to be enabled in Minecraft:
+<img width="1267" height="110" alt="image" src="https://github.com/user-attachments/assets/00078db7-1374-403c-9c3f-7fe5a9cb5a7a" />
+
 
 
 Example diagnostics view

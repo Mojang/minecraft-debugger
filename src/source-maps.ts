@@ -201,6 +201,11 @@ export class SourceMaps {
     public async getGeneratedRemoteRelativePath(originalSource: string): Promise<string> {
         const mapInfo = await this._sourceMapCache.getMapFromOriginalSource(originalSource);
         if (!mapInfo || !this._sourceMapRoot) {
+            if(originalSource.endsWith('.ts')) {
+                throw new Error(
+                    `Could not find source map for ${originalSource}. Did you forget to build or are you trying to debug a file from a different project?`
+                );
+            }
             // no source map, convert to remote relative path suitable for debugger.
             return normalizePathForRemote(path.relative(this._localRoot, originalSource));
         }

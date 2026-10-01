@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Minecraft Debugger project settings",
+    "type": "object",
+    "properties": {
+        "commandShortcuts": {
+            "type": "array",
+            "description": "Minecraft commands shown as shortcuts in the Minecraft Debugger home panel.",
+            "items": {
+                "oneOf": [
+                    { "type": "string", "description": "The command to run." },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "command": { "type": "string", "description": "The command to run." },
+                            "label": { "type": "string", "description": "Text shown instead of the command." }
+                        },
+                        "required": ["command"]
+                    }
+                ]
+            }
+        }
+    }
+}

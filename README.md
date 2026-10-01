@@ -178,6 +178,17 @@ The Activity Bar icon ![image](/icons/creeper_icon.png) will open the Minecraft 
 ##### Minecraft Command Shortcuts
 Add shortcuts for your favorite Minecraft commands.
 
+A project can also provide shortcuts by checking a `minecraft-debugger.json` file into the root of the workspace folder. They are shown above your own shortcuts and update when the file changes. Each entry is either a command string or an object with a `command` and an optional `label`. The file is only loaded in trusted workspaces.
+
+```json
+{
+    "commandShortcuts": [
+        "/time set day",
+        { "label": "Clear weather", "command": "/weather clear" }
+    ]
+}
+```
+
 ##### Script Profiler
 After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create performance captures of your actively running add-on.
 

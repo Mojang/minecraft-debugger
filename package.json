@@ -33,7 +33,19 @@
         "onCommand:extension.minecraft-js.getPort"
     ],
     "main": "./dist/extension.js",
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "Project settings from minecraft-debugger.json are only loaded in trusted workspaces."
+        }
+    },
     "contributes": {
+        "jsonValidation": [
+            {
+                "fileMatch": "minecraft-debugger.json",
+                "url": "./schemas/minecraft-debugger.schema.json"
+            }
+        ],
         "viewsContainers": {
             "activitybar": [
                 {

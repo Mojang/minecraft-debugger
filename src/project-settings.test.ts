@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { describe, it, expect, vi } from 'vitest';
-import { parseProjectSettings } from './project-settings';
+import { parseCommandShortcutFiles, parseCommandText, parseProjectSettings } from './project-settings';
 
 vi.mock('vscode');
 
@@ -34,9 +34,41 @@ describe('parseProjectSettings', () => {
         }
     });
 
+    it('accepts an array root', () => {
+        expect(parseProjectSettings(['a', { command: 'b', label: 'B' }, 3])).toEqual({
+            commandShortcuts: [{ command: 'a' }, { label: 'B', command: 'b' }],
+        });
+    });
+
     it('ignores unknown keys', () => {
         expect(parseProjectSettings({ future: true, commandShortcuts: ['a'] })).toEqual({
             commandShortcuts: [{ command: 'a' }],
         });
+    });
+});
+
+describe('parseCommandShortcutFiles', () => {
+    it('keeps non-empty strings only', () => {
+        expect(parseCommandShortcutFiles({ commandShortcutFiles: ['a.json', '', 4, 'b/*.txt'] })).toEqual([
+            'a.json',
+            'b/*.txt',
+        ]);
+    });
+
+    it('returns empty for missing or invalid values', () => {
+        for (const input of [null, undefined, [], {}, { commandShortcutFiles: 'a.json' }]) {
+            expect(parseCommandShortcutFiles(input)).toEqual([]);
+        }
+    });
+});
+
+describe('parseCommandText', () => {
+    it('reads one command per line, skipping blanks and comments', () => {
+        const text = '# comment\r\n  time set day  \r\n\r\n/weather clear\n   # indented comment\nsay hi\n';
+        expect(parseCommandText(text)).toEqual([
+            { command: 'time set day' },
+            { command: '/weather clear' },
+            { command: 'say hi' },
+        ]);
     });
 });

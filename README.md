@@ -178,14 +178,15 @@ The Activity Bar icon ![image](/icons/creeper_icon.png) will open the Minecraft 
 ##### Minecraft Command Shortcuts
 Add shortcuts for your favorite Minecraft commands.
 
-A project can also provide shortcuts by checking a `minecraft-debugger.json` file into the root of the workspace folder. They are shown above your own shortcuts and update when the file changes. Each entry is either a command string or an object with a `command` and an optional `label`. The file is only loaded in trusted workspaces.
+A project can also provide shortcuts by checking a `minecraft-debugger.json` file into the root of the workspace folder. They are shown above your own shortcuts and update when the file changes. Each entry is either a command string or an object with a `command` and an optional `label`. Use `commandShortcutFiles` to load more shortcuts from other files in the folder. Entries are paths or globs relative to `minecraft-debugger.json`. A `.json` file holds an array of shortcuts (or an object with `commandShortcuts`); any other file, such as `.mcfunction` or `.txt`, holds one command per line, ignoring blank lines and lines starting with `#`. Shortcuts from files are listed after the inline ones. The file is only loaded in trusted workspaces.
 
 ```json
 {
     "commandShortcuts": [
         "/time set day",
         { "label": "Clear weather", "command": "/weather clear" }
-    ]
+    ],
+    "commandShortcutFiles": ["tools/dev.mcfunction", "shortcuts/*.json"]
 }
 ```
 

@@ -2,6 +2,36 @@ import { describe, it, expect } from 'vitest';
 import { StatData, StatDataModel, StatsProvider } from './stats-provider';
 
 describe('StatsProvider', () => {
+    it('emits each child statistic once to each listener', () => {
+        const provider = new StatsProvider('test', 'test');
+        const firstListenerStats: StatData[] = [];
+        const secondListenerStats: StatData[] = [];
+
+        provider.addStatListener({
+            onStatUpdated: (stat: StatData) => firstListenerStats.push(stat),
+        });
+        provider.addStatListener({
+            onStatUpdated: (stat: StatData) => secondListenerStats.push(stat),
+        });
+
+        provider.setStats({
+            tick: 1,
+            type: 'stats',
+            stats: [{
+                name: 'parent',
+                should_aggregate: false,
+                children: [{
+                    name: 'child',
+                    should_aggregate: false,
+                    values: [1],
+                }],
+            }],
+        });
+
+        expect(firstListenerStats.map((stat: StatData) => stat.name)).toEqual(['parent', 'child']);
+        expect(secondListenerStats.map((stat: StatData) => stat.name)).toEqual(['parent', 'child']);
+    });
+
     it('aggregateData successful', async () => {
         const childDataA: StatDataModel = {
             name: 'childA',

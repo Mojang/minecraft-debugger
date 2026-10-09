@@ -212,6 +212,27 @@ Please see examples and further documentation [here](https://learn.microsoft.com
 
 
 
+## MCP Server
+The extension can host a local [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server so MCP clients can inspect and drive your debug session.
+
+1. Enable the `minecraft-debugger.mcp.enabled` setting (the port is `minecraft-debugger.mcp.port`, default `19180`).
+2. Run the command `Minecraft Debugger: Copy MCP Server Config`.
+3. Paste the result into your MCP client's server configuration.
+
+Tools:
+- `get_status` - session, connection, command support and paused state.
+- `get_logs` - recent debugger output, optionally filtered by level.
+- `get_stats` - latest Live Diagnostics values (empty until collectors are enabled in the Live Diagnostics panel).
+- `get_stack` - call stack of a paused thread.
+- `get_variables` - scopes and variables of a stack frame.
+- `evaluate` - evaluate an expression while paused.
+- `run_command` - send a Minecraft command (fire-and-forget).
+- `continue`, `pause`, `step` - control execution.
+- `set_breakpoint`, `clear_breakpoints` - manage breakpoints.
+- `wait_for_event` - wait for a log line or a stop, with an optional regex.
+
+Security: the server only listens on `127.0.0.1` and requires a bearer token. The token is stored in the MCP client's config file you pasted it into; run `Minecraft Debugger: Regenerate MCP Token` to rotate it. Recent tool calls are shown in the home panel.
+
 ## Feedback
 
 Send us your feedback by [filing an issue](https://github.com/mojang/minecraft-debugger/issues/new) against this extension's [GitHub repo](https://github.com/mojang/minecraft-debugger).

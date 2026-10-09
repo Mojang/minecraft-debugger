@@ -12,6 +12,7 @@
         "noFallthroughCasesInSwitch": true,
         "lib": ["es2022"],
         "moduleResolution": "Bundler",
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "skipLibCheck": true
     }
 }

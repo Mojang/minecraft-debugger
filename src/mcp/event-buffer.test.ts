@@ -68,4 +68,21 @@ describe('EventBuffer', () => {
         vi.advanceTimersByTime(500);
         expect(await p).toBeUndefined();
     });
+
+    it('waitFor with sinceSeq returns an already-buffered match newer than sinceSeq', async () => {
+        const b = new EventBuffer();
+        b.push(Log('old'));
+        const head = b.head();
+        const e = b.push(Log('hit'));
+        expect(await b.waitFor(x => x.text === 'hit', 1000, head)).toEqual(e);
+    });
+
+    it('waitFor with sinceSeq ignores matches at or before sinceSeq', () => {
+        vi.useFakeTimers();
+        const b = new EventBuffer();
+        b.push(Log('hit'));
+        const p = b.waitFor(x => x.text === 'hit', 500, b.head());
+        vi.advanceTimersByTime(500);
+        return expect(p).resolves.toBeUndefined();
+    });
 });

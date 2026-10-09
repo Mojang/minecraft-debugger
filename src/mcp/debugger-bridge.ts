@@ -1,13 +1,22 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'stream';
 
 import { MinecraftCapabilities } from '../session';
 import { StatsListener, StatsProvider } from '../stats/stats-provider';
 import { EventBuffer } from './event-buffer';
-import { DebugEvent, DebuggerBridge, DebuggerStatus, LogLevel, StatSnapshot, StepKind } from './types';
+import {
+    BreakpointResult,
+    DebugEvent,
+    DebuggerBridge,
+    DebuggerStatus,
+    LogLevel,
+    StatSnapshot,
+    StepKind,
+} from './types';
 
 const DAP_TIMEOUT_MS = 10000;
 const STEP_COMMANDS: Record<StepKind, string> = {
@@ -168,8 +177,12 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         return this._events.since(sinceSeq, limit, level);
     }
 
-    public waitForEvent(match: (event: DebugEvent) => boolean, timeoutMs: number): Promise<DebugEvent | undefined> {
-        return this._events.waitFor(match, timeoutMs);
+    public waitForEvent(
+        match: (event: DebugEvent) => boolean,
+        timeoutMs: number,
+        sinceSeq?: number,
+    ): Promise<DebugEvent | undefined> {
+        return this._events.waitFor(match, timeoutMs, sinceSeq);
     }
 
     public getStats(filter?: string): StatSnapshot[] {
@@ -252,10 +265,15 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         await vscode.commands.executeCommand(STEP_COMMANDS[kind]);
     }
 
-    public setBreakpoint(file: string, line: number, condition?: string): void {
-        const abs = path.isAbsolute(file)
-            ? file
-            : path.join(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '', file);
+    public async setBreakpoint(file: string, line: number, condition?: string): Promise<BreakpointResult> {
+        // relative paths resolve against the session's localRoot (where the sources live), else the workspace root
+        const base: string =
+            this._session?.configuration.localRoot ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+        const abs = path.resolve(base, file);
+        if (!fs.existsSync(abs)) {
+            // refuse instead of leaving a phantom breakpoint that errors on every debug start
+            throw new Error(`File not found: ${abs}`);
+        }
         const bp = new vscode.SourceBreakpoint(
             new vscode.Location(vscode.Uri.file(abs), new vscode.Position(line - 1, 0)),
             true,
@@ -263,6 +281,25 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         );
         vscode.debug.addBreakpoints([bp]);
         this._ownBreakpoints.push(bp);
+
+        const session = this._session;
+        if (!session) {
+            return { file: abs, line, verified: false, message: 'No active session; sent when debugging starts' };
+        }
+        // VS Code sends setBreakpoints asynchronously; poll briefly for the adapter's answer
+        for (let i = 0; i < 20; i++) {
+            const dapBp = await session.getDebugProtocolBreakpoint(bp);
+            if (dapBp) {
+                const {
+                    verified,
+                    message,
+                    line: boundLine,
+                } = dapBp as { verified: boolean; message?: string; line?: number };
+                return { file: abs, line: boundLine ?? line, verified, message };
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        return { file: abs, line, verified: false, message: 'No response from the debug adapter' };
     }
 
     public clearBreakpoints(all: boolean): number {

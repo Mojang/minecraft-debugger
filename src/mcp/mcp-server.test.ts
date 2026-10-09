@@ -20,7 +20,7 @@ function makeBridge(overrides: Partial<DebuggerBridge> = {}): DebuggerBridge {
         continue: async () => undefined,
         pause: async () => undefined,
         step: async () => undefined,
-        setBreakpoint: () => undefined,
+        setBreakpoint: async (file: string, line: number) => ({ file, line, verified: true }),
         clearBreakpoints: () => 0,
         ...overrides,
     };

@@ -132,7 +132,8 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
     server.registerTool(
         'set_breakpoint',
         {
-            description: 'Set a breakpoint. file is workspace-relative or absolute; line is 1-based.',
+            description:
+                "Set a breakpoint. file is absolute or relative to the debug session's localRoot (workspace root when no session); line is 1-based. Returns verified=false with a message when the debugger could not bind it.",
             inputSchema: {
                 file: z.string(),
                 line: z.number().int().min(1),
@@ -155,11 +156,12 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
         'wait_for_event',
         {
             description:
-                'Wait for the next event (only events after the call). kind=any (default) matches any event (log, stopped, continued, session), optionally matching a regex pattern. Returns { timedOut: true } on timeout.',
+                'Wait for the next event (only events after the call, or with sinceSeq also already-buffered events newer than sinceSeq, e.g. nextSeq from get_logs taken before run_command). kind=any (default) matches any event (log, stopped, continued, session), optionally matching a regex pattern. Returns { timedOut: true } on timeout.',
             inputSchema: {
                 kind: z.enum(['log', 'stopped', 'any']).optional(),
                 pattern: z.string().optional(),
                 timeoutSeconds: z.number().min(1).max(30).optional(),
+                sinceSeq: z.number().int().min(0).optional(),
             },
         },
         args =>
@@ -169,6 +171,7 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
                 const event = await bridge.waitForEvent(
                     e => (kind === 'any' || e.kind === kind) && (!re || re.test(e.text)),
                     (args.timeoutSeconds ?? 15) * 1000,
+                    args.sinceSeq,
                 );
                 return event ?? { timedOut: true };
             }),

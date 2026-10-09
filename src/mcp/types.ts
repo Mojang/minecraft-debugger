@@ -29,6 +29,13 @@ export interface StatSnapshot {
     ageMs: number;
 }
 
+export interface BreakpointResult {
+    file: string;
+    line: number;
+    verified: boolean;
+    message?: string;
+}
+
 export type StepKind = 'over' | 'in' | 'out';
 
 // Implemented by MinecraftDebuggerBridge. Methods that touch the game throw an Error with a
@@ -37,7 +44,11 @@ export interface DebuggerBridge {
     getStatus(): DebuggerStatus;
     getEvents(sinceSeq: number, limit: number, level?: LogLevel): { events: DebugEvent[]; nextSeq: number };
     getStats(filter?: string): StatSnapshot[];
-    waitForEvent(match: (event: DebugEvent) => boolean, timeoutMs: number): Promise<DebugEvent | undefined>;
+    waitForEvent(
+        match: (event: DebugEvent) => boolean,
+        timeoutMs: number,
+        sinceSeq?: number,
+    ): Promise<DebugEvent | undefined>;
     getStack(threadId?: number): Promise<unknown>;
     getVariables(frameId: number): Promise<unknown>;
     evaluate(expression: string, frameId?: number): Promise<unknown>;
@@ -45,7 +56,7 @@ export interface DebuggerBridge {
     continue(): Promise<void>;
     pause(): Promise<void>;
     step(kind: StepKind): Promise<void>;
-    setBreakpoint(file: string, line: number, condition?: string): void;
+    setBreakpoint(file: string, line: number, condition?: string): Promise<BreakpointResult>;
     clearBreakpoints(all: boolean): number;
 }
 

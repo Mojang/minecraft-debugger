@@ -30,7 +30,14 @@ export class EventBuffer {
         return this._seq;
     }
 
-    waitFor(match: (e: DebugEvent) => boolean, timeoutMs: number): Promise<DebugEvent | undefined> {
+    // With sinceSeq, an already-buffered match newer than sinceSeq resolves immediately.
+    waitFor(match: (e: DebugEvent) => boolean, timeoutMs: number, sinceSeq?: number): Promise<DebugEvent | undefined> {
+        if (sinceSeq !== undefined) {
+            const buffered = this._events.find(e => e.seq > sinceSeq && match(e));
+            if (buffered) {
+                return Promise.resolve(buffered);
+            }
+        }
         return new Promise(resolve => {
             const done = (e?: DebugEvent) => {
                 clearTimeout(timer);

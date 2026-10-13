@@ -979,7 +979,7 @@ const StatsTab: TabPrefab = {
 
                                 <MinecraftGroupedStatisticTable
                                     ref={entityTimingsTableRef}
-                                    key={`entity-timings-${entityViewMode}-${selectedClient}`}
+                                    key={`entity-timings-${selectedClient}`}
                                     title="Entity Timings"
                                     showTitle={false}
                                     selectionEnabled={filterSelectionMode === 'filter-by-entity'}
@@ -1087,7 +1087,7 @@ const StatsTab: TabPrefab = {
                                 </div>
                                 <MinecraftGroupedStatisticTable
                                     ref={systemTimingsTableRef}
-                                    key={`system-timings-${systemViewMode}-${selectedClient}`}
+                                    key={`system-timings-${selectedClient}`}
                                     title="System Timings"
                                     showTitle={false}
                                     selectionEnabled={filterSelectionMode === 'filter-by-system'}

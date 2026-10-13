@@ -38,6 +38,11 @@ export interface BreakpointResult {
 
 export type StepKind = 'over' | 'in' | 'out';
 
+export interface DiagnosticsTab {
+    name: string;
+    active: boolean;
+}
+
 // Implemented by MinecraftDebuggerBridge. Methods that touch the game throw an Error with a
 // human-readable message when they cannot run (no session, not connected, not paused, timeout).
 export interface DebuggerBridge {
@@ -58,8 +63,8 @@ export interface DebuggerBridge {
     step(kind: StepKind): Promise<void>;
     setBreakpoint(file: string, line: number, condition?: string): Promise<BreakpointResult>;
     clearBreakpoints(all: boolean): number;
-    getCollectors(): string[];
-    setDiagnosticsActive(collectors: string[], active: boolean): void;
+    getDiagnosticsTabs(): Promise<DiagnosticsTab[]>;
+    setDiagnosticsTab(tab: string, active: boolean): Promise<DiagnosticsTab>;
 }
 
 export interface ActivityEntry {

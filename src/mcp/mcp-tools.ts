@@ -66,24 +66,29 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
         'get_stats',
         {
             description:
-                'Get the latest value of live diagnostics stats. Only active collectors send stats: enable them with set_diagnostics_active or in the Live Diagnostics panel.',
+                'Get the latest value of live diagnostics stats. Stats arrive for the tabs enabled in the Live Diagnostics panel (see set_diagnostics_tab).',
             inputSchema: { filter: z.string().optional() },
         },
         args => run('get_stats', args, () => bridge.getStats(args.filter)),
     );
 
     server.registerTool(
-        'set_diagnostics_active',
+        'get_diagnostics_tabs',
         {
             description:
-                'Enable or disable live diagnostics collectors (e.g. entities, chunks, server_tick_timings) so get_stats returns their stats. Returns the known collector names. The Live Diagnostics panel, when open, may toggle collectors again when its tabs change.',
-            inputSchema: { collectors: z.array(z.string().min(1)).min(1), active: z.boolean() },
+                'List the Live Diagnostics panel tabs and whether each is enabled. Opens the panel if it is closed.',
         },
-        args =>
-            run('set_diagnostics_active', args, () => {
-                bridge.setDiagnosticsActive(args.collectors, args.active);
-                return { collectors: args.collectors, active: args.active, known: bridge.getCollectors() };
-            }),
+        () => run('get_diagnostics_tabs', {}, () => bridge.getDiagnosticsTabs()),
+    );
+
+    server.registerTool(
+        'set_diagnostics_tab',
+        {
+            description:
+                "Enable or disable a Live Diagnostics tab (name from get_diagnostics_tabs), like its switch in the panel, and show it. Enabling a tab turns on its stat collectors for get_stats. Returns the tab's resulting state.",
+            inputSchema: { tab: z.string().min(1), active: z.boolean() },
+        },
+        args => run('set_diagnostics_tab', args, () => bridge.setDiagnosticsTab(args.tab, args.active)),
     );
 
     server.registerTool(

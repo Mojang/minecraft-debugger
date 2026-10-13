@@ -222,8 +222,8 @@ The extension can host a local [Model Context Protocol](https://modelcontextprot
 Tools:
 - `get_status` - session, connection, command support and paused state.
 - `get_logs` - recent debugger output, optionally filtered by level.
-- `get_stats` - latest Live Diagnostics values (only from active collectors).
-- `set_diagnostics_active` - enable or disable Live Diagnostics collectors (e.g. `entities`, `chunks`).
+- `get_stats` - latest Live Diagnostics values (from enabled tabs).
+- `get_diagnostics_tabs`, `set_diagnostics_tab` - list and enable or disable Live Diagnostics tabs.
 - `get_stack` - call stack of a paused thread.
 - `get_variables` - scopes and variables of a stack frame.
 - `evaluate` - evaluate an expression while paused.

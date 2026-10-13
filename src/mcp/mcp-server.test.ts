@@ -22,8 +22,8 @@ function makeBridge(overrides: Partial<DebuggerBridge> = {}): DebuggerBridge {
         step: async () => undefined,
         setBreakpoint: async (file: string, line: number) => ({ file, line, verified: true }),
         clearBreakpoints: () => 0,
-        getCollectors: () => ['entities'],
-        setDiagnosticsActive: vi.fn(),
+        getDiagnosticsTabs: async () => [{ name: 'World', active: false }],
+        setDiagnosticsTab: async (name: string, active: boolean) => ({ name, active }),
         ...overrides,
     };
 }
@@ -168,12 +168,12 @@ describe('mcp server', () => {
             expect((await call('get_status')).isError).toBeFalsy();
         });
 
-        it('set_diagnostics_active forwards collectors and lists known ones', async () => {
-            const setDiagnosticsActive = vi.fn();
-            await start(makeBridge({ setDiagnosticsActive }));
-            const r = await call('set_diagnostics_active', { collectors: ['entities'], active: true });
-            expect(setDiagnosticsActive).toHaveBeenCalledWith(['entities'], true);
-            expect(r.content[0].text).toContain('"known"');
+        it('set_diagnostics_tab forwards the tab and returns its state', async () => {
+            const setDiagnosticsTab = vi.fn(async (name: string, active: boolean) => ({ name, active }));
+            await start(makeBridge({ setDiagnosticsTab }));
+            const r = await call('set_diagnostics_tab', { tab: 'World', active: true });
+            expect(setDiagnosticsTab).toHaveBeenCalledWith('World', true);
+            expect(JSON.parse(r.content[0].text)).toEqual({ name: 'World', active: true });
         });
 
         it('wait_for_event with an invalid regex is an error result', async () => {

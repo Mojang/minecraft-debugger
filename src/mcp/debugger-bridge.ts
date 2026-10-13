@@ -13,6 +13,7 @@ import {
     DebugEvent,
     DebuggerBridge,
     DebuggerStatus,
+    DiagnosticsTab,
     LogLevel,
     StatSnapshot,
     StepKind,
@@ -25,17 +26,11 @@ const STEP_COMMANDS: Record<StepKind, string> = {
     out: 'workbench.action.debug.stepOut',
 };
 
-// collectors behind the built-in Live Diagnostics tabs; the game's schema can add more
-const PREFAB_COLLECTORS = [
-    'app_memory',
-    'runtime_memory',
-    'packets',
-    'networking_packets_details',
-    'server_tick_timings',
-    'commands',
-    'entities',
-    'chunks',
-];
+async function waitUntil(condition: () => boolean, timeoutMs: number): Promise<void> {
+    for (let waited = 0; !condition() && waited < timeoutMs; waited += 100) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+}
 
 interface StoredStat {
     name: string;
@@ -57,7 +52,8 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
     private _connected = false;
     private _supportsCommands = false;
     private _ownBreakpoints: vscode.Breakpoint[] = [];
-    private _schemaCollectors: string[] = [];
+    private _tabs: DiagnosticsTab[] | undefined;
+    private readonly _onDiagnosticsTabs: (tabs?: DiagnosticsTab[]) => void;
 
     constructor(
         private readonly _eventEmitter: EventEmitter,
@@ -110,15 +106,19 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
                     receivedAt: Date.now(),
                 });
             },
-            onSchemaReceived: schema => {
-                this._schemaCollectors = schema.map(d => d.stat_group_id);
-            },
         };
         this._statsProvider.addStatListener(this._statListener);
+
+        // reported by the Live Diagnostics panel while it is open
+        this._onDiagnosticsTabs = tabs => {
+            this._tabs = tabs;
+        };
+        this._eventEmitter.on('diagnostics-tabs', this._onDiagnosticsTabs);
     }
 
     public dispose(): void {
         this._eventEmitter.off('debugger-status', this._onDebuggerStatus);
+        this._eventEmitter.off('diagnostics-tabs', this._onDiagnosticsTabs);
         this._statsProvider.removeStatListener(this._statListener);
         this._disposables.forEach(d => d.dispose());
         this._disposables.length = 0;
@@ -260,16 +260,25 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         return { result, type };
     }
 
-    public getCollectors(): string[] {
-        return [...new Set([...PREFAB_COLLECTORS, ...this._schemaCollectors])];
+    // Opens or reveals the Live Diagnostics panel; the tab list comes from it.
+    public async getDiagnosticsTabs(): Promise<DiagnosticsTab[]> {
+        await vscode.commands.executeCommand('minecraft-debugger.liveDiagnostics');
+        await waitUntil(() => this._tabs !== undefined, 5000);
+        if (!this._tabs) {
+            throw new Error('The Live Diagnostics panel did not report its tabs');
+        }
+        return this._tabs;
     }
 
-    public setDiagnosticsActive(collectors: string[], active: boolean): void {
-        this._requireSession();
-        if (!this._connected) {
-            throw new Error('Minecraft is not connected');
+    // Toggles a tab exactly like its switch in the panel, which enables or disables its collectors.
+    public async setDiagnosticsTab(tab: string, active: boolean): Promise<DiagnosticsTab> {
+        const tabs = await this.getDiagnosticsTabs();
+        if (!tabs.some(t => t.name === tab)) {
+            throw new Error(`Unknown tab '${tab}'. Tabs: ${tabs.map(t => t.name).join(', ')}`);
         }
-        this._eventEmitter.emit('set-diagnostics-active', collectors, active);
+        this._eventEmitter.emit('set-diagnostics-tab', tab, active);
+        await waitUntil(() => this._tabs?.find(t => t.name === tab)?.active === active, 3000);
+        return this._tabs?.find(t => t.name === tab) ?? { name: tab, active: !active };
     }
 
     public runCommand(command: string): void {

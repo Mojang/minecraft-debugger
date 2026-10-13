@@ -166,6 +166,31 @@ function App() {
         });
     };
 
+    // Report the tabs to the extension and let it toggle them (used by the MCP server).
+    useEffect(() => {
+        if (!window.initialParams.showReplayControls) {
+            vscode.postMessage({
+                type: 'diagnostics-tabs',
+                tabs: mergedTabs.map(tab => ({ name: tab.name, active: enabledTabs[tab.name] === true })),
+            });
+        }
+    }, [mergedTabs, enabledTabs]);
+
+    useEffect(() => {
+        const handleSetTab = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type !== 'set-diagnostics-tab' || !mergedTabs.some(tab => tab.name === message.tabName)) {
+                return;
+            }
+            setCurrentTab(message.tabName);
+            if ((enabledTabs[message.tabName] === true) !== message.active) {
+                setTabActive(message.tabName, message.active);
+            }
+        };
+        window.addEventListener('message', handleSetTab);
+        return () => window.removeEventListener('message', handleSetTab);
+    });
+
     return (
         <main>
             {window.initialParams.showReplayControls && (

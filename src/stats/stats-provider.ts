@@ -168,11 +168,13 @@ export class StatsProvider {
 
             if (aggregateChildData !== undefined) {
                 listener.onStatUpdated?.(aggregateChildData);
-            } else if (stat.children) {
-                stat.children.forEach((child: StatDataModel) => {
-                    this._fireStatUpdated(child, tick, statData);
-                });
             }
         });
+
+        if (aggregateChildData === undefined && stat.children) {
+            stat.children.forEach((child: StatDataModel) => {
+                this._fireStatUpdated(child, tick, statData);
+            });
+        }
     }
 }

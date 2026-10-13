@@ -22,8 +22,14 @@ export class EventBuffer {
     }
 
     since(sinceSeq: number, limit: number, level?: LogLevel): { events: DebugEvent[]; nextSeq: number } {
+        sinceSeq = this._cursor(sinceSeq);
         const events = this._events.filter(e => e.seq > sinceSeq && (!level || e.level === level)).slice(0, limit);
         return { events, nextSeq: events.length > 0 ? events[events.length - 1].seq : sinceSeq };
+    }
+
+    // A cursor ahead of the newest seq comes from before a reset (window reload): read from the start.
+    private _cursor(sinceSeq: number): number {
+        return sinceSeq > this._seq ? 0 : sinceSeq;
     }
 
     head(): number {
@@ -33,7 +39,8 @@ export class EventBuffer {
     // With sinceSeq, an already-buffered match newer than sinceSeq resolves immediately.
     waitFor(match: (e: DebugEvent) => boolean, timeoutMs: number, sinceSeq?: number): Promise<DebugEvent | undefined> {
         if (sinceSeq !== undefined) {
-            const buffered = this._events.find(e => e.seq > sinceSeq && match(e));
+            const cursor = this._cursor(sinceSeq);
+            const buffered = this._events.find(e => e.seq > cursor && match(e));
             if (buffered) {
                 return Promise.resolve(buffered);
             }

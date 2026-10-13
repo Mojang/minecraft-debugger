@@ -41,6 +41,7 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
     private readonly _onDebuggerStatus: (isConnected: boolean, caps: MinecraftCapabilities) => void;
     private _session?: vscode.DebugSession;
     private _paused = false;
+    private _stoppedThreadId: number | undefined;
     private _connected = false;
     private _supportsCommands = false;
     private _ownBreakpoints: vscode.Breakpoint[] = [];
@@ -115,6 +116,7 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
             this._events.push({ kind: 'log', level, text: String(m.body?.output ?? '').trimEnd() });
         } else if (m.type === 'event' && m.event === 'stopped') {
             this._paused = true;
+            this._stoppedThreadId = m.body?.threadId;
             const reason = m.body?.reason ?? 'stopped';
             const description = m.body?.description;
             this._events.push({ kind: 'stopped', text: reason + (description ? ': ' + description : '') });
@@ -200,7 +202,7 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
 
     public async getStack(threadId?: number): Promise<unknown> {
         this._requirePaused();
-        const id = threadId ?? (await this._dap('threads')).threads?.[0]?.id;
+        const id = threadId ?? this._stoppedThreadId ?? (await this._dap('threads')).threads?.[0]?.id;
         if (id === undefined) {
             throw new Error('No threads available');
         }
@@ -255,9 +257,15 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         await vscode.commands.executeCommand('workbench.action.debug.continue');
     }
 
+    // workbench.action.debug.pause is a no-op when invoked without a thread context, so ask the adapter directly.
+    // Only the first thread, like the toolbar: a pause sent to every thread stays armed and stops them later.
     public async pause(): Promise<void> {
-        this._requireFocusedSession();
-        await vscode.commands.executeCommand('workbench.action.debug.pause');
+        const threadId = (await this._dap('threads')).threads?.[0]?.id;
+        if (threadId === undefined) {
+            // the adapter learns thread ids only from the game's thread/stopped events
+            throw new Error('Minecraft has not reported a script thread yet; hit a breakpoint once, then pause works');
+        }
+        await this._dap('pause', { threadId });
     }
 
     public async step(kind: StepKind): Promise<void> {

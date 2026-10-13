@@ -85,4 +85,10 @@ describe('EventBuffer', () => {
         vi.advanceTimersByTime(500);
         return expect(p).resolves.toBeUndefined();
     });
+    it('treats a cursor from before a reset as a read from the start', () => {
+        const b = new EventBuffer();
+        b.push({ kind: 'log', text: 'a' });
+        expect(b.since(54, 10).events.map(e => e.text)).toEqual(['a']);
+        return expect(b.waitFor(e => e.text === 'a', 10, 54)).resolves.toMatchObject({ text: 'a' });
+    });
 });

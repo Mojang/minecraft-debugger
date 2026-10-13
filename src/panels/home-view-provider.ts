@@ -7,17 +7,21 @@ import { getNonce } from '../utilities/getNonce';
 import { getUri } from '../utilities/getUri';
 import { EventEmitter } from 'stream';
 import { MinecraftCapabilities } from '../session';
+import { ProjectSettingsLoader } from '../project-settings';
 
 export class HomeViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'minecraft-debugger-home-panel';
 
     private readonly _extensionUri: vscode.Uri;
     private _eventEmitter: EventEmitter;
+    private _projectSettings: ProjectSettingsLoader;
     private _view?: vscode.WebviewView;
 
-    constructor(extensionUri: vscode.Uri, eventEmitter: EventEmitter) {
+    constructor(extensionUri: vscode.Uri, eventEmitter: EventEmitter, projectSettings: ProjectSettingsLoader) {
         this._extensionUri = extensionUri;
         this._eventEmitter = eventEmitter;
+        this._projectSettings = projectSettings;
+        this._projectSettings.onDidChange(() => this._postProjectSettings());
     }
 
     public setDebuggerStatus(
@@ -31,6 +35,13 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             isListening: isListening,
             supportsCommands: minecraftCapabilities.supportsCommands,
             supportsProfiler: minecraftCapabilities.supportsProfiler,
+        });
+    }
+
+    private _postProjectSettings() {
+        this._view?.webview.postMessage({
+            type: 'project-settings',
+            commandShortcuts: this._projectSettings.settings.commandShortcuts,
         });
     }
 
@@ -93,6 +104,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                 }
                 case 'request-debugger-status': {
                     this._requestDebuggerStatus();
+                    this._postProjectSettings();
                     break;
                 }
                 case 'browse-captures-base-path': {

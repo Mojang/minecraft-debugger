@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useEffect, useState } from 'react';
-import CommandSection from './controls/CommandSection';
+import CommandSection, { ProjectCommand } from './controls/CommandSection';
 import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/CommandHandlers';
 import GeneralSection from './controls/GeneralSection';
 import ProfilerSection from './controls/ProfilerSection';
@@ -42,6 +42,7 @@ const App = () => {
     const [debuggerListening, setDebuggerListening] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
+    const [projectCommands, setProjectCommands] = useState<ProjectCommand[]>([]);
 
     const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
         getCommandHandlers();
@@ -108,6 +109,8 @@ const App = () => {
                 setDebuggerListening(message.isListening);
                 setSupportsCommands(message.supportsCommands);
                 setSupportsProfiler(message.supportsProfiler);
+            } else if (message.type === 'project-settings') {
+                setProjectCommands(message.commandShortcuts);
             }
         };
 
@@ -130,6 +133,7 @@ const App = () => {
             <CommandSection
                 debuggerConnected={debuggerConnected}
                 supportsCommands={supportsCommands}
+                projectCommands={projectCommands}
                 commandButtons={commandButtons}
                 onAddCommand={onAddCommand}
                 onEditCommand={onEditCommand}

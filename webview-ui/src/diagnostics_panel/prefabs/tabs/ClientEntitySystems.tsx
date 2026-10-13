@@ -335,7 +335,7 @@ function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap
 const StatsTab: TabPrefab = {
     name: 'Client - Entity Systems',
     dataSource: TabPrefabDataSource.Client,
-    content: ({ selectedClient }: TabPrefabParams) => {
+    content: ({ selectedClient, onRunCommand }: TabPrefabParams) => {
         useDebuggerRequestUpdates();
         const [lastRequestedCommand, setLastRequestedCommand] = useState<string>('');
         const [entityTimingUnit, setEntityTimingUnit] = useState<TimingUnit>('ms');
@@ -708,6 +708,17 @@ const StatsTab: TabPrefab = {
             ): JSX.Element => {
                 const entityId = extractEntityId(row.category);
                 const optionalStats = entityId ? optionalEntityStatsById.get(entityId) : undefined;
+                const coordinates = [optionalStats?.positionX, optionalStats?.positionY, optionalStats?.positionZ];
+                const dimension = optionalStats?.dimension?.trim() ?? '';
+                const hasValidTeleportDestination =
+                    selectedClient.trim().length > 0 &&
+                    dimension.length > 0 &&
+                    coordinates.every(value => typeof value === 'number' && Number.isFinite(value));
+                
+                // Teleports the selected client to this entity's dimension and coordinates if they are valid.
+                const teleportCommand = hasValidTeleportDestination
+                    ? `/execute in ${dimension} run tp ${JSON.stringify(selectedClient)} ${coordinates.join(' ')}`
+                    : undefined;
 
                 return (
                     <div className="minecraft-entity-row-details">
@@ -737,6 +748,18 @@ const StatsTab: TabPrefab = {
                                 </span>
                             </div>
                         </div>
+                        <VSCodeButton
+                            style={{ alignSelf: 'flex-start' }}
+                            disabled={!teleportCommand}
+                            title={teleportCommand ? undefined : 'Player name, entity dimension, or position is unavailable'}
+                            onClick={() => {
+                                if (teleportCommand) {
+                                    onRunCommand(teleportCommand);
+                                }
+                            }}
+                        >
+                            Teleport to Entity
+                        </VSCodeButton>
                         <div className="minecraft-entity-row-details-chart">
                             <div className="minecraft-entity-row-details-chart-title">
                                 Trend ({formatSparklineDurationFromPoints(context.sparklineTickRange)})
@@ -757,7 +780,7 @@ const StatsTab: TabPrefab = {
                     </div>
                 );
             },
-            [entityTimingUnit, optionalEntityStatsById],
+            [entityTimingUnit, optionalEntityStatsById, selectedClient, onRunCommand],
         );
 
         return (

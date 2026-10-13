@@ -34,7 +34,9 @@ async function waitUntil(condition: () => boolean, timeoutMs: number): Promise<v
 
 interface StoredStat {
     name: string;
+    group: string;
     value: number | string | undefined;
+    rows: string[][];
     tick: number;
     receivedAt: number;
 }
@@ -101,7 +103,9 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
             onStatUpdated: stat => {
                 this._stats.set(stat.full_id, {
                     name: stat.name,
+                    group: stat.parent_name,
                     value: stat.values[stat.values.length - 1],
+                    rows: stat.children_string_values,
                     tick: stat.tick,
                     receivedAt: Date.now(),
                 });
@@ -208,10 +212,18 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         const now = Date.now();
         const result: StatSnapshot[] = [];
         for (const [id, s] of this._stats) {
-            if (needle && !id.toLowerCase().includes(needle) && !s.name.toLowerCase().includes(needle)) {
+            if (needle && ![id, s.name, s.group].some(text => text.toLowerCase().includes(needle))) {
                 continue;
             }
-            result.push({ id, name: s.name, value: s.value, tick: s.tick, ageMs: now - s.receivedAt });
+            result.push({
+                id,
+                name: s.name,
+                group: s.group,
+                value: s.value,
+                ...(s.rows.length > 0 && { rows: s.rows }),
+                tick: s.tick,
+                ageMs: now - s.receivedAt,
+            });
         }
         return result;
     }
@@ -255,9 +267,56 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
     }
 
     public async evaluate(expression: string, frameId?: number): Promise<unknown> {
-        this._requirePaused();
         const { result, type } = await this._dap('evaluate', { expression, frameId, context: 'repl' });
         return { result, type };
+    }
+
+    // Evaluates in the running game. Minecraft sometimes answers an evaluate with an empty result without
+    // running it, so expressions return 'R:'-prefixed strings and are resent until one comes back.
+    private async _evaluateMarked(expression: string): Promise<string> {
+        for (let attempt = 0; attempt < 20; attempt++) {
+            const { result } = await this._dap('evaluate', { expression, context: 'repl' });
+            if (typeof result === 'string' && result.startsWith('R:')) {
+                return result.slice(2);
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        throw new Error('Minecraft did not evaluate the request');
+    }
+
+    // Loads @minecraft/server once through a dynamic import (it resolves on the next game tick),
+    // then queries entities without breakpoints or profilers.
+    public async getEntities(dimension: string, type?: string, limit = 200): Promise<unknown> {
+        if (!this._connected) {
+            throw new Error('Minecraft is not connected');
+        }
+        if (this._paused) {
+            throw new Error('Resume the game first: the scripting API loads on a game tick');
+        }
+        const load =
+            "globalThis.__mcpServerModule ? 'R:ready' : (import('@minecraft/server').then(m => { globalThis.__mcpServerModule = m; }), 'R:loading')";
+        let state = await this._evaluateMarked(load);
+        for (let waited = 0; state !== 'ready' && waited < 3000; waited += 100) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            state = await this._evaluateMarked(load);
+        }
+        if (state !== 'ready') {
+            throw new Error('Could not load @minecraft/server in the game');
+        }
+        const query = `(() => {
+            const all = globalThis.__mcpServerModule.world.getDimension(${JSON.stringify(dimension)})
+                .getEntities(${JSON.stringify(type ? { type } : {})});
+            const entities = all.slice(0, ${limit}).map(e => ({
+                id: e.id, type: e.typeId, name: e.nameTag || undefined, location: e.location, dimension: e.dimension.id,
+            }));
+            return 'R:' + JSON.stringify({ total: all.length, entities });
+        })()`;
+        return JSON.parse(await this._evaluateMarked(query));
+    }
+
+    // Same channel the Live Diagnostics tabs use for their buttons (profilers, filters, CSV exports).
+    public debuggerRequest(request: string, args?: Record<string, unknown>): Promise<unknown> {
+        return this._dap('debugger-request', { request, args });
     }
 
     // Opens or reveals the Live Diagnostics panel; the tab list comes from it.

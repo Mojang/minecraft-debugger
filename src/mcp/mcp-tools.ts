@@ -73,6 +73,16 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
     );
 
     server.registerTool(
+        'debugger_request',
+        {
+            description:
+                "Send a named request to Minecraft, the same ones the Live Diagnostics tab buttons send, and return its response. Examples: 'Start Entity System Profiler', 'Stop Entity System Profiler', 'Clear Entity System Profiler', 'Request CSV Entity System Profiler', 'Start CPU Profiler', 'Stop CPU Profiler'. Profiler data then arrives as stats (get_stats).",
+            inputSchema: { request: z.string().min(1), args: z.record(z.string(), z.unknown()).optional() },
+        },
+        args => run('debugger_request', args, () => bridge.debuggerRequest(args.request, args.args)),
+    );
+
+    server.registerTool(
         'get_diagnostics_tabs',
         {
             description:
@@ -113,10 +123,26 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
     server.registerTool(
         'evaluate',
         {
-            description: 'Evaluate a script expression in the paused debugger, optionally in the context of a frame.',
+            description:
+                "Evaluate a script expression, in a stack frame (frameId from get_stack) while paused or in the global scope while running. While running, Minecraft sometimes returns an empty result (type 'undefined') without evaluating: resend, and return a marker such as 'R:' + value to tell a real undefined apart.",
             inputSchema: { expression: z.string().min(1), frameId: z.number().int().optional() },
         },
         args => run('evaluate', args, () => bridge.evaluate(args.expression, args.frameId)),
+    );
+
+    server.registerTool(
+        'get_entities',
+        {
+            description:
+                "List entities in a dimension with id, type, name tag and location, while the game is running. dimension defaults to 'overworld'; type filters by entity type (e.g. 'minecraft:pig'); returns at most limit entities (default 200) plus the total.",
+            inputSchema: {
+                dimension: z.string().min(1).optional(),
+                type: z.string().min(1).optional(),
+                limit: z.number().int().min(1).max(5000).optional(),
+            },
+        },
+        args =>
+            run('get_entities', args, () => bridge.getEntities(args.dimension ?? 'overworld', args.type, args.limit)),
     );
 
     server.registerTool(

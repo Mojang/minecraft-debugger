@@ -42,6 +42,8 @@ describe('EventBuffer', () => {
         const r = b.since(0, 1, 'error');
         expect(r.events.map(e => e.text)).toEqual(['b']);
         expect(r.nextSeq).toBe(2);
+        // not truncated by limit: the cursor moves to the head, past non-matching events
+        expect(b.since(0, 10, 'info')).toEqual({ events: [expect.objectContaining({ text: 'a' })], nextSeq: 3 });
     });
 
     it('clear keeps seq monotonic', () => {

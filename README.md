@@ -224,9 +224,11 @@ Tools:
 - `get_logs` - recent debugger output, optionally filtered by level.
 - `get_stats` - latest Live Diagnostics values (from enabled tabs).
 - `get_diagnostics_tabs`, `set_diagnostics_tab` - list and enable or disable Live Diagnostics tabs.
+- `debugger_request` - send the requests behind the Live Diagnostics buttons, such as starting a profiler.
 - `get_stack` - call stack of a paused thread.
 - `get_variables` - scopes and variables of a stack frame.
-- `evaluate` - evaluate an expression while paused.
+- `evaluate` - evaluate an expression, in a stack frame while paused or globally while running.
+- `get_entities` - list entities of a dimension with their type and location.
 - `run_command` - send a Minecraft command (fire-and-forget).
 - `continue`, `pause`, `step` - control execution.
 - `set_breakpoint`, `clear_breakpoints` - manage breakpoints.

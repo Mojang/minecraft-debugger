@@ -24,7 +24,8 @@ export class EventBuffer {
     since(sinceSeq: number, limit: number, level?: LogLevel): { events: DebugEvent[]; nextSeq: number } {
         sinceSeq = this._cursor(sinceSeq);
         const events = this._events.filter(e => e.seq > sinceSeq && (!level || e.level === level)).slice(0, limit);
-        return { events, nextSeq: events.length > 0 ? events[events.length - 1].seq : sinceSeq };
+        // truncated by limit: resume after the last returned event; otherwise everything was scanned
+        return { events, nextSeq: events.length === limit ? events[events.length - 1].seq : this._seq };
     }
 
     // A cursor ahead of the newest seq comes from before a reset (window reload): read from the start.

@@ -24,6 +24,8 @@ function makeBridge(overrides: Partial<DebuggerBridge> = {}): DebuggerBridge {
         clearBreakpoints: () => 0,
         getDiagnosticsTabs: async () => [{ name: 'World', active: false }],
         setDiagnosticsTab: async (name: string, active: boolean) => ({ name, active }),
+        debuggerRequest: async () => ({}),
+        getEntities: async () => ({ total: 0, entities: [] }),
         ...overrides,
     };
 }
@@ -174,6 +176,21 @@ describe('mcp server', () => {
             const r = await call('set_diagnostics_tab', { tab: 'World', active: true });
             expect(setDiagnosticsTab).toHaveBeenCalledWith('World', true);
             expect(JSON.parse(r.content[0].text)).toEqual({ name: 'World', active: true });
+        });
+
+        it('debugger_request forwards the request and returns the response', async () => {
+            const debuggerRequest = vi.fn(async () => ({ started: true }));
+            await start(makeBridge({ debuggerRequest }));
+            const r = await call('debugger_request', { request: 'Start Entity System Profiler' });
+            expect(debuggerRequest).toHaveBeenCalledWith('Start Entity System Profiler', undefined);
+            expect(JSON.parse(r.content[0].text)).toEqual({ started: true });
+        });
+
+        it('get_entities defaults to the overworld', async () => {
+            const getEntities = vi.fn(async () => ({ total: 0, entities: [] }));
+            await start(makeBridge({ getEntities }));
+            await call('get_entities', { type: 'minecraft:pig' });
+            expect(getEntities).toHaveBeenCalledWith('overworld', 'minecraft:pig', undefined);
         });
 
         it('wait_for_event with an invalid regex is an error result', async () => {

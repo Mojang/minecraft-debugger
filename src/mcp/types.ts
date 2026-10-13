@@ -24,7 +24,9 @@ export interface DebuggerStatus {
 export interface StatSnapshot {
     id: string;
     name: string;
+    group: string;
     value: number | string | undefined;
+    rows?: string[][];
     tick: number;
     ageMs: number;
 }
@@ -57,6 +59,7 @@ export interface DebuggerBridge {
     getStack(threadId?: number): Promise<unknown>;
     getVariables(frameId: number): Promise<unknown>;
     evaluate(expression: string, frameId?: number): Promise<unknown>;
+    getEntities(dimension: string, type?: string, limit?: number): Promise<unknown>;
     runCommand(command: string): void;
     continue(): Promise<void>;
     pause(): Promise<void>;
@@ -65,6 +68,7 @@ export interface DebuggerBridge {
     clearBreakpoints(all: boolean): number;
     getDiagnosticsTabs(): Promise<DiagnosticsTab[]>;
     setDiagnosticsTab(tab: string, active: boolean): Promise<DiagnosticsTab>;
+    debuggerRequest(request: string, args?: Record<string, unknown>): Promise<unknown>;
 }
 
 export interface ActivityEntry {

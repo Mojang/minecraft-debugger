@@ -22,6 +22,8 @@ function makeBridge(overrides: Partial<DebuggerBridge> = {}): DebuggerBridge {
         step: async () => undefined,
         setBreakpoint: async (file: string, line: number) => ({ file, line, verified: true }),
         clearBreakpoints: () => 0,
+        getCollectors: () => ['entities'],
+        setDiagnosticsActive: vi.fn(),
         ...overrides,
     };
 }
@@ -164,6 +166,14 @@ describe('mcp server', () => {
             expect(r.isError).toBe(true);
             expect(r.content[0].text).toContain('No active Minecraft Debugger session');
             expect((await call('get_status')).isError).toBeFalsy();
+        });
+
+        it('set_diagnostics_active forwards collectors and lists known ones', async () => {
+            const setDiagnosticsActive = vi.fn();
+            await start(makeBridge({ setDiagnosticsActive }));
+            const r = await call('set_diagnostics_active', { collectors: ['entities'], active: true });
+            expect(setDiagnosticsActive).toHaveBeenCalledWith(['entities'], true);
+            expect(r.content[0].text).toContain('"known"');
         });
 
         it('wait_for_event with an invalid regex is an error result', async () => {

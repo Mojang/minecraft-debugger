@@ -25,6 +25,18 @@ const STEP_COMMANDS: Record<StepKind, string> = {
     out: 'workbench.action.debug.stepOut',
 };
 
+// collectors behind the built-in Live Diagnostics tabs; the game's schema can add more
+const PREFAB_COLLECTORS = [
+    'app_memory',
+    'runtime_memory',
+    'packets',
+    'networking_packets_details',
+    'server_tick_timings',
+    'commands',
+    'entities',
+    'chunks',
+];
+
 interface StoredStat {
     name: string;
     value: number | string | undefined;
@@ -45,6 +57,7 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
     private _connected = false;
     private _supportsCommands = false;
     private _ownBreakpoints: vscode.Breakpoint[] = [];
+    private _schemaCollectors: string[] = [];
 
     constructor(
         private readonly _eventEmitter: EventEmitter,
@@ -96,6 +109,9 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
                     tick: stat.tick,
                     receivedAt: Date.now(),
                 });
+            },
+            onSchemaReceived: schema => {
+                this._schemaCollectors = schema.map(d => d.stat_group_id);
             },
         };
         this._statsProvider.addStatListener(this._statListener);
@@ -242,6 +258,18 @@ export class MinecraftDebuggerBridge implements DebuggerBridge, vscode.Disposabl
         this._requirePaused();
         const { result, type } = await this._dap('evaluate', { expression, frameId, context: 'repl' });
         return { result, type };
+    }
+
+    public getCollectors(): string[] {
+        return [...new Set([...PREFAB_COLLECTORS, ...this._schemaCollectors])];
+    }
+
+    public setDiagnosticsActive(collectors: string[], active: boolean): void {
+        this._requireSession();
+        if (!this._connected) {
+            throw new Error('Minecraft is not connected');
+        }
+        this._eventEmitter.emit('set-diagnostics-active', collectors, active);
     }
 
     public runCommand(command: string): void {

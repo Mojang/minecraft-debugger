@@ -58,6 +58,8 @@ export interface DebuggerBridge {
     step(kind: StepKind): Promise<void>;
     setBreakpoint(file: string, line: number, condition?: string): Promise<BreakpointResult>;
     clearBreakpoints(all: boolean): number;
+    getCollectors(): string[];
+    setDiagnosticsActive(collectors: string[], active: boolean): void;
 }
 
 export interface ActivityEntry {

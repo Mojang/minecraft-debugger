@@ -66,10 +66,24 @@ export function registerTools(server: McpServer, bridge: DebuggerBridge, sink: A
         'get_stats',
         {
             description:
-                'Get the latest value of live diagnostics stats. May be empty until collectors are enabled in the Live Diagnostics panel.',
+                'Get the latest value of live diagnostics stats. Only active collectors send stats: enable them with set_diagnostics_active or in the Live Diagnostics panel.',
             inputSchema: { filter: z.string().optional() },
         },
         args => run('get_stats', args, () => bridge.getStats(args.filter)),
+    );
+
+    server.registerTool(
+        'set_diagnostics_active',
+        {
+            description:
+                'Enable or disable live diagnostics collectors (e.g. entities, chunks, server_tick_timings) so get_stats returns their stats. Returns the known collector names. The Live Diagnostics panel, when open, may toggle collectors again when its tabs change.',
+            inputSchema: { collectors: z.array(z.string().min(1)).min(1), active: z.boolean() },
+        },
+        args =>
+            run('set_diagnostics_active', args, () => {
+                bridge.setDiagnosticsActive(args.collectors, args.active);
+                return { collectors: args.collectors, active: args.active, known: bridge.getCollectors() };
+            }),
     );
 
     server.registerTool(

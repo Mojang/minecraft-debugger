@@ -10,7 +10,7 @@ import { TabPrefab, TabPrefabDataSource, TabPrefabParams } from './prefabs/TabPr
 import { handleDebuggerRequestResult } from './utilities/useDebuggerRequests';
 import { vscode } from './utilities/vscode';
 import DynamicTab from './DynamicTab';
-import { DiagnosticsTabDescriptor } from '../../../src/diagnostics-schema';
+import { DiagnosticsTabDescriptor, groupDiagnosticsViews } from '../../../src/diagnostics-schema';
 
 // Wraps each tab's content() as a proper React component so that any hooks
 // inside the content function are correctly isolated and not called conditionally
@@ -24,7 +24,7 @@ const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.n
 // A tab entry is either a hardcoded prefab or a dynamic descriptor received from the game.
 type MergedTab =
     | { kind: 'prefab'; name: string; tab: TabPrefab; collectorNames: string[] }
-    | { kind: 'dynamic'; name: string; descriptor: DiagnosticsTabDescriptor; collectorNames: string[] };
+    | { kind: 'dynamic'; name: string; descriptors: DiagnosticsTabDescriptor[]; collectorNames: string[] };
 
 declare global {
     interface Window {
@@ -102,6 +102,7 @@ function App() {
             }
         };
         window.addEventListener('message', handleMessage);
+        vscode.postMessage({ type: 'diagnostics-ready' });
         return () => {
             window.removeEventListener('message', handleMessage);
         };
@@ -114,24 +115,18 @@ function App() {
             kind: 'prefab' as const,
             name: tab.name,
             tab,
-            collectorNames: (tab.collectors?.map(collector => collector.collectorName).filter(collectorName => collectorName !== undefined) ?? [])
+            collectorNames:
+                tab.collectors
+                    ?.map(collector => collector.collectorName)
+                    .filter(collectorName => collectorName !== undefined) ?? [],
         }));
-        for (const descriptor of schema) {
-            const existingIndex = merged.findIndex(t => t.name === descriptor.name);
+        for (const tab of groupDiagnosticsViews(schema)) {
+            const dynamicTab: MergedTab = { kind: 'dynamic', ...tab };
+            const existingIndex = merged.findIndex(t => t.name === tab.name);
             if (existingIndex !== -1) {
-                merged[existingIndex] = {
-                    kind: 'dynamic' as const,
-                    name: descriptor.name,
-                    descriptor,
-                    collectorNames: [descriptor.stat_group_id],
-                };
+                merged[existingIndex] = dynamicTab;
             } else {
-                merged.push({
-                    kind: 'dynamic' as const,
-                    name: descriptor.name,
-                    descriptor,
-                    collectorNames: [descriptor.stat_group_id],
-                });
+                merged.push(dynamicTab);
             }
         }
         merged.sort((a, b) => a.name.localeCompare(b.name));
@@ -208,8 +203,8 @@ function App() {
                                     {pendingTabs[tab.name] !== undefined
                                         ? '…'
                                         : enabledTabs[tab.name] === true
-                                            ? Icons.enabled
-                                            : Icons.disabled}
+                                          ? Icons.enabled
+                                          : Icons.disabled}
                                 </button>
                             )}
                         </div>
@@ -253,30 +248,35 @@ function App() {
                                         />
                                     </>
                                 ) : (
-                                    !tab.descriptor.is_empty_tab && (
-                                        <>
-                                            {tab.descriptor.data_source === 'client' && (
-                                                <StatGroupSelectionBox
-                                                    labelName="Client"
-                                                    statParentId="client_stats"
-                                                    onChange={handleClientSelection}
-                                                    helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
-                                                />
-                                            )}
-                                            {tab.descriptor.data_source === 'server_script' && (
-                                                <StatGroupSelectionBox
-                                                    labelName="Script Plugin"
-                                                    statParentId="handle_counts"
-                                                    onChange={handlePluginSelection}
-                                                />
-                                            )}
-                                            <DynamicTab
-                                                descriptor={tab.descriptor}
-                                                selectedClient={selectedClient}
-                                                selectedPlugin={selectedPlugin}
+                                    <>
+                                        {tab.descriptors.some(descriptor => descriptor.data_source === 'client') && (
+                                            <StatGroupSelectionBox
+                                                labelName="Client"
+                                                statParentId="client_stats"
+                                                onChange={handleClientSelection}
+                                                helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
                                             />
-                                        </>
-                                    )
+                                        )}
+                                        {tab.descriptors.some(
+                                            descriptor => descriptor.data_source === 'server_script',
+                                        ) && (
+                                            <StatGroupSelectionBox
+                                                labelName="Script Plugin"
+                                                statParentId="handle_counts"
+                                                onChange={handlePluginSelection}
+                                            />
+                                        )}
+                                        {tab.descriptors
+                                            .filter(descriptor => !descriptor.is_empty_tab)
+                                            .map((descriptor, index) => (
+                                                <DynamicTab
+                                                    key={`${JSON.stringify(descriptor)}:${index}`}
+                                                    descriptor={descriptor}
+                                                    selectedClient={selectedClient}
+                                                    selectedPlugin={selectedPlugin}
+                                                />
+                                            ))}
+                                    </>
                                 )
                             ) : (
                                 <div className="diagnostics-tab-disabled">

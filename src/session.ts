@@ -499,7 +499,7 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
             );
         } catch (e) {
             this.log((e as Error).message, LogLevel.Error);
-            this.sendErrorResponse(response, 1002, `Failed to set breakpoints for ${args.source.path}.`);
+            this.sendErrorResponse(response, 1002, `Failed to set breakpoints for ${args.source.path}: ${(e as Error).message}`);
             return;
         }
 

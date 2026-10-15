@@ -49,6 +49,11 @@ export class MinecraftDiagnosticsPanel {
         // Handle events from the webview panel
         this._panel.webview.onDidReceiveMessage(message => {
             switch (message.type) {
+                case 'diagnostics-ready':
+                    if (this._statsCallback) {
+                        this._statsTracker.sendSchema(this._statsCallback);
+                    }
+                    break;
                 case 'restart':
                     this._statsTracker.stop();
                     this._panel.webview.html = this._getWebviewContent(

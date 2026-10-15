@@ -17,6 +17,18 @@ This Visual Studio Code extension will assist in debugging your JavaScript code 
 * Performance diagnostics
 * Running Minecraft slash commands
 
+### Script-driven live diagnostics
+
+With a supporting Minecraft build, `@minecraft/debug-utilities` can add custom
+live diagnostics tabs. Each tab can contain multiple chart and table views.
+Table stat names are row keys: subsequent pushes with the same name replace that
+row's values and leave other rows intact. Views have independent data, even when
+their row names match.
+
+Existing tabs are sent when the debugger connects, including diagnostics-only
+connections. Opening or restarting the diagnostics panel restores the latest tab
+schema without requiring `/reload`. Enable a tab to receive its live data.
+
 ### Unsupported scenarios
 
 * Changing variable state

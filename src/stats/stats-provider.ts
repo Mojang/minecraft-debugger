@@ -1,6 +1,6 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
-import { DiagnosticsTabDescriptor } from "../diagnostics-schema";
+import { DiagnosticsTabDescriptor } from '../diagnostics-schema';
 
 export interface StatData {
     name: string;
@@ -41,7 +41,10 @@ export class StatsProvider {
     protected _statListeners: StatsListener[];
     private _cachedSchema: DiagnosticsTabDescriptor[] | undefined;
 
-    constructor(public readonly name: string, public readonly uniqueId: string) {
+    constructor(
+        public readonly name: string,
+        public readonly uniqueId: string,
+    ) {
         this._statListeners = [];
     }
 
@@ -90,8 +93,10 @@ export class StatsProvider {
     public addStatListener(listener: StatsListener): void {
         this._statListeners.push(listener);
 
-        // If we have a cached schema from diagnostics previously sent when the page was no active, 
-        // send it to the new listener immediately
+        this.sendSchema(listener);
+    }
+
+    public sendSchema(listener: StatsListener): void {
         if (this._cachedSchema !== undefined) {
             listener.onSchemaReceived?.(this._cachedSchema);
         }
@@ -109,21 +114,7 @@ export class StatsProvider {
                 continue;
             }
 
-            // Handle different value types
-            if (typeof child.values[0] === 'string' && child.values[0].length > 0) {
-                // Original behavior: string values
-                childStringValues.push([child.name, child.values[0]]);
-            } else if (typeof child.values[0] === 'number') {
-                // New behavior: numeric values
-                if (child.values.length === 1) {
-                    // Single numeric value
-                    childStringValues.push([child.name, child.values[0].toString()]);
-                } else if (child.values.length >= 2) {
-                    // Multiple numeric values - create a row with all values
-                    const valueStrings = child.values.map(v => v.toString());
-                    childStringValues.push([child.name, ...valueStrings]);
-                }
-            }
+            childStringValues.push([child.name, ...child.values.map(value => value.toString())]);
         }
 
         const childStatData: StatData = {
@@ -132,7 +123,7 @@ export class StatsProvider {
             full_id: (parent !== undefined ? parent.full_id + '_' + statId : statId) + '_consolidated_data',
             parent_name: stat.name,
             parent_id: statId,
-            parent_full_id: statId,
+            parent_full_id: parent !== undefined ? parent.full_id + '_' + statId : statId,
             values: stat.values ?? [],
             children_string_values: childStringValues,
             should_aggregate: stat.should_aggregate,
@@ -168,11 +159,13 @@ export class StatsProvider {
 
             if (aggregateChildData !== undefined) {
                 listener.onStatUpdated?.(aggregateChildData);
-            } else if (stat.children) {
-                stat.children.forEach((child: StatDataModel) => {
-                    this._fireStatUpdated(child, tick, statData);
-                });
             }
         });
+
+        if (aggregateChildData === undefined && stat.children) {
+            stat.children.forEach((child: StatDataModel) => {
+                this._fireStatUpdated(child, tick, statData);
+            });
+        }
     }
 }

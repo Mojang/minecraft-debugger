@@ -10,7 +10,9 @@ import {
     VSCodeDropdown,
     VSCodeOption,
     VSCodeButton,
+    VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
+import { matchesTableSearch } from '../../../../src/table-search';
 
 export enum MinecraftMultiColumnStatisticTableSortOrder {
     Ascending,
@@ -59,6 +61,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     rowAction?: MinecraftMultiColumnStatisticTableRowAction; // Optional per-row action button
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver; // Maps split events to target columns for non-consolidated streams
     valueFormatter?: (value: string | number, columnIndex: number) => string; // Optional custom display formatter for cell values
+    showSearchBox?: boolean;
 };
 
 const sortOrderOptions = [
@@ -146,6 +149,7 @@ export default function MinecraftMultiColumnStatisticTable({
     rowAction,
     nonConsolidatedColumnResolver,
     valueFormatter,
+    showSearchBox = false
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
     // Memoize sort column options to prevent unnecessary recreations
     const sortColumnOptions = useMemo(
@@ -158,6 +162,7 @@ export default function MinecraftMultiColumnStatisticTable({
 
     // states
     const [data, setData] = useState<MultiColumnTrackedStat[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [selectedSortOrder, setSelectedSortOrder] =
         useState<MinecraftMultiColumnStatisticTableSortOrder>(defaultSortOrder);
     const [selectedSortType, setSelectedSortType] =
@@ -370,9 +375,31 @@ export default function MinecraftMultiColumnStatisticTable({
         prettifyNames,
     ]);
 
+    const visibleData = showSearchBox
+        ? data.filter(dataPoint => matchesTableSearch(searchQuery, [
+              dataPoint.category,
+              ...dataPoint.values.map((value, index) =>
+                  valueFormatter
+                      ? valueFormatter(value, index)
+                      : typeof value === 'number'
+                        ? value.toFixed(1)
+                        : value,
+              ),
+          ]))
+        : data;
+
     return (
         <div>
             <h2>{title}</h2>
+            {showSearchBox && (
+                <VSCodeTextField
+                    value={searchQuery}
+                    placeholder="Search table"
+                    onInput={event => setSearchQuery((event.target as HTMLInputElement).value)}
+                >
+                    Search
+                </VSCodeTextField>
+            )}
             {actions?.length && (
                 <div className="minecraft-statistic-table-actions">
                     {actions.map(action => (
@@ -464,7 +491,7 @@ export default function MinecraftMultiColumnStatisticTable({
                         </VSCodeDataGridCell>
                     )}
                 </VSCodeDataGridRow>
-                {data.map(dataPoint => (
+                {visibleData.map(dataPoint => (
                     <VSCodeDataGridRow key={dataPoint.category}>
                         <VSCodeDataGridCell
                             gridColumn="1"

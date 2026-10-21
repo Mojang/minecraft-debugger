@@ -132,18 +132,6 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
             );
 
         case 'table':
-            if (isScriptView) {
-                return (
-                    <MinecraftMultiColumnStatisticTable
-                        title={title}
-                        keyLabel={descriptor.key_label ?? 'Name'}
-                        valueLabels={descriptor.value_labels?.slice(0, 1) ?? ['Value']}
-                        statisticDataProvider={provider}
-                        statisticResolver={resolver}
-                        showSearchBox={descriptor.show_search_box}
-                    />
-                );
-            }
             return (
                 <MinecraftStatisticTable
                     title={title}

@@ -25,6 +25,7 @@ export interface DiagnosticsTabDescriptor {
     target_value?: number;
     key_label?: string;
     value_labels?: string[];
+    show_search_box?: boolean;
     statistic_id?: string;
     statistic_ids?: string[];
     is_empty_tab?: boolean;

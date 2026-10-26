@@ -139,6 +139,7 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
                     valueLabel={descriptor.y_label ?? 'Value'}
                     statisticDataProvider={provider}
                     statisticResolver={resolver}
+                    showSearchBox={descriptor.show_search_box}
                 />
             );
 
@@ -150,6 +151,7 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
                     valueLabels={descriptor.value_labels ?? ['Value']}
                     statisticDataProvider={provider as MultipleStatisticProvider}
                     statisticResolver={resolver}
+                    showSearchBox={descriptor.show_search_box}
                 />
             );
 

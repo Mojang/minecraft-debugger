@@ -93,7 +93,7 @@ export class Breakpoints implements IBreakpointsHandler {
         }
 
         // create response breakpoints only for those from the primary source, providing 'verified' status to VSCode
-        // note that handSetBreakpointsRequest is per-source, so we can't return breakpoint status from other sources
+        // note that handleSetBreakpointsRequest is per-source, so we can't return breakpoint status from other sources
         if (generatedBreakpoints.breakpoints.length !== breakpointsStatus.breakpoints.length) {
             throw new Error('Breakpoint count mismatch between generated and received breakpoints');
         }

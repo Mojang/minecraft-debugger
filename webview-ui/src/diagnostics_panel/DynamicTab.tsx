@@ -151,7 +151,7 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
                         statisticDataProvider={provider}
                         statisticResolver={resolver}
                         showSearchBox={descriptor.show_search_box}
-                        incrementalUpdates
+                        incrementalUpdates={true}
                     />
                 );
             }

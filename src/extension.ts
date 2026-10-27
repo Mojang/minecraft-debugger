@@ -2,6 +2,7 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 
 import { EventEmitter } from 'stream';
 
@@ -11,6 +12,11 @@ import { MinecraftDiagnosticsPanel } from './panels/minecraft-diagnostics';
 import { ServerDebugAdapterFactory } from './server-debug-adapter-factory';
 import { StatsProvider } from './stats/stats-provider';
 import { ReplayStatsProvider } from './stats/replay-stats-provider';
+import { ActivityStore } from './mcp/activity-store';
+import { MinecraftDebuggerBridge } from './mcp/debugger-bridge';
+import { McpHttpServer, startMcpServer } from './mcp/mcp-server';
+
+const MCP_TOKEN_KEY = 'minecraft-debugger.mcp.token';
 
 // called when extension is activated
 //
@@ -32,6 +38,73 @@ export function activate(context: vscode.ExtensionContext): void {
     if ('dispose' in descriptorFactory) {
         context.subscriptions.push(descriptorFactory);
     }
+
+    // MCP server
+    const activityStore = new ActivityStore();
+    const debuggerBridge = new MinecraftDebuggerBridge(eventEmitter, liveStatsProvider);
+    homeViewProvider.setMcpActivityStore(activityStore);
+    context.subscriptions.push(debuggerBridge);
+
+    let mcpServer: McpHttpServer | undefined;
+    let mcpToken = '';
+    let mcpRunId = 0;
+
+    const getMcpSettings = () => {
+        const config = vscode.workspace.getConfiguration('minecraft-debugger.mcp');
+        return { enabled: config.get<boolean>('enabled', false), port: config.get<number>('port', 19180) };
+    };
+
+    const getOrCreateMcpToken = async (): Promise<string> => {
+        let token = await context.secrets.get(MCP_TOKEN_KEY);
+        if (!token) {
+            token = crypto.randomBytes(32).toString('hex');
+            await context.secrets.store(MCP_TOKEN_KEY, token);
+        }
+        return token;
+    };
+
+    const startOrStopMcp = async (): Promise<void> => {
+        const runId = ++mcpRunId;
+        const previous = mcpServer;
+        mcpServer = undefined;
+        await previous?.close().catch(() => undefined);
+        const { enabled, port } = getMcpSettings();
+        if (!enabled) {
+            activityStore.onServerState({ state: 'off', clientActive: false });
+            return;
+        }
+        try {
+            mcpToken = await getOrCreateMcpToken();
+            const server = await startMcpServer({ port, token: mcpToken, bridge: debuggerBridge, sink: activityStore });
+            if (runId !== mcpRunId) {
+                // a newer start/stop request superseded this one while it was starting
+                await server.close();
+                return;
+            }
+            mcpServer = server;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            activityStore.onServerState({ state: 'error', clientActive: false, message });
+            vscode.window.showWarningMessage(
+                `MCP server could not start on port ${port}: ${message}. Change 'minecraft-debugger.mcp.port'.`
+            );
+        }
+    };
+
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('minecraft-debugger.mcp')) {
+                startOrStopMcp();
+            }
+        }),
+        {
+            dispose: () => {
+                mcpRunId++;
+                mcpServer?.close();
+            },
+        }
+    );
+    startOrStopMcp();
 
     //
     // Command Registrations
@@ -102,13 +175,43 @@ export function activate(context: vscode.ExtensionContext): void {
         },
     );
 
+    const copyMcpConfigCommand = vscode.commands.registerCommand('minecraft-debugger.copyMcpConfig', async () => {
+        const { enabled, port } = getMcpSettings();
+        const token = await getOrCreateMcpToken();
+        await vscode.env.clipboard.writeText(
+            JSON.stringify(
+                { type: 'http', url: `http://127.0.0.1:${port}/mcp`, headers: { Authorization: `Bearer ${token}` } }, // eslint-disable-line @typescript-eslint/naming-convention
+                null,
+                2
+            )
+        );
+        if (enabled) {
+            vscode.window.showInformationMessage('MCP server config copied to clipboard.');
+        } else {
+            vscode.window.showWarningMessage(
+                "MCP server config copied to clipboard, but the server is disabled. Enable 'minecraft-debugger.mcp.enabled'."
+            );
+        }
+    });
+
+    const regenerateMcpTokenCommand = vscode.commands.registerCommand(
+        'minecraft-debugger.regenerateMcpToken',
+        async () => {
+            await context.secrets.store(MCP_TOKEN_KEY, crypto.randomBytes(32).toString('hex'));
+            await startOrStopMcp();
+            vscode.window.showInformationMessage('MCP token regenerated. Copy the MCP server config again.');
+        }
+    );
+
     // Add commands to the extension context
     context.subscriptions.push(
         getPortCommand,
         minecraftReloadCommand,
         runMinecraftCommand,
         liveDiagnosticsCommand,
-        replayDiagnosticsCommand
+        replayDiagnosticsCommand,
+        copyMcpConfigCommand,
+        regenerateMcpTokenCommand
     );
 
     //

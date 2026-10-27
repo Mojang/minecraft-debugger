@@ -20,6 +20,7 @@ export class MinecraftDiagnosticsPanel {
     private _statsCallback: StatsListener | undefined = undefined;
     private _eventEmitter: EventEmitter;
     private _debuggerRequestHandler: DebuggerRequestHandler;
+    private _onSetDiagnosticsTab: ((tabName: string, active: boolean) => void) | undefined;
 
     private constructor(
         panel: WebviewPanel,
@@ -87,6 +88,9 @@ export class MinecraftDiagnosticsPanel {
                 case 'sync-diagnostics-tabs':
                     this._eventEmitter.emit('sync-diagnostics-tabs', message.states);
                     break;
+                case 'diagnostics-tabs':
+                    this._eventEmitter.emit('diagnostics-tabs', message.tabs);
+                    break;
                 case 'export-data':
                     void this.handleExportDataMessage(message);
                     break;
@@ -142,6 +146,13 @@ export class MinecraftDiagnosticsPanel {
         };
 
         this._statsTracker.addStatListener(this._statsCallback);
+
+        // lets the MCP server toggle tabs of the live panel
+        if (!statsTracker.manualControl()) {
+            this._onSetDiagnosticsTab = (tabName, active) =>
+                this._panel.webview.postMessage({ type: 'set-diagnostics-tab', tabName, active });
+            this._eventEmitter.on('set-diagnostics-tab', this._onSetDiagnosticsTab);
+        }
     }
 
     private getDiagnosticsTabStates(): DiagnosticsTabStates {
@@ -249,6 +260,12 @@ export class MinecraftDiagnosticsPanel {
         if (this._statsCallback !== undefined) {
             this._statsTracker.removeStatListener(this._statsCallback);
             this._statsCallback = undefined;
+        }
+
+        if (this._onSetDiagnosticsTab !== undefined) {
+            this._eventEmitter.off('set-diagnostics-tab', this._onSetDiagnosticsTab);
+            this._onSetDiagnosticsTab = undefined;
+            this._eventEmitter.emit('diagnostics-tabs', undefined);
         }
 
         // Remove the current panel from the active panel list

@@ -2,6 +2,8 @@
 
 // TypeScript mirror of ScriptDiagnosticsDescriptor (C++) and its Cereal based wire format.
 
+export const SCRIPT_DIAGNOSTICS_STAT_GROUP = 'scripting_stats_root';
+
 export type DiagnosticsDataSource = 'server' | 'client' | 'server_script';
 
 export type DiagnosticsDisplayType =

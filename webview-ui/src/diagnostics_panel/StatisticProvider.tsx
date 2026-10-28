@@ -1,6 +1,8 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import type { StatisticPrefab } from './prefabs/StatisticPrefab';
+import type { DiagnosticsTabDescriptor } from '../../../src/diagnostics-schema';
+import { resolveScriptDiagnosticsUpdate } from '../../../src/stats/script-diagnostics';
 
 export interface StatisticUpdatedMessage {
     type: 'statistic-updated';
@@ -57,6 +59,19 @@ export class StatisticProvider {
     public unregisterWindowListener(window: Window) {
         if (this._eventListenerHandle) {
             window.removeEventListener('message', this._eventListenerHandle);
+        }
+    }
+}
+
+export class ScriptStatisticProvider extends StatisticProvider {
+    constructor(private descriptor: DiagnosticsTabDescriptor) {
+        super();
+    }
+
+    protected _handleEvent(event: StatisticUpdatedMessage) {
+        const update = resolveScriptDiagnosticsUpdate(this.descriptor, event);
+        if (update !== undefined) {
+            this._fireEvent(update);
         }
     }
 }
@@ -119,8 +134,7 @@ export class MultipleStatisticProvider extends StatisticProvider {
 
     protected _handleEvent(event: StatisticUpdatedMessage) {
         const statisticParentId =
-            typeof this.options.statisticParentId === 'object' &&
-            !(this.options.statisticParentId instanceof RegExp)
+            typeof this.options.statisticParentId === 'object' && !(this.options.statisticParentId instanceof RegExp)
                 ? this.options.statisticParentId.collectorName
                 : this.options.statisticParentId;
 

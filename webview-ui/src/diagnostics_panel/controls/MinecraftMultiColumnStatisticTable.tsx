@@ -1,7 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import { MultipleStatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
+import { StatisticProvider, StatisticUpdatedMessage } from '../StatisticProvider';
 import { StatisticResolver } from '../StatisticResolver';
 import {
     VSCodeDataGrid,
@@ -47,7 +47,7 @@ type NonConsolidatedColumnResolver = (event: StatisticUpdatedMessage, valueLabel
 
 type MinecraftMultiColumnStatisticTableProps = {
     title: string;
-    statisticDataProvider: MultipleStatisticProvider;
+    statisticDataProvider: StatisticProvider;
     statisticResolver: StatisticResolver;
     defaultSortOrder?: MinecraftMultiColumnStatisticTableSortOrder;
     defaultSortType?: MinecraftMultiColumnStatisticTableSortType;
@@ -62,6 +62,7 @@ type MinecraftMultiColumnStatisticTableProps = {
     nonConsolidatedColumnResolver?: NonConsolidatedColumnResolver; // Maps split events to target columns for non-consolidated streams
     valueFormatter?: (value: string | number, columnIndex: number) => string; // Optional custom display formatter for cell values
     showSearchBox?: boolean;
+    incrementalUpdates?: boolean;
 };
 
 const sortOrderOptions = [
@@ -149,7 +150,8 @@ export default function MinecraftMultiColumnStatisticTable({
     rowAction,
     nonConsolidatedColumnResolver,
     valueFormatter,
-    showSearchBox = false
+    showSearchBox = false,
+    incrementalUpdates = false,
 }: MinecraftMultiColumnStatisticTableProps): JSX.Element {
     // Memoize sort column options to prevent unnecessary recreations
     const sortColumnOptions = useMemo(
@@ -211,7 +213,7 @@ export default function MinecraftMultiColumnStatisticTable({
                 // preserve previous rows and merge in only the updated column.
                 const categoryMap = new Map<string, MultiColumnTrackedStat>();
 
-                if (!isConsolidatedDataEvent) {
+                if (!isConsolidatedDataEvent || incrementalUpdates) {
                     prevState.forEach(previousRow => {
                         categoryMap.set(previousRow.category, {
                             category: previousRow.category,
@@ -238,14 +240,24 @@ export default function MinecraftMultiColumnStatisticTable({
                 // For consolidated_data events with children_string_values, skip the statisticResolver
                 // and process the data directly since it's already in the correct format
                 if (isConsolidatedDataEvent) {
-                    processChildrenStringValues(
-                        event.children_string_values,
-                        categoryMap,
-                        valueLabels,
-                        prettifyNames,
-                        event.time || Date.now(),
-                        valueColumnIndex,
-                    );
+                    if (incrementalUpdates) {
+                        for (const [category, ...values] of event.children_string_values) {
+                            categoryMap.set(category, {
+                                category,
+                                values: values.slice(0, valueLabels.length),
+                                time: event.time,
+                            });
+                        }
+                    } else {
+                        processChildrenStringValues(
+                            event.children_string_values,
+                            categoryMap,
+                            valueLabels,
+                            prettifyNames,
+                            event.time || Date.now(),
+                            valueColumnIndex,
+                        );
+                    }
                 } else {
                     // Use the statisticResolver for other event types
                     const rawStats = statisticResolver(event, []);
@@ -373,19 +385,23 @@ export default function MinecraftMultiColumnStatisticTable({
         selectedSortColumn,
         valueLabels,
         prettifyNames,
+        incrementalUpdates,
+        nonConsolidatedColumnResolver,
     ]);
 
     const visibleData = showSearchBox
-        ? data.filter(dataPoint => matchesTableSearch(searchQuery, [
-              dataPoint.category,
-              ...dataPoint.values.map((value, index) =>
-                  valueFormatter
-                      ? valueFormatter(value, index)
-                      : typeof value === 'number'
-                        ? value.toFixed(1)
-                        : value,
-              ),
-          ]))
+        ? data.filter(dataPoint =>
+              matchesTableSearch(searchQuery, [
+                  dataPoint.category,
+                  ...dataPoint.values.map((value, index) =>
+                      valueFormatter
+                          ? valueFormatter(value, index)
+                          : typeof value === 'number'
+                            ? value.toFixed(1)
+                            : value,
+                  ),
+              ]),
+          )
         : data;
 
     return (

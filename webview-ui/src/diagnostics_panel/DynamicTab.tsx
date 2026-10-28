@@ -5,7 +5,12 @@
 // and renders the matching control — no new tab files needed for new diagnostics.
 
 import { useMemo } from 'react';
-import { SimpleStatisticProvider, MultipleStatisticProvider, StatisticProvider } from './StatisticProvider';
+import {
+    SimpleStatisticProvider,
+    MultipleStatisticProvider,
+    ScriptStatisticProvider,
+    StatisticProvider,
+} from './StatisticProvider';
 import { StatisticType, YAxisType, createStatResolver, StatisticResolver } from './StatisticResolver';
 import MinecraftStatisticLineChart from './controls/MinecraftStatisticLineChart';
 import MinecraftStatisticStackedLineChart from './controls/MinecraftStatisticStackedLineChart';
@@ -13,9 +18,7 @@ import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStac
 import MinecraftStatisticTable from './controls/MinecraftStatisticTable';
 import MinecraftMultiColumnStatisticTable from './controls/MinecraftMultiColumnStatisticTable';
 import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
-import { DiagnosticsTabDescriptor } from '../../../src/diagnostics-schema';
-
-const SCRIPT_DIAGNOSTICS_STAT_GROUP = 'scripting_stats_root';
+import { DiagnosticsTabDescriptor, SCRIPT_DIAGNOSTICS_STAT_GROUP } from '../../../src/diagnostics-schema';
 
 type DynamicTabProps = {
     descriptor: DiagnosticsTabDescriptor;
@@ -33,14 +36,7 @@ function buildProvider(
     const { data_source, display_type, stat_group_id, statistic_id, statistic_ids } = descriptor;
 
     if (stat_group_id === SCRIPT_DIAGNOSTICS_STAT_GROUP && statistic_id !== undefined) {
-        const viewPath = `${stat_group_id}_${statistic_id}`;
-        return new MultipleStatisticProvider({
-            statisticParentId: new RegExp(`^${viewPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
-            statisticIds:
-                display_type === 'table' || display_type === 'multi_column_table'
-                    ? ['consolidated_data']
-                    : statistic_ids,
-        });
+        return new ScriptStatisticProvider(descriptor);
     }
 
     // DynamicPropertiesTable has its own fixed provider shape

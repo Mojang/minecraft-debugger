@@ -11,6 +11,7 @@ import { MinecraftDiagnosticsPanel } from './panels/minecraft-diagnostics';
 import { ServerDebugAdapterFactory } from './server-debug-adapter-factory';
 import { StatsProvider } from './stats/stats-provider';
 import { ReplayStatsProvider } from './stats/replay-stats-provider';
+import { ProjectSettingsLoader } from './project-settings';
 
 // called when extension is activated
 //
@@ -18,8 +19,11 @@ export function activate(context: vscode.ExtensionContext): void {
     const liveStatsProvider = new StatsProvider('Live', 'minecraftDiagnosticsLive');
     const eventEmitter: EventEmitter = new EventEmitter();
 
+    const projectSettings = new ProjectSettingsLoader();
+    context.subscriptions.push(projectSettings);
+
     // home view
-    const homeViewProvider = new HomeViewProvider(context.extensionUri, eventEmitter);
+    const homeViewProvider = new HomeViewProvider(context.extensionUri, eventEmitter, projectSettings);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(HomeViewProvider.viewType, homeViewProvider));
 
     // register a configuration provider for the 'minecraft-js' debug type

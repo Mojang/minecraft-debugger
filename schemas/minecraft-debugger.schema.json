@@ -1,0 +1,29 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Minecraft Debugger project settings",
+    "type": "object",
+    "properties": {
+        "commandShortcutFiles": {
+            "type": "array",
+            "description": "Paths or globs, relative to this file's folder, of files holding more command shortcuts. A .json file holds an array of shortcuts or an object with commandShortcuts; any other file holds one command per line, ignoring blank lines and lines starting with #.",
+            "items": { "type": "string" }
+        },
+        "commandShortcuts": {
+            "type": "array",
+            "description": "Minecraft commands shown as shortcuts in the Minecraft Debugger home panel.",
+            "items": {
+                "oneOf": [
+                    { "type": "string", "description": "The command to run." },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "command": { "type": "string", "description": "The command to run." },
+                            "label": { "type": "string", "description": "Text shown instead of the command." }
+                        },
+                        "required": ["command"]
+                    }
+                ]
+            }
+        }
+    }
+}

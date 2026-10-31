@@ -65,6 +65,13 @@ const TREND_DURATION_OPTIONS: ReadonlyArray<TrendDurationOption> = [
     { label: '5 minutes', points: 500 },
     { label: '10 minutes', points: 1000 },
 ];
+const ECS_VERSIONS = {
+    baseline: 1, // Initial entity/system timings and entity filtering.
+    systemFiltering: 2, // Adds filtering by system.
+    entityDetails: 3, // Adds entity position/dimension details and row trends.
+    matrixCsvExport: 4, // Adds entity-system matrix CSV export.
+    serverProfiler: 5, // Adds server-side ECS profiling.
+} as const;
 
 const EXPORT_CSV_HEADERS = [
     'TimingUnit',
@@ -157,7 +164,7 @@ function buildEntitySystemMatrixCsvFileName(now: Date): string {
 }
 
 function getFilterSelectionModeTooltip(ecsVersion: number): string {
-    if (ecsVersion >= 2) {
+    if (ecsVersion >= ECS_VERSIONS.systemFiltering) {
         return (
             'Select Filtering Mode:\n' +
             '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
@@ -166,7 +173,7 @@ function getFilterSelectionModeTooltip(ecsVersion: number): string {
             '    This option has some performance benefits on the backend profiler versus multi select.\n' +
             '\u2022 "Filter By System" allows you to select specific systems and will only show the entities and entity timing values for those systems.'
         );
-    } else if (ecsVersion === 1) {
+    } else if (ecsVersion === ECS_VERSIONS.baseline) {
         return (
             'Select Filtering Mode:\n' +
             '\u2022 "No Filter" will display system and entity timings for all entities and systems.\n' +
@@ -365,7 +372,8 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
         const [selectedSingleEntityId, setSelectedSingleEntityId] = useState<string | undefined>(undefined);
         const [filteredEntityCount, setFilteredEntityCount] = useState<number | undefined>(undefined);
         const [filteredSystemCount, setFilteredSystemCount] = useState<number | undefined>(undefined);
-        const [ecsVersion, setECSVersion] = useState<number>(1);
+        const [ecsVersion, setECSVersion] = useState<number>(ECS_VERSIONS.baseline);
+        const [hasReceivedEcsVersion, setHasReceivedEcsVersion] = useState<boolean>(false);
         const [isStarted, setIsStarted] = useState<boolean>(false);
         const [trendDurationPoints, setTrendDurationPoints] = useState<number>(DEFAULT_TREND_DURATION_POINTS);
         const [isEntitySystemMatrixCsvExportPending, setIsEntitySystemMatrixCsvExportPending] =
@@ -634,9 +642,10 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                 return;
             }
 
-            if (lastResult?.response?.args) {
-                setECSVersion(lastResult.response.args as number);
-                console.log(`Received ECS version ${ecsVersion} from client`);
+            if (typeof lastResult?.response?.args === 'number') {
+                setECSVersion(lastResult.response.args);
+                setHasReceivedEcsVersion(true);
+                console.log(`Received ECS version ${lastResult.response.args} from client`);
             }
 
             setIsStarted(lastResult?.response?.success ?? false);
@@ -806,6 +815,26 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                             <DebuggerRequestResultBanner lastResult={lastResult} />
                         </div>
                         <h2>Entity System Profiler Controls</h2>
+                        {hasReceivedEcsVersion &&
+                            config.requestTarget === 'server' &&
+                            ecsVersion < ECS_VERSIONS.serverProfiler && (
+                            <div
+                                className="minecraft-debugger-request-result minecraft-debugger-request-result--error"
+                                role="status"
+                                style={{ margin: '5px' }}
+                            >
+                                <div className="minecraft-debugger-request-result__badge">Warning</div>
+                                <div className="minecraft-debugger-request-result__content">
+                                    <div className="minecraft-debugger-request-result__title">
+                                        Server ECS profiling requires ECS version 5 or later.
+                                        Note that these controls will be directed at the Client profiler instead.
+                                    </div>
+                                    <div className="minecraft-debugger-request-result__message">
+                                        Detected ECS version {ecsVersion}.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {DEBUGGER_REQUEST_COMMANDS.map(command => {
                             const inFlight = isDebuggerRequestInFlight(command.command);
                             return (
@@ -848,7 +877,7 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                                         <VSCodeOption value="filter-by-single-entity">
                                             Filter By Single Entity
                                         </VSCodeOption>
-                                        {ecsVersion >= 2 && (
+                                        {ecsVersion >= ECS_VERSIONS.systemFiltering && (
                                             <VSCodeOption value="filter-by-system">Filter By System</VSCodeOption>
                                         )}
                                     </VSCodeDropdown>
@@ -928,7 +957,7 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                                     <VSCodeButton onClick={() => exportTableData('system')} disabled={!isStarted}>
                                         Export System CSV
                                     </VSCodeButton>
-                                    {ecsVersion >= 4 && (
+                                    {ecsVersion >= ECS_VERSIONS.matrixCsvExport && (
                                         <VSCodeButton
                                             onClick={openEntitySystemMatrixCsvDialog}
                                             disabled={
@@ -1041,7 +1070,9 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                                     sparklineColumnIndex={0}
                                     sparklineTickRange={trendDurationPoints}
                                     sparklineValueFormatter={value => formatTimingValue(value, entityTimingUnit)}
-                                    rowDetailsRenderer={ecsVersion >= 3 ? renderEntityRowDetails : undefined}
+                                    rowDetailsRenderer={
+                                        ecsVersion >= ECS_VERSIONS.entityDetails ? renderEntityRowDetails : undefined
+                                    }
                                     valueFormatter={(value, columnIndex) => {
                                         // Timing column
                                         if (columnIndex === 0) {

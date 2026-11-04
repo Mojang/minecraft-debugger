@@ -33,6 +33,14 @@ import { CsvCellValue, TableCsvExporter } from '../../exporters/TableCsvExporter
 import { sendExportDataRequest } from '../../utilities/exportData';
 import { SparklineCell } from '../../controls/SparklineCell';
 
+export const ECS_VERSIONS = {
+    baseline: 1, // Initial entity/system timings and entity filtering.
+    systemFiltering: 2, // Adds filtering by system.
+    entityDetails: 3, // Adds entity position/dimension details and row trends.
+    matrixCsvExport: 4, // Adds entity-system matrix CSV export.
+    serverProfiler: 5, // Adds server-side ECS profiling.
+} as const;
+
 type DiagnosticsExportTableType = 'entity' | 'system';
 
 const START_ENTITY_SYSTEM_PROFILER_REQUEST = 'Start Entity System Profiler';
@@ -65,13 +73,6 @@ const TREND_DURATION_OPTIONS: ReadonlyArray<TrendDurationOption> = [
     { label: '5 minutes', points: 500 },
     { label: '10 minutes', points: 1000 },
 ];
-const ECS_VERSIONS = {
-    baseline: 1, // Initial entity/system timings and entity filtering.
-    systemFiltering: 2, // Adds filtering by system.
-    entityDetails: 3, // Adds entity position/dimension details and row trends.
-    matrixCsvExport: 4, // Adds entity-system matrix CSV export.
-    serverProfiler: 5, // Adds server-side ECS profiling.
-} as const;
 
 const EXPORT_CSV_HEADERS = [
     'TimingUnit',
@@ -350,6 +351,7 @@ interface EntitySystemsTabConfig {
     dataSource: TabPrefabDataSource.Client | TabPrefabDataSource.Server;
     requestTarget: 'client' | 'server';
     statGroupPrefix: (selectedClient: string) => string;
+    minSupportedVersion?: number;
 }
 
 export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefab {
@@ -635,6 +637,10 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand)
             : undefined;
+        const shouldShowVersionWarning =
+            hasReceivedEcsVersion &&
+            config.minSupportedVersion !== undefined &&
+            ecsVersion < config.minSupportedVersion;
         const entitySystemMatrixCsvResult = getDebuggerRequestResult(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST);
 
         useEffect(() => {
@@ -812,29 +818,25 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                 <div style={{ flexDirection: 'column', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, margin: '5px' }}>
                         <div style={{ marginTop: '20px' }}>
-                            <DebuggerRequestResultBanner lastResult={lastResult} />
-                        </div>
-                        <h2>Entity System Profiler Controls</h2>
-                        {hasReceivedEcsVersion &&
-                            config.requestTarget === 'server' &&
-                            ecsVersion < ECS_VERSIONS.serverProfiler && (
-                            <div
-                                className="minecraft-debugger-request-result minecraft-debugger-request-result--error"
-                                role="status"
-                                style={{ margin: '5px' }}
-                            >
-                                <div className="minecraft-debugger-request-result__badge">Warning</div>
-                                <div className="minecraft-debugger-request-result__content">
-                                    <div className="minecraft-debugger-request-result__title">
-                                        Server ECS profiling requires ECS version 5 or later.
-                                        Note that these controls will be directed at the Client profiler instead.
-                                    </div>
-                                    <div className="minecraft-debugger-request-result__message">
-                                        Detected ECS version {ecsVersion}.
+                            {shouldShowVersionWarning ? (
+                                <div
+                                    className="minecraft-debugger-request-result minecraft-debugger-request-result--error"
+                                    role="status"
+                                    style={{ margin: '5px' }}
+                                >
+                                    <div className="minecraft-debugger-request-result__badge">Warning</div>
+                                    <div className="minecraft-debugger-request-result__content">
+                                        <div className="minecraft-debugger-request-result__message">
+                                            The connected Minecraft game version doesn't support this feature. Controls
+                                            may not work properly.
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <DebuggerRequestResultBanner lastResult={lastResult} />
+                            )}
+                        </div>
+                        <h2>Entity System Profiler Controls</h2>
                         {DEBUGGER_REQUEST_COMMANDS.map(command => {
                             const inFlight = isDebuggerRequestInFlight(command.command);
                             return (

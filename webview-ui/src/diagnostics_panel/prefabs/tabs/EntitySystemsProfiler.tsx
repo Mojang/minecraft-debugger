@@ -638,10 +638,10 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
             ? getDebuggerRequestResult(lastRequestedCommand, config.requestTarget)
             : undefined;
-        const shouldShowVersionWarning =
-            hasReceivedEcsVersion &&
-            config.minSupportedVersion !== undefined &&
-            ecsVersion < config.minSupportedVersion;
+        const isOnSupportedEcsVersion =
+            !hasReceivedEcsVersion ||
+            config.minSupportedVersion === undefined ||
+            ecsVersion >= config.minSupportedVersion;
         const entitySystemMatrixCsvResult = getDebuggerRequestResult(
             REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST,
             config.requestTarget,
@@ -822,7 +822,7 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                 <div style={{ flexDirection: 'column', display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1, margin: '5px' }}>
                         <div style={{ marginTop: '20px' }}>
-                            {shouldShowVersionWarning ? (
+                            {!isOnSupportedEcsVersion ? (
                                 <div
                                     className="minecraft-debugger-request-result minecraft-debugger-request-result--error"
                                     role="status"
@@ -862,7 +862,7 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                                 </VSCodeButton>
                             );
                         })}
-                        {isStarted && (
+                        {isStarted && isOnSupportedEcsVersion && (
                             <div className="minecraft-entity-system-general-controls">
                                 <div className="dropdown-container">
                                     <label htmlFor="ecs-filter-mode" style={{ marginBottom: '5px' }}>
@@ -979,7 +979,7 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
                         )}
                     </div>
                 </div>
-                {isStarted && (
+                {isStarted && isOnSupportedEcsVersion && (
                     <div>
                         <div className="minecraft-entity-systems-tables-container">
                             <div className="minecraft-entity-systems-table-wrapper">

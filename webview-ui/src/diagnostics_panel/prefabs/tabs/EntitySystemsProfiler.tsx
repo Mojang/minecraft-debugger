@@ -20,6 +20,7 @@ import MinecraftGroupedStatisticTable, {
 } from '../../controls/MinecraftGroupedStatisticTable';
 import {
     DebuggerRequestResultMessage,
+    DebuggerRequestTarget,
     getDebuggerRequestResult,
     isDebuggerRequestInFlight,
     sendDebuggerRequest,
@@ -349,7 +350,7 @@ function resolveSystemCategoryGroupKey(fullName: string, systemCategoryLegendMap
 interface EntitySystemsTabConfig {
     name: string;
     dataSource: TabPrefabDataSource.Client | TabPrefabDataSource.Server;
-    requestTarget: 'client' | 'server';
+    requestTarget: DebuggerRequestTarget;
     statGroupPrefix: (selectedClient: string) => string;
     minSupportedVersion?: number;
 }
@@ -635,13 +636,16 @@ export function createEntitySystemsTab(config: EntitySystemsTabConfig): TabPrefa
         })();
 
         const lastResult: DebuggerRequestResultMessage | undefined = lastRequestedCommand
-            ? getDebuggerRequestResult(lastRequestedCommand)
+            ? getDebuggerRequestResult(lastRequestedCommand, config.requestTarget)
             : undefined;
         const shouldShowVersionWarning =
             hasReceivedEcsVersion &&
             config.minSupportedVersion !== undefined &&
             ecsVersion < config.minSupportedVersion;
-        const entitySystemMatrixCsvResult = getDebuggerRequestResult(REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST);
+        const entitySystemMatrixCsvResult = getDebuggerRequestResult(
+            REQUEST_CSV_ENTITY_SYSTEM_PROFILER_REQUEST,
+            config.requestTarget,
+        );
 
         useEffect(() => {
             if (lastRequestedCommand !== START_ENTITY_SYSTEM_PROFILER_REQUEST) {

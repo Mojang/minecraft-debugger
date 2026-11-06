@@ -13,7 +13,12 @@ export type DebuggerRequestResultMessage = {
     error?: string;
 };
 
-const InFlightDebuggerRequests = new Set<string>();
+export enum DebuggerRequestTarget {
+    Client = 'client',
+    Server = 'server',
+}
+
+const InFlightDebuggerRequests = new Map<string, DebuggerRequestTarget | undefined>();
 const DebuggerRequestResults = new Map<string, DebuggerRequestResultMessage>();
 const DebuggerRequestListeners = new Set<() => void>();
 
@@ -30,6 +35,17 @@ function subscribeToDebuggerRequestUpdates(listener: () => void): () => void {
     };
 }
 
+function getDebuggerRequestTarget(request: string, args: unknown): DebuggerRequestTarget | undefined{
+    if (typeof args === 'object' && args !== null && 'target' in args) {
+        if (args.target !== DebuggerRequestTarget.Client && args.target !== DebuggerRequestTarget.Server) {
+            console.warn(`Invalid target for debugger request '${request}':`, args.target);
+            return undefined;
+        }
+        return args.target;
+    }
+    return undefined;
+}
+
 // Sends a debugger request to the extension host.
 // Duplicate requests with the same `request` string are ignored if one is in-flight.
 export function sendDebuggerRequest(request: string, args?: unknown): void {
@@ -38,7 +54,8 @@ export function sendDebuggerRequest(request: string, args?: unknown): void {
         return;
     }
 
-    InFlightDebuggerRequests.add(request);
+    const target = getDebuggerRequestTarget(request, args);
+    InFlightDebuggerRequests.set(request, target);
     notifyDebuggerRequestListeners();
 
     vscode.postMessage({
@@ -53,14 +70,18 @@ export function isDebuggerRequestInFlight(request: string): boolean {
     return InFlightDebuggerRequests.has(request);
 }
 
-// Returns the latest result message for a given request key.
-export function getDebuggerRequestResult(request: string): DebuggerRequestResultMessage | undefined {
-    return DebuggerRequestResults.get(request);
+// Returns the latest result message for a given request and optional target.
+export function getDebuggerRequestResult(
+    request: string,
+    target?: DebuggerRequestTarget,
+): DebuggerRequestResultMessage | undefined {
+    return DebuggerRequestResults.get(JSON.stringify([request, target]));
 }
 
 // Accepts an incoming result message of type `debugger-request-result` and updates results.
 export function handleDebuggerRequestResult(message: DebuggerRequestResultMessage): void {
-    DebuggerRequestResults.set(message.request, message);
+    const target = InFlightDebuggerRequests.get(message.request);
+    DebuggerRequestResults.set(JSON.stringify([message.request, target]), message);
     InFlightDebuggerRequests.delete(message.request);
     notifyDebuggerRequestListeners();
 }

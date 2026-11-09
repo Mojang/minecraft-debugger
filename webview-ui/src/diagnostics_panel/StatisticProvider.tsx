@@ -3,7 +3,6 @@
 import type { StatisticPrefab } from './prefabs/StatisticPrefab';
 
 export interface StatisticUpdatedMessage {
-    type: 'statistic-updated';
     should_aggregate: boolean;
     values: number[];
     children_string_values: string[][];
@@ -27,8 +26,10 @@ export class StatisticProvider {
     }
 
     private _handleRawEvent(event: MessageEvent) {
-        if (event.data.type === 'statistic-updated') {
-            this._handleEvent(event.data as StatisticUpdatedMessage);
+        if (event.data.type === 'statistic-updated-batch' && Array.isArray(event.data.events)) {
+            for (const statisticEvent of event.data.events) {
+                this._handleEvent(statisticEvent as StatisticUpdatedMessage);
+            }
         }
     }
 

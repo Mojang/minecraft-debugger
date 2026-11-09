@@ -9,6 +9,7 @@ import { StatData, StatsListener, StatsProvider } from '../stats/stats-provider'
 import { DiagnosticsTabDescriptor } from '../diagnostics-schema';
 
 const DIAGNOSTICS_TAB_STATES_KEY = 'minecraftDiagnosticsTabStates';
+const STAT_MESSAGE_FLUSH_DELAY_MS = 16;
 type DiagnosticsTabStates = Record<string, boolean>;
 
 export class MinecraftDiagnosticsPanel {
@@ -18,6 +19,8 @@ export class MinecraftDiagnosticsPanel {
     private _disposables: Disposable[] = [];
     private _statsTracker: StatsProvider;
     private _statsCallback: StatsListener | undefined = undefined;
+    private _pendingStatMessages: Array<Record<string, unknown>> = [];
+    private _statFlushTimer: ReturnType<typeof setTimeout> | undefined;
     private _eventEmitter: EventEmitter;
     private _debuggerRequestHandler: DebuggerRequestHandler;
 
@@ -112,7 +115,7 @@ export class MinecraftDiagnosticsPanel {
                         time: stat.tick,
                         group_full_id: stat.parent_full_id,
                     };
-                    this._panel.webview.postMessage(message);
+                    this.queueStatMessage(message);
                 }
             },
             onSpeedUpdated: (speed: number) => {
@@ -142,6 +145,25 @@ export class MinecraftDiagnosticsPanel {
         };
 
         this._statsTracker.addStatListener(this._statsCallback);
+    }
+
+    private queueStatMessage(message: Record<string, unknown>): void {
+        this._pendingStatMessages.push(message);
+
+        if (this._statFlushTimer === undefined) {
+            this._statFlushTimer = setTimeout(() => this.flushStatMessages(), STAT_MESSAGE_FLUSH_DELAY_MS);
+        }
+    }
+
+    private flushStatMessages(): void {
+        this._statFlushTimer = undefined;
+        if (this._pendingStatMessages.length === 0) {
+            return;
+        }
+
+        const events = this._pendingStatMessages;
+        this._pendingStatMessages = [];
+        this._panel.webview.postMessage({ type: 'statistic-updated-batch', events });
     }
 
     private getDiagnosticsTabStates(): DiagnosticsTabStates {
@@ -250,6 +272,12 @@ export class MinecraftDiagnosticsPanel {
             this._statsTracker.removeStatListener(this._statsCallback);
             this._statsCallback = undefined;
         }
+
+        if (this._statFlushTimer !== undefined) {
+            clearTimeout(this._statFlushTimer);
+            this._statFlushTimer = undefined;
+        }
+        this._pendingStatMessages = [];
 
         // Remove the current panel from the active panel list
         MinecraftDiagnosticsPanel.activeDiagnosticsPanels = MinecraftDiagnosticsPanel.activeDiagnosticsPanels.filter(

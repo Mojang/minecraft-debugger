@@ -24,7 +24,7 @@ const sortedTabPrefabs = [...tabPrefabs].sort((a, b) => a.name.localeCompare(b.n
 // A tab entry is either a hardcoded prefab or a dynamic descriptor received from the game.
 type MergedTab =
     | { kind: 'prefab'; name: string; tab: TabPrefab; collectorNames: string[] }
-    | { kind: 'dynamic'; name: string; descriptor: DiagnosticsTabDescriptor; collectorNames: string[] };
+    | { kind: 'dynamic'; name: string; descriptors: DiagnosticsTabDescriptor[]; collectorNames: string[] };
 
 declare global {
     interface Window {
@@ -118,20 +118,24 @@ function App() {
         }));
         for (const descriptor of schema) {
             const existingIndex = merged.findIndex(t => t.name === descriptor.name);
-            if (existingIndex !== -1) {
-                merged[existingIndex] = {
+            const existingTab = merged[existingIndex];
+            if (existingTab?.kind === 'dynamic') {
+                existingTab.descriptors.push(descriptor);
+                if (!existingTab.collectorNames.includes(descriptor.stat_group_id)) {
+                    existingTab.collectorNames.push(descriptor.stat_group_id);
+                }
+            } else {
+                const dynamicTab: MergedTab = {
                     kind: 'dynamic' as const,
                     name: descriptor.name,
-                    descriptor,
+                    descriptors: [descriptor],
                     collectorNames: [descriptor.stat_group_id],
                 };
-            } else {
-                merged.push({
-                    kind: 'dynamic' as const,
-                    name: descriptor.name,
-                    descriptor,
-                    collectorNames: [descriptor.stat_group_id],
-                });
+                if (existingIndex !== -1) {
+                    merged[existingIndex] = dynamicTab;
+                } else {
+                    merged.push(dynamicTab);
+                }
             }
         }
         merged.sort((a, b) => a.name.localeCompare(b.name));
@@ -253,30 +257,31 @@ function App() {
                                         />
                                     </>
                                 ) : (
-                                    !tab.descriptor.is_empty_tab && (
-                                        <>
-                                            {tab.descriptor.data_source === 'client' && (
-                                                <StatGroupSelectionBox
-                                                    labelName="Client"
-                                                    statParentId="client_stats"
-                                                    onChange={handleClientSelection}
-                                                    helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
-                                                />
-                                            )}
-                                            {tab.descriptor.data_source === 'server_script' && (
-                                                <StatGroupSelectionBox
-                                                    labelName="Script Plugin"
-                                                    statParentId="handle_counts"
-                                                    onChange={handlePluginSelection}
-                                                />
-                                            )}
+                                    <>
+                                        {tab.descriptors.some(descriptor => !descriptor.is_empty_tab && descriptor.data_source === 'client') && (
+                                            <StatGroupSelectionBox
+                                                labelName="Client"
+                                                statParentId="client_stats"
+                                                onChange={handleClientSelection}
+                                                helpTooltip={CLIENT_SELECTION_HELP_TOOLTIP}
+                                            />
+                                        )}
+                                        {tab.descriptors.some(descriptor => !descriptor.is_empty_tab && descriptor.data_source === 'server_script') && (
+                                            <StatGroupSelectionBox
+                                                labelName="Script Plugin"
+                                                statParentId="handle_counts"
+                                                onChange={handlePluginSelection}
+                                            />
+                                        )}
+                                        {tab.descriptors.map((descriptor, index) => !descriptor.is_empty_tab && (
                                             <DynamicTab
-                                                descriptor={tab.descriptor}
+                                                key={`${descriptor.stat_group_id}-${index}`}
+                                                descriptor={descriptor}
                                                 selectedClient={selectedClient}
                                                 selectedPlugin={selectedPlugin}
                                             />
-                                        </>
-                                    )
+                                        ))}
+                                    </>
                                 )
                             ) : (
                                 <div className="diagnostics-tab-disabled">

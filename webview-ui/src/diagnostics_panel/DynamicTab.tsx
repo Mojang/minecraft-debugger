@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import {
     SimpleStatisticProvider,
     MultipleStatisticProvider,
+    ScriptStatisticProvider,
     StatisticProvider,
 } from './StatisticProvider';
 import { StatisticType, YAxisType, createStatResolver, StatisticResolver } from './StatisticResolver';
@@ -17,7 +18,7 @@ import MinecraftStatisticStackedBarChart from './controls/MinecraftStatisticStac
 import MinecraftStatisticTable from './controls/MinecraftStatisticTable';
 import MinecraftMultiColumnStatisticTable from './controls/MinecraftMultiColumnStatisticTable';
 import { MinecraftDynamicPropertiesTable } from './controls/MinecraftDynamicPropertiesTable';
-import { DiagnosticsTabDescriptor } from '../../../src/diagnostics-schema';
+import { DiagnosticsTabDescriptor, SCRIPT_DIAGNOSTICS_STAT_GROUP } from '../../../src/diagnostics-schema';
 
 type DynamicTabProps = {
     descriptor: DiagnosticsTabDescriptor;
@@ -30,9 +31,13 @@ type DynamicTabProps = {
 function buildProvider(
     descriptor: DiagnosticsTabDescriptor,
     selectedClient: string,
-    _selectedPlugin: string
+    _selectedPlugin: string,
 ): StatisticProvider {
     const { data_source, display_type, stat_group_id, statistic_id, statistic_ids } = descriptor;
+
+    if (stat_group_id === SCRIPT_DIAGNOSTICS_STAT_GROUP && statistic_id !== undefined) {
+        return new ScriptStatisticProvider(descriptor);
+    }
 
     // DynamicPropertiesTable has its own fixed provider shape
     if (display_type === 'dynamic_properties_table') {
@@ -46,9 +51,7 @@ function buildProvider(
     if (display_type === 'line_chart') {
         const effectiveStatId = statistic_id ?? stat_group_id;
         const parentId: string | RegExp =
-            data_source === 'client'
-                ? new RegExp(`.*${selectedClient}_${stat_group_id}`)
-                : stat_group_id;
+            data_source === 'client' ? new RegExp(`.*${selectedClient}_${stat_group_id}`) : stat_group_id;
         return new SimpleStatisticProvider({
             statisticId: effectiveStatId,
             statisticParentId: parentId,
@@ -57,9 +60,7 @@ function buildProvider(
 
     // All other chart/table types use MultipleStatisticProvider
     const parentId: string | RegExp =
-        data_source === 'client'
-            ? new RegExp(`.*${selectedClient}_${stat_group_id}`)
-            : stat_group_id;
+        data_source === 'client' ? new RegExp(`.*${selectedClient}_${stat_group_id}`) : stat_group_id;
 
     return new MultipleStatisticProvider({
         statisticParentId: parentId,
@@ -80,19 +81,24 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
     const title = descriptor.title ?? descriptor.name;
     const yLabel = descriptor.y_label ?? '';
     const tickRange = descriptor.tick_range ?? 20 * 10;
+    const isScriptView = descriptor.stat_group_id === SCRIPT_DIAGNOSTICS_STAT_GROUP;
 
     // Memoize provider and resolver so controls' useEffect deps remain stable across renders.
     const provider = useMemo(
         () => buildProvider(descriptor, selectedClient, selectedPlugin),
         // re-create only when the identity of the tab or the selected client/plugin changes
-        [descriptor.stat_group_id, descriptor.data_source, descriptor.display_type,
-         descriptor.statistic_id, descriptor.statistic_ids?.join(','), selectedClient, selectedPlugin]
+        [
+            descriptor.stat_group_id,
+            descriptor.data_source,
+            descriptor.display_type,
+            descriptor.statistic_id,
+            descriptor.statistic_ids?.join(','),
+            selectedClient,
+            selectedPlugin,
+        ],
     );
 
-    const resolver = useMemo(
-        () => buildResolver(descriptor),
-        [descriptor.tick_range, descriptor.value_scalar]
-    );
+    const resolver = useMemo(() => buildResolver(descriptor), [descriptor.tick_range, descriptor.value_scalar]);
 
     switch (descriptor.display_type) {
         case 'line_chart':
@@ -132,6 +138,19 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
             );
 
         case 'table':
+            if (isScriptView) {
+                return (
+                    <MinecraftMultiColumnStatisticTable
+                        title={title}
+                        keyLabel={descriptor.key_label ?? 'Name'}
+                        valueLabels={descriptor.value_labels?.slice(0, 1) ?? ['Value']}
+                        statisticDataProvider={provider}
+                        statisticResolver={resolver}
+                        showSearchBox={descriptor.show_search_box}
+                        incrementalUpdates={true}
+                    />
+                );
+            }
             return (
                 <MinecraftStatisticTable
                     title={title}
@@ -149,18 +168,15 @@ export default function DynamicTab({ descriptor, selectedClient, selectedPlugin 
                     title={title}
                     keyLabel={descriptor.key_label ?? 'Name'}
                     valueLabels={descriptor.value_labels ?? ['Value']}
-                    statisticDataProvider={provider as MultipleStatisticProvider}
+                    statisticDataProvider={provider}
                     statisticResolver={resolver}
                     showSearchBox={descriptor.show_search_box}
+                    incrementalUpdates={isScriptView}
                 />
             );
 
         case 'dynamic_properties_table':
-            return (
-                <MinecraftDynamicPropertiesTable
-                    statisticDataProviders={provider}
-                />
-            );
+            return <MinecraftDynamicPropertiesTable statisticDataProviders={provider} />;
 
         default:
             return <div>Unsupported display type: {descriptor.display_type}</div>;

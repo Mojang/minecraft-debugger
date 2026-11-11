@@ -15,8 +15,6 @@ import clientMemoryTab from './tabs/ClientMemory';
 import clientEntitySystemTab from './tabs/ClientEntitySystems';
 import clientProfilerScopesTab from './tabs/ClientCPUProfiler';
 
-import editorNetworkStatsTab from './tabs/EditorNetworkStats';
-
 export default [
     worldTab,
     serverMemoryTab,
@@ -31,5 +29,4 @@ export default [
     clientEntitySystemTab,
     clientProfilerScopesTab,
     dynamicPropertyTab,
-    editorNetworkStatsTab,
 ];

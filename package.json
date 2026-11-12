@@ -30,6 +30,7 @@
     "private": true,
     "activationEvents": [
         "onDebug",
+        "onStartupFinished",
         "onCommand:extension.minecraft-js.getPort"
     ],
     "main": "./dist/extension.js",
@@ -69,6 +70,14 @@
                 "command": "minecraft-debugger.runMinecraftCommand",
                 "enablement": "inDebugMode",
                 "title": "Minecraft Run Command"
+            },
+            {
+                "command": "minecraft-debugger.copyMcpConfig",
+                "title": "Minecraft Debugger: Copy MCP Server Config"
+            },
+            {
+                "command": "minecraft-debugger.regenerateMcpToken",
+                "title": "Minecraft Debugger: Regenerate MCP Token"
             }
         ],
         "keybindings": [
@@ -197,6 +206,18 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Open the diagnostics view on connection to Minecraft."
+                },
+                "minecraft-debugger.mcp.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Host a local Model Context Protocol (MCP) server that lets MCP clients inspect and control the Minecraft debug session. Enable it per workspace: every VS Code window with it enabled tries to bind the same port."
+                },
+                "minecraft-debugger.mcp.port": {
+                    "type": "number",
+                    "default": 19180,
+                    "minimum": 1024,
+                    "maximum": 65535,
+                    "description": "Port for the local MCP server. Must differ from the Minecraft debug port (19144)."
                 }
             }
         }
@@ -221,6 +242,7 @@
         "package:all": "npm run build:webview && npm run check-types && node esbuild.mjs --production"
     },
     "devDependencies": {
+        "@modelcontextprotocol/sdk": "^1.32.1",
         "@semantic-release/changelog": "^6.0.3",
         "@semantic-release/git": "^10.0.1",
         "@types/node": "^24.12.4",
@@ -241,6 +263,7 @@
         "stream-parser": "^0.3.1",
         "ts-loader": "^9.5.1",
         "typescript": "^5.5.4",
-        "vitest": "^2.1.9"
+        "vitest": "^2.1.9",
+        "zod": "^4.6.5"
     }
 }

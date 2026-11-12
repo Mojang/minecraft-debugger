@@ -6,6 +6,7 @@ import { CommandButton, CommandHandlers, getCommandHandlers } from './handlers/C
 import GeneralSection from './controls/GeneralSection';
 import ProfilerSection from './controls/ProfilerSection';
 import { CaptureItem, ProfilerHandlers, getProfilerHandlers } from './handlers/ProfilerHandlers';
+import McpSection, { ActivityEntry, McpServerState } from './controls/McpSection';
 import StatusSection from './controls/StatusSection';
 import { WebviewApi } from 'vscode-webview';
 import './App.css';
@@ -37,11 +38,22 @@ const onCaptureBasePathBrowseButtonPressed = () => {
     vscode.postMessage({ type: 'browse-captures-base-path' });
 };
 
+const onCopyMcpConfig = () => {
+    vscode.postMessage({ type: 'copy-mcp-config' });
+};
+
+const onShowMcpSettings = () => {
+    vscode.postMessage({ type: 'show-mcp-settings' });
+};
+
 const App = () => {
     const [debuggerConnected, setDebuggerConnected] = useState<boolean>(false);
     const [debuggerListening, setDebuggerListening] = useState<boolean>(false);
     const [supportsCommands, setSupportsCommands] = useState<boolean>(false);
     const [supportsProfiler, setSupportsProfiler] = useState<boolean>(false);
+
+    const [mcpEntries, setMcpEntries] = useState<ActivityEntry[]>([]);
+    const [mcpState, setMcpState] = useState<McpServerState>({ state: 'off', clientActive: false });
 
     const { commandButtons, setCommandButtons, onAddCommand, onDeleteCommand, onEditCommand }: CommandHandlers =
         getCommandHandlers();
@@ -87,6 +99,7 @@ const App = () => {
     // events from vscode
     useEffect(() => {
         vscode.postMessage({ type: 'request-debugger-status' });
+        vscode.postMessage({ type: 'request-mcp-status' });
 
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
@@ -108,6 +121,19 @@ const App = () => {
                 setDebuggerListening(message.isListening);
                 setSupportsCommands(message.supportsCommands);
                 setSupportsProfiler(message.supportsProfiler);
+            } else if (message.type === 'mcp-replay') {
+                // store sends entries oldest-first; reverse for newest-first display
+                setMcpEntries([...(message.entries as ActivityEntry[])].reverse().slice(0, 200));
+                setMcpState(message.state);
+            } else if (message.type === 'mcp-activity') {
+                const entry = message.entry as ActivityEntry;
+                setMcpEntries(prev =>
+                    prev.some(e => e.id === entry.id)
+                        ? prev.map(e => (e.id === entry.id ? entry : e))
+                        : [entry, ...prev].slice(0, 200),
+                );
+            } else if (message.type === 'mcp-state') {
+                setMcpState(message.state);
             }
         };
 
@@ -150,6 +176,12 @@ const App = () => {
                 isProfilerCapturing={isProfilerCapturing}
                 supportsProfiler={supportsProfiler}
                 debuggerConnected={debuggerConnected}
+            />
+            <McpSection
+                entries={mcpEntries}
+                serverState={mcpState}
+                onCopyConfig={onCopyMcpConfig}
+                onShowSettings={onShowMcpSettings}
             />
         </main>
     );

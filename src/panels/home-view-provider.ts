@@ -7,6 +7,7 @@ import { getNonce } from '../utilities/getNonce';
 import { getUri } from '../utilities/getUri';
 import { EventEmitter } from 'stream';
 import { MinecraftCapabilities } from '../session';
+import { ActivityStore } from '../mcp/activity-store';
 
 export class HomeViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'minecraft-debugger-home-panel';
@@ -14,6 +15,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     private readonly _extensionUri: vscode.Uri;
     private _eventEmitter: EventEmitter;
     private _view?: vscode.WebviewView;
+    private _mcpActivityStore?: ActivityStore;
 
     constructor(extensionUri: vscode.Uri, eventEmitter: EventEmitter) {
         this._extensionUri = extensionUri;
@@ -32,6 +34,12 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
             supportsCommands: minecraftCapabilities.supportsCommands,
             supportsProfiler: minecraftCapabilities.supportsProfiler,
         });
+        this._eventEmitter.emit('debugger-status', isConnected, minecraftCapabilities, isListening);
+    }
+
+    public setMcpActivityStore(store: ActivityStore): void {
+        this._mcpActivityStore = store;
+        store.onChange(msg => this._view?.webview.postMessage(msg));
     }
 
     private _requestDebuggerStatus() {
@@ -93,6 +101,20 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                 }
                 case 'request-debugger-status': {
                     this._requestDebuggerStatus();
+                    break;
+                }
+                case 'request-mcp-status': {
+                    if (this._mcpActivityStore) {
+                        this._view?.webview.postMessage({ type: 'mcp-replay', ...this._mcpActivityStore.snapshot() });
+                    }
+                    break;
+                }
+                case 'copy-mcp-config': {
+                    vscode.commands.executeCommand('minecraft-debugger.copyMcpConfig');
+                    break;
+                }
+                case 'show-mcp-settings': {
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'minecraft-debugger.mcp');
                     break;
                 }
                 case 'browse-captures-base-path': {

@@ -197,3 +197,38 @@
 .capture-item-delete-button:hover {
     color: var(--vscode-errorForeground);
 }
+
+.mcp-status {
+    margin-bottom: 10px;
+}
+
+.mcp-button-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.mcp-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--vscode-editorGroup-border);
+    width: 90%;
+    text-align: left;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.mcp-entry {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--vscode-editorGroup-border);
+    overflow-wrap: anywhere;
+}
+
+.mcp-entry-error {
+    color: var(--vscode-errorForeground);
+}
+
+.mcp-entry-detail {
+    opacity: 0.7;
+    font-size: 0.9em;
+}

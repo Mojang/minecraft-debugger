@@ -34,29 +34,35 @@ export function StatGroupSelectionBox({ labelName, statParentId, onChange, helpT
 
     //draws chart
     useEffect(() => {
-        const eventHandler = (e: MessageEvent): void => {
-            // Object containing type prop and value prop
-            const msg: MessageEvent = e;
-
-            switch (msg.data.type) {
-                case 'statistic-updated': {
-                    if (msg.data.group !== statParentId) {
-                        return;
+        const handleStatistic = (statistic: {
+            group: string;
+            id: string;
+            name: string;
+        }): void => {
+            if (statistic.group !== statParentId) {
+                return;
+            }
+            // Add it to the list
+            setGroup(prevState => {
+                const isNewGroup = !prevState || prevState.findIndex(x => x.id === statistic.id) === -1;
+                if (isNewGroup) {
+                    // auto select the first group we get if nothing selected
+                    if (!selectedGroupId) {
+                        setSelectedGroupId(statistic.id);
                     }
-                    // Add it to the list
-                    setGroup(prevState => {
-                        const isNewGroup = !prevState || prevState.findIndex(x => x.id === msg.data.id) === -1;
-                        if (isNewGroup) {
-                            // auto select the first group we get if nothing selected
-                            if (!selectedGroupId) {
-                                setSelectedGroupId(msg.data.id);
-                            }
-                            // add new group to end of list
-                            const newState = [...(prevState ?? []), { id: msg.data.id, name: msg.data.name }];
-                            return newState;
-                        }
-                        return prevState;
-                    });
+                    // add new group to end of list
+                    const newState = [...(prevState ?? []), { id: statistic.id, name: statistic.name }];
+                    return newState;
+                }
+                return prevState;
+            });
+        };
+
+        const eventHandler = (e: MessageEvent): void => {
+            const message = e.data;
+            if (message.type === 'statistic-updated-batch' && Array.isArray(message.events)) {
+                for (const statistic of message.events) {
+                    handleStatistic(statistic);
                 }
             }
         };

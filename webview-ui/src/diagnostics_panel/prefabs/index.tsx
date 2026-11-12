@@ -8,6 +8,7 @@ import dynamicPropertyTab from './tabs/DynamicProperties';
 
 import serverScriptHandleCountsTab from './tabs/ServerScriptHandleCounts';
 import serverScriptSubscriberCountsTab from './tabs/ServerScriptSubscriberCounts';
+import serverEntitySystemTab from './tabs/ServerEntitySystems';
 
 import clientTimingTab from './tabs/ClientTiming';
 import clientMemoryTab from './tabs/ClientMemory';
@@ -24,6 +25,7 @@ export default [
     serverBandwidthTab,
     serverScriptHandleCountsTab,
     serverScriptSubscriberCountsTab,
+    serverEntitySystemTab,
     clientTimingTab,
     clientMemoryTab,
     clientEntitySystemTab,

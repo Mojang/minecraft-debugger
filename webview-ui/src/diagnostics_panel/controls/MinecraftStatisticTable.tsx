@@ -9,7 +9,9 @@ import {
     VSCodeDataGridCell,
     VSCodeDropdown,
     VSCodeOption,
+    VSCodeTextField,
 } from '@vscode/webview-ui-toolkit/react';
+import { matchesTableSearch } from '../../../../src/table-search';
 
 export enum MinecraftStatisticTableSortOrder {
     Ascending,
@@ -30,6 +32,7 @@ type MinecraftStatisticTableProps = {
 
     keyLabel: string;
     valueLabel: string;
+    showSearchBox?: boolean;
 };
 
 const sortOrderOptions = [
@@ -50,9 +53,11 @@ export default function MinecraftStatisticTable({
     defaultSortType = MinecraftStatisticTableSortType.Numerical,
     keyLabel,
     valueLabel,
+    showSearchBox = false,
 }: MinecraftStatisticTableProps): JSX.Element {
     // states
     const [data, setData] = useState<TrackedStat[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [selectedSortOrder, setSelectedSortOrder] = useState<MinecraftStatisticTableSortOrder>(defaultSortOrder);
     const [selectedSortType, setSelectedSortType] = useState<MinecraftStatisticTableSortType>(defaultSortType);
@@ -115,9 +120,25 @@ export default function MinecraftStatisticTable({
         };
     }, [statisticDataProvider, selectedSortOrder, selectedSortType]);
 
+    const visibleData = showSearchBox
+        ? data.filter(dataPoint => matchesTableSearch(searchQuery, [
+              dataPoint.category ?? '',
+              dataPoint.absoluteValue.toFixed(1),
+          ]))
+        : data;
+
     return (
         <div>
             <h2>{title}</h2>
+            {showSearchBox && (
+                <VSCodeTextField
+                    value={searchQuery}
+                    placeholder="Search table"
+                    onInput={event => setSearchQuery((event.target as HTMLInputElement).value)}
+                >
+                    Search
+                </VSCodeTextField>
+            )}
             <div className="minecraft-statistic-table-container">
                 <div className="minecraft-statistic-table-sort-container">
                     <label htmlFor="sort-order">Sort Order</label>
@@ -154,7 +175,7 @@ export default function MinecraftStatisticTable({
                         {valueLabel}
                     </VSCodeDataGridCell>
                 </VSCodeDataGridRow>
-                {data.map(dataPoint => (
+                {visibleData.map(dataPoint => (
                     <VSCodeDataGridRow key={dataPoint.category}>
                         <VSCodeDataGridCell gridColumn="1">{dataPoint.category}</VSCodeDataGridCell>
                         <VSCodeDataGridCell gridColumn="2">{dataPoint.absoluteValue.toFixed(1)}</VSCodeDataGridCell>

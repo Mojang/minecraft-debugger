@@ -9,6 +9,7 @@ const statsTab: TabPrefab = {
         return (
             <div>
                 <MinecraftDynamicPropertiesTable
+                    showSearchBox={true}
                     statisticDataProviders={
                         new SimpleStatisticProvider({
                             statisticParentId: /dynamic_property_values*/,

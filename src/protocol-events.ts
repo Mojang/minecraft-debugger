@@ -36,7 +36,7 @@ export enum ProtocolVersion {
 export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportDiagnosticsSetActive;
 
 // -------------------------------------------------------------------------
-// Interfaces for event message payloads (received from the debugee)
+// Interfaces for event message payloads (received from the debuggee)
 // -------------------------------------------------------------------------
 export enum IncomingEventType {
     Stopped = 'StoppedEvent',
@@ -122,7 +122,7 @@ export type IncomingDebuggeeMessage =
 
 
 // -------------------------------------------------------------------------
-// Interfaces for outbound message payloads (sent to the debugee)
+// Interfaces for outbound message payloads (sent to the debuggee)
 // -------------------------------------------------------------------------
 export enum OutgoingEventType {
     Protocol = 'protocol',

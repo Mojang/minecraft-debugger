@@ -4,9 +4,15 @@ import React from 'react';
 import { VSCodeButton, VSCodeTextField } from '@vscode/webview-ui-toolkit/react';
 import { CommandButton } from '../handlers/CommandHandlers';
 
+export interface ProjectCommand {
+    label?: string;
+    command: string;
+}
+
 interface CommandSectionProps {
     debuggerConnected: boolean;
     supportsCommands: boolean;
+    projectCommands: ProjectCommand[];
     commandButtons: CommandButton[];
     onAddCommand: () => void;
     onEditCommand: (id: string, event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -17,6 +23,7 @@ interface CommandSectionProps {
 const CommandSection: React.FC<CommandSectionProps> = ({
     debuggerConnected,
     supportsCommands,
+    projectCommands,
     commandButtons,
     onAddCommand,
     onEditCommand,
@@ -26,6 +33,19 @@ const CommandSection: React.FC<CommandSectionProps> = ({
     return (
         <div className="section">
             <h3 className="title">Minecraft Command Shortcuts</h3>
+            {projectCommands.length > 0 && <h4 className="sub-title">From project (minecraft-debugger.json)</h4>}
+            {projectCommands.map((projectCommand, index) => (
+                <div key={index} className="command-container">
+                    <span className="command-input">{projectCommand.label ?? projectCommand.command}</span>
+                    <VSCodeButton
+                        className="command-run-button"
+                        onClick={() => onRunCommand(projectCommand.command)}
+                        disabled={!debuggerConnected || !supportsCommands}
+                    >
+                        Run
+                    </VSCodeButton>
+                </div>
+            ))}
             <VSCodeButton className="standard-button" onClick={onAddCommand}>
                 Add Command Shortcut
             </VSCodeButton>

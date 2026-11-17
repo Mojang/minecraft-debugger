@@ -340,8 +340,13 @@ export class Session extends DebugSession implements IDebuggeeMessageSender {
 
     // MC has sent the profiler capture results to the debugger
     private async handleProfilerCapture(profilerCapture: ProfilerCapture) {
+        if (!profilerCapture.should_write_to_disk) {
+            this._eventEmitter.emit('new-profiler-capture', profilerCapture.capture_base_path, profilerCapture.capture_file_name);
+            return;
+        }
+
         const formattedDate = new Date().toISOString().replace(/:/g, '-');
-        const newCaptureFileNameJS = `Capture_${formattedDate}_JS.cpuprofile`;
+        const newCaptureFileNameJS = profilerCapture.capture_file_name !== undefined && profilerCapture.capture_file_name.length > 0 ? profilerCapture.capture_file_name : `Capture_${formattedDate}_JS.cpuprofile`;
         const captureFullPathJS = path.join(profilerCapture.capture_base_path, newCaptureFileNameJS);
 
         const jsFileCreated = this.writeProfilerCaptureToFile(

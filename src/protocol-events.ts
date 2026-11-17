@@ -31,9 +31,10 @@ export enum ProtocolVersion {
     SupportNativeDescriptors = 9,
     SupportEmptyTabs = 10,
     SupportDiagnosticsSetActive = 11,
+    SupportProfilerCaptureNotification = 12,
 }
 
-export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportDiagnosticsSetActive;
+export const DEBUGGER_PROTOCOL_VERSION = ProtocolVersion.SupportProfilerCaptureNotification;
 
 // -------------------------------------------------------------------------
 // Interfaces for event message payloads (received from the debuggee)
@@ -65,7 +66,9 @@ export interface ProtocolCapabilities {
 export interface ProfilerCapture {
     type: IncomingEventType.ProfilerCapture;
     capture_base_path: string;
+    capture_file_name: string;
     capture_data: string;
+    should_write_to_disk: boolean;
 }
 
 export interface StoppedEventMessage {

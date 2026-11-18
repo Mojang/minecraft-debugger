@@ -180,6 +180,7 @@ Add shortcuts for your favorite Minecraft commands.
 
 ##### Script Profiler
 After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create performance captures of your actively running add-on.
+While the home panel is visible, the Captures list automatically updates when `.cpuprofile` files are added to or removed from the selected folder, including changes made outside VS Code.
 
 #### Diagnostics Window
 When attatched to a game server running Minecraft 1.21.10 or above, the debugger can display high level statistics to help diagnose performance issues.

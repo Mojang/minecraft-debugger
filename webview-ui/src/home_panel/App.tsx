@@ -100,6 +100,8 @@ const App = () => {
                 if (message.newCaptureFileName) {
                     setSelectedCaptureItem({ fileName: message.newCaptureFileName });
                 }
+            } else if (message.type === 'capture-files-refresh-failed') {
+                setCaptureItems([]);
             } else if (message.type === 'debugger-status') {
                 if (!message.isConnected) {
                     setProfilerCapturing(false);

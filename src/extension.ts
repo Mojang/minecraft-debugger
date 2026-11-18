@@ -20,7 +20,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // home view
     const homeViewProvider = new HomeViewProvider(context.extensionUri, eventEmitter);
-    context.subscriptions.push(vscode.window.registerWebviewViewProvider(HomeViewProvider.viewType, homeViewProvider));
+    context.subscriptions.push(
+        homeViewProvider,
+        vscode.window.registerWebviewViewProvider(HomeViewProvider.viewType, homeViewProvider),
+    );
 
     // register a configuration provider for the 'minecraft-js' debug type
     const configProvider = new ConfigProvider();

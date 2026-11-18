@@ -41,8 +41,11 @@ export const getProfilerHandlers = (vscode: WebviewApi<unknown>): ProfilerHandle
         vscode.postMessage({ type: 'refresh-captures', capturesBasePath: capturesBasePath });
     }, [capturesBasePath]);
 
-    // update the scrolling list when captures are refreshed
+    // update the scrolling list and selection when captures are refreshed
     useEffect(() => {
+        setSelectedCaptureItem(selected =>
+            captureItems.some(item => item.fileName === selected?.fileName) ? selected : undefined
+        );
         if (scrollingListRef.current) {
             scrollingListRef.current.scrollTop = 0;
         }

@@ -8,12 +8,18 @@ import { getUri } from '../utilities/getUri';
 import { EventEmitter } from 'stream';
 import { MinecraftCapabilities } from '../session';
 
-export class HomeViewProvider implements vscode.WebviewViewProvider {
+export class HomeViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
     public static readonly viewType = 'minecraft-debugger-home-panel';
 
     private readonly _extensionUri: vscode.Uri;
     private _eventEmitter: EventEmitter;
     private _view?: vscode.WebviewView;
+    private _disposables: vscode.Disposable[] = [];
+    private _capturesBasePath = '';
+    private _capturesWatcher?: vscode.FileSystemWatcher;
+    private _capturesRefreshTimer?: ReturnType<typeof setTimeout>;
+    private _capturesRefreshId = 0;
+    private _newCaptureFileName?: string;
 
     constructor(extensionUri: vscode.Uri, eventEmitter: EventEmitter) {
         this._extensionUri = extensionUri;
@@ -39,6 +45,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
     }
 
     public resolveWebviewView(webviewView: vscode.WebviewView): void {
+        this.dispose();
         this._view = webviewView;
 
         this._view.webview.options = {
@@ -49,9 +56,18 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         this._view.webview.html = this._getHtmlForWebview(this._view.webview, this._extensionUri);
 
         // listen for events from the debugger Session
-        this._eventEmitter.on('new-profiler-capture', (captureBasePath: string, newCaptureFileName: string) => {
-            this._refreshProfilerCaptures(captureBasePath, newCaptureFileName);
-        });
+        const onNewProfilerCapture = (captureBasePath: string, newCaptureFileName: string) => {
+            if (captureBasePath === this._capturesBasePath) {
+                this._refreshProfilerCaptures(newCaptureFileName);
+            }
+        };
+        this._eventEmitter.on('new-profiler-capture', onNewProfilerCapture);
+        this._disposables.push(new vscode.Disposable(() => {
+            this._eventEmitter.off('new-profiler-capture', onNewProfilerCapture);
+        }));
+
+        this._view.onDidChangeVisibility(() => this._updateCapturesWatcher(), null, this._disposables);
+        this._view.onDidDispose(() => this.dispose(), null, this._disposables);
 
         // listen for events from the home panel webview
         this._view.webview.onDidReceiveMessage(async message => {
@@ -88,7 +104,11 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
                 case 'refresh-captures': {
-                    this._refreshProfilerCaptures(message.capturesBasePath);
+                    if (this._capturesBasePath !== message.capturesBasePath) {
+                        this._newCaptureFileName = undefined;
+                    }
+                    this._capturesBasePath = message.capturesBasePath;
+                    this._updateCapturesWatcher();
                     break;
                 }
                 case 'request-debugger-status': {
@@ -108,7 +128,18 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                     break;
                 }
             }
-        });
+        }, null, this._disposables);
+    }
+
+    public dispose(): void {
+        this._stopCapturesWatcher();
+        for (const disposable of this._disposables) {
+            disposable.dispose();
+        }
+        this._disposables = [];
+        this._view = undefined;
+        this._capturesBasePath = '';
+        this._newCaptureFileName = undefined;
     }
 
     private async _browseCapturesBasePath() {
@@ -128,21 +159,67 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
         vscode.commands.executeCommand('vscode.open', uri);
     }
 
-    private _refreshProfilerCaptures(capturesBasePath: string, newCaptureFileName?: string) {
-        if (!capturesBasePath) {
+    private _updateCapturesWatcher(): void {
+        this._stopCapturesWatcher();
+        if (!this._view?.visible || !this._capturesBasePath) {
             return;
         }
-        fs.readdir(capturesBasePath, (err, files) => {
+
+        this._capturesWatcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(this._capturesBasePath, '*.cpuprofile'),
+            false,
+            true,
+            false,
+        );
+        const refreshCaptures = () => {
+            if (this._capturesRefreshTimer !== undefined) {
+                clearTimeout(this._capturesRefreshTimer);
+            }
+            this._capturesRefreshTimer = setTimeout(() => {
+                this._capturesRefreshTimer = undefined;
+                this._refreshProfilerCaptures();
+            }, 100);
+        };
+        this._capturesWatcher.onDidCreate(refreshCaptures);
+        this._capturesWatcher.onDidDelete(refreshCaptures);
+        this._refreshProfilerCaptures();
+    }
+
+    private _stopCapturesWatcher(): void {
+        this._capturesWatcher?.dispose();
+        this._capturesWatcher = undefined;
+        if (this._capturesRefreshTimer !== undefined) {
+            clearTimeout(this._capturesRefreshTimer);
+            this._capturesRefreshTimer = undefined;
+        }
+        ++this._capturesRefreshId;
+    }
+
+    private _refreshProfilerCaptures(newCaptureFileName?: string) {
+        if (newCaptureFileName) {
+            this._newCaptureFileName = newCaptureFileName;
+        }
+        const view = this._view;
+        if (!view?.visible || !this._capturesBasePath) {
+            return;
+        }
+        const refreshId = ++this._capturesRefreshId;
+        fs.readdir(this._capturesBasePath, (err, files) => {
+            if (refreshId !== this._capturesRefreshId) {
+                return;
+            }
             if (err) {
                 console.error('Error reading captures directory:', err);
+                view.webview.postMessage({ type: 'capture-files-refresh-failed' });
                 return;
             }
             const allCaptureFileNames = files.filter(file => path.extname(file) === '.cpuprofile');
-            this._view?.webview.postMessage({
+            view.webview.postMessage({
                 type: 'capture-files-refreshed',
                 allCaptureFileNames: allCaptureFileNames,
-                newCaptureFileName: newCaptureFileName,
+                newCaptureFileName: this._newCaptureFileName,
             });
+            this._newCaptureFileName = undefined;
         });
     }
 
@@ -153,7 +230,9 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
                 console.error('Error deleting capture file:', err);
                 return;
             }
-            this._refreshProfilerCaptures(capturesBasePath);
+            if (capturesBasePath === this._capturesBasePath) {
+                this._refreshProfilerCaptures();
+            }
         });
     }
 

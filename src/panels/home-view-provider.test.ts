@@ -1,6 +1,7 @@
 // Copyright (C) Microsoft Corporation.  All rights reserved.
 
 import { EventEmitter } from 'stream';
+import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { HomeViewProvider } from './home-view-provider';
@@ -114,8 +115,8 @@ function createView() {
 }
 
 describe('HomeViewProvider capture watching', () => {
-    const capturesPath = 'D:\\captures';
-    const otherPath = 'D:\\other-captures';
+    const capturesPath = path.resolve('captures');
+    const otherPath = path.resolve('other-captures');
     let provider: HomeViewProvider;
     let emitter: EventEmitter;
     let ui: ReturnType<typeof createView>;
@@ -140,7 +141,7 @@ describe('HomeViewProvider capture watching', () => {
         mocks.stat.mockResolvedValue({ isDirectory: () => true });
         mocks.openExternal.mockResolvedValue(true);
         emitter = new EventEmitter();
-        provider = new HomeViewProvider(vscode.Uri.file('D:\\extension'), emitter);
+        provider = new HomeViewProvider(vscode.Uri.file(path.resolve('extension')), emitter);
         ui = createView();
         provider.resolveWebviewView(ui.view);
     });
@@ -158,7 +159,7 @@ describe('HomeViewProvider capture watching', () => {
         }
 
         it('opens the captures folder with the system file explorer without requiring a debugger connection', async () => {
-            const folder = 'D:\\captures with spaces';
+            const folder = path.resolve('captures with spaces');
             await openFolder(folder);
 
             expect(mocks.stat).toHaveBeenCalledWith(folder);
@@ -239,7 +240,7 @@ describe('HomeViewProvider capture watching', () => {
         const files = event === 'created' ? ['initial.cpuprofile', 'external.cpuprofile'] : [];
         mocks.readdir.mockImplementation((_path, callback) => callback(null, files));
 
-        watchers[0][event].fire(vscode.Uri.file(`${capturesPath}\\external.cpuprofile`));
+        watchers[0][event].fire(vscode.Uri.file(path.join(capturesPath, 'external.cpuprofile')));
         vi.advanceTimersByTime(100);
 
         expect(ui.postMessage).toHaveBeenLastCalledWith({
@@ -251,7 +252,7 @@ describe('HomeViewProvider capture watching', () => {
 
     it('debounces bursts of create and delete events', () => {
         setCapturesPath(capturesPath);
-        const uri = vscode.Uri.file(`${capturesPath}\\capture.cpuprofile`);
+        const uri = vscode.Uri.file(path.join(capturesPath, 'capture.cpuprofile'));
         watchers[0].created.fire(uri);
         vi.advanceTimersByTime(50);
         watchers[0].deleted.fire(uri);
@@ -283,7 +284,7 @@ describe('HomeViewProvider capture watching', () => {
 
     it('stops watching and cancels pending refreshes when the captures path is cleared', () => {
         setCapturesPath(capturesPath);
-        watchers[0].created.fire(vscode.Uri.file(`${capturesPath}\\capture.cpuprofile`));
+        watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'capture.cpuprofile')));
         setCapturesPath('');
         vi.advanceTimersByTime(100);
 
@@ -295,7 +296,7 @@ describe('HomeViewProvider capture watching', () => {
 
     it('stops watching while hidden and refreshes changes made while hidden on reopening', () => {
         setCapturesPath(capturesPath);
-        watchers[0].created.fire(vscode.Uri.file(`${capturesPath}\\capture.cpuprofile`));
+        watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'capture.cpuprofile')));
         ui.setVisible(false);
         vi.advanceTimersByTime(100);
 
@@ -327,7 +328,7 @@ describe('HomeViewProvider capture watching', () => {
     it.each(['view', 'provider'] as const)('cleans up watchers, timers, reads and listeners on %s disposal', target => {
         mocks.readdir.mockImplementation(() => undefined);
         setCapturesPath(capturesPath);
-        watchers[0].created.fire(vscode.Uri.file(`${capturesPath}\\capture.cpuprofile`));
+        watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'capture.cpuprofile')));
 
         if (target === 'view') {
             ui.disposed.fire();
@@ -363,7 +364,7 @@ describe('HomeViewProvider capture watching', () => {
         mocks.readdir.mockImplementation(() => undefined);
         setCapturesPath(capturesPath);
         emitter.emit('new-profiler-capture', capturesPath, 'new.cpuprofile');
-        watchers[0].created.fire(vscode.Uri.file(`${capturesPath}\\new.cpuprofile`));
+        watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'new.cpuprofile')));
         vi.advanceTimersByTime(100);
 
         mocks.readdir.mock.calls[2][1](null, ['new.cpuprofile']);
@@ -418,7 +419,7 @@ describe('HomeViewProvider capture watching', () => {
         mocks.readdir.mockImplementation((_path, callback) => callback(null, []));
         ui.received.fire({ type: 'delete-capture-file', capturesBasePath: capturesPath, fileName: 'initial.cpuprofile' });
 
-        expect(mocks.unlink).toHaveBeenCalledWith(`${capturesPath}\\initial.cpuprofile`, expect.any(Function));
+        expect(mocks.unlink).toHaveBeenCalledWith(path.join(capturesPath, 'initial.cpuprofile'), expect.any(Function));
         expect(ui.postMessage).toHaveBeenLastCalledWith({
             type: 'capture-files-refreshed',
             allCaptureFileNames: [],

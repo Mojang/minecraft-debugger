@@ -21,6 +21,7 @@ export interface ProfilerHandlers {
     setSelectedCaptureItem: (item: CaptureItem | undefined) => void;
     // callbacks
     onCaptureBasePathEdited: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onOpenCapturesFolder: () => void;
     onSelectCaptureItem: (captureItem: CaptureItem) => void;
     onDeleteCaptureItem: (toDelete: CaptureItem) => void;
     onStartProfiler: () => void;
@@ -55,6 +56,10 @@ export const getProfilerHandlers = (vscode: WebviewApi<unknown>): ProfilerHandle
     const onCaptureBasePathEdited = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         setCapturesBasePath(event.target.value);
     }, []);
+
+    const onOpenCapturesFolder = useCallback(() => {
+        vscode.postMessage({ type: 'open-captures-folder', capturesBasePath });
+    }, [capturesBasePath]);
 
     // when a capture file is selected from the list
     const onSelectCaptureItem = useCallback((captureItem: CaptureItem) => {
@@ -102,6 +107,7 @@ export const getProfilerHandlers = (vscode: WebviewApi<unknown>): ProfilerHandle
         selectedCaptureItem,
         setSelectedCaptureItem,
         onCaptureBasePathEdited,
+        onOpenCapturesFolder,
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,

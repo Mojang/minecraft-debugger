@@ -145,7 +145,13 @@
 
 .capture-path-input {
     flex: 1;
+    min-width: 0;
     margin-right: 10px;
+}
+
+.open-captures-folder-button {
+    flex-shrink: 0;
+    margin-left: 6px;
 }
 
 .capture-scrolling-list-box {

@@ -9,11 +9,15 @@ const mocks = vi.hoisted(() => ({
     readdir: vi.fn<(path: string, callback: (error: NodeJS.ErrnoException | null, files: string[]) => void) => void>(),
     unlink: vi.fn<(path: string, callback: (error: NodeJS.ErrnoException | null) => void) => void>(),
     createWatcher: vi.fn<() => vscode.FileSystemWatcher>(),
+    stat: vi.fn<(path: string) => Promise<{ isDirectory: () => boolean }>>(),
+    openExternal: vi.fn<(uri: vscode.Uri) => Promise<boolean>>(),
+    showErrorMessage: vi.fn(),
 }));
 
 vi.mock('fs', () => ({
     readdir: mocks.readdir,
     unlink: mocks.unlink,
+    promises: { stat: mocks.stat },
 }));
 
 vi.mock('vscode', () => ({
@@ -32,6 +36,8 @@ vi.mock('vscode', () => ({
     workspace: {
         createFileSystemWatcher: mocks.createWatcher,
     },
+    env: { openExternal: mocks.openExternal },
+    window: { showErrorMessage: mocks.showErrorMessage },
 }));
 
 vi.mock('../utilities/getUri', () => ({
@@ -131,6 +137,8 @@ describe('HomeViewProvider capture watching', () => {
         mocks.readdir.mockImplementation((_path, callback) => {
             callback(null, ['initial.cpuprofile', 'notes.txt']);
         });
+        mocks.stat.mockResolvedValue({ isDirectory: () => true });
+        mocks.openExternal.mockResolvedValue(true);
         emitter = new EventEmitter();
         provider = new HomeViewProvider(vscode.Uri.file('D:\\extension'), emitter);
         ui = createView();
@@ -141,6 +149,66 @@ describe('HomeViewProvider capture watching', () => {
         provider.dispose();
         vi.useRealTimers();
         vi.restoreAllMocks();
+    });
+
+    describe('opening the captures folder', () => {
+        async function openFolder(capturesBasePath: unknown) {
+            const [handler] = ui.received.event.mock.calls[0];
+            await handler({ type: 'open-captures-folder', capturesBasePath });
+        }
+
+        it('opens the captures folder with the system file explorer without requiring a debugger connection', async () => {
+            const folder = 'D:\\captures with spaces';
+            await openFolder(folder);
+
+            expect(mocks.stat).toHaveBeenCalledWith(folder);
+            expect(mocks.openExternal).toHaveBeenCalledWith(vscode.Uri.file(folder));
+            expect(mocks.showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it.each([undefined, '', '   '])('reports an unset captures path (%s)', async capturesBasePath => {
+            await openFolder(capturesBasePath);
+
+            expect(mocks.stat).not.toHaveBeenCalled();
+            expect(mocks.openExternal).not.toHaveBeenCalled();
+            expect(mocks.showErrorMessage).toHaveBeenCalledWith('Set a captures path before opening the folder.');
+        });
+
+        it('reports an inaccessible or missing folder', async () => {
+            mocks.stat.mockRejectedValue(new Error('Directory is unavailable'));
+            await openFolder(capturesPath);
+
+            expect(mocks.openExternal).not.toHaveBeenCalled();
+            expect(mocks.showErrorMessage).toHaveBeenCalledWith(
+                'Unable to open the captures folder: Directory is unavailable',
+            );
+        });
+
+        it('rejects a captures path that points to a file', async () => {
+            mocks.stat.mockResolvedValue({ isDirectory: () => false });
+            await openFolder(capturesPath);
+
+            expect(mocks.openExternal).not.toHaveBeenCalled();
+            expect(mocks.showErrorMessage).toHaveBeenCalledWith(
+                'Unable to open the captures folder: The captures path is not a folder.',
+            );
+        });
+
+        it('reports when the system file explorer cannot be opened', async () => {
+            mocks.openExternal.mockResolvedValue(false);
+            await openFolder(capturesPath);
+
+            expect(mocks.showErrorMessage).toHaveBeenCalledWith(
+                'Unable to open the captures folder: The system file explorer could not be opened.',
+            );
+        });
+
+        it('reports errors opening the system file explorer', async () => {
+            mocks.openExternal.mockRejectedValue(new Error('Access denied'));
+            await openFolder(capturesPath);
+
+            expect(mocks.showErrorMessage).toHaveBeenCalledWith('Unable to open the captures folder: Access denied');
+        });
     });
 
     it('does not watch or read an unset captures path', () => {

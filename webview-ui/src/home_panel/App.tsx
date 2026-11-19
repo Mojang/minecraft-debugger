@@ -57,6 +57,7 @@ const App = () => {
         selectedCaptureItem,
         setSelectedCaptureItem,
         onCaptureBasePathEdited,
+        onOpenCapturesFolder,
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,
@@ -142,6 +143,7 @@ const App = () => {
                 capturesBasePath={capturesBasePath}
                 onCaptureBasePathBrowseButtonPressed={onCaptureBasePathBrowseButtonPressed}
                 onCaptureBasePathEdited={onCaptureBasePathEdited}
+                onOpenCapturesFolder={onOpenCapturesFolder}
                 scrollingListRef={scrollingListRef}
                 captureItems={captureItems}
                 selectedCaptureItem={selectedCaptureItem}

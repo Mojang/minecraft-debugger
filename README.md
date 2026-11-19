@@ -180,6 +180,7 @@ Add shortcuts for your favorite Minecraft commands.
 
 ##### Script Profiler
 After setting a local path for saving captures, use `Start Profiler` and `Stop Profiler` to create performance captures of your actively running add-on.
+Use `Open Folder` beside the captures path to open that folder in your system file explorer (File Explorer on Windows).
 While the home panel is visible, the Captures list automatically updates when `.cpuprofile` files are added to or removed from the selected folder, including changes made outside VS Code.
 
 #### Diagnostics Window

@@ -119,6 +119,10 @@ export class HomeViewProvider implements vscode.WebviewViewProvider, vscode.Disp
                     await this._browseCapturesBasePath();
                     break;
                 }
+                case 'open-captures-folder': {
+                    await this._openCapturesFolder(message.capturesBasePath);
+                    break;
+                }
                 case 'open-capture-file': {
                     this._openCaptureFile(message.capturesBasePath, message.fileName);
                     break;
@@ -150,6 +154,26 @@ export class HomeViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         });
         if (uri && uri[0]) {
             this._view?.webview.postMessage({ type: 'captures-base-path-set', capturesBasePath: uri[0].fsPath });
+        }
+    }
+
+    private async _openCapturesFolder(capturesBasePath: string): Promise<void> {
+        if (typeof capturesBasePath !== 'string' || capturesBasePath.trim() === '') {
+            vscode.window.showErrorMessage('Set a captures path before opening the folder.');
+            return;
+        }
+
+        try {
+            const stats = await fs.promises.stat(capturesBasePath);
+            if (!stats.isDirectory()) {
+                throw new Error('The captures path is not a folder.');
+            }
+            if (!await vscode.env.openExternal(vscode.Uri.file(capturesBasePath))) {
+                throw new Error('The system file explorer could not be opened.');
+            }
+        } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Unable to open the captures folder: ${detail}`);
         }
     }
 

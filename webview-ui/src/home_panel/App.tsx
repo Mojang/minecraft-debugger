@@ -57,6 +57,7 @@ const App = () => {
         selectedCaptureItem,
         setSelectedCaptureItem,
         onCaptureBasePathEdited,
+        onOpenCapturesFolder,
         onSelectCaptureItem,
         onDeleteCaptureItem,
         onStartProfiler,
@@ -100,6 +101,8 @@ const App = () => {
                 if (message.newCaptureFileName) {
                     setSelectedCaptureItem({ fileName: message.newCaptureFileName });
                 }
+            } else if (message.type === 'capture-files-refresh-failed') {
+                setCaptureItems([]);
             } else if (message.type === 'debugger-status') {
                 if (!message.isConnected) {
                     setProfilerCapturing(false);
@@ -140,6 +143,7 @@ const App = () => {
                 capturesBasePath={capturesBasePath}
                 onCaptureBasePathBrowseButtonPressed={onCaptureBasePathBrowseButtonPressed}
                 onCaptureBasePathEdited={onCaptureBasePathEdited}
+                onOpenCapturesFolder={onOpenCapturesFolder}
                 scrollingListRef={scrollingListRef}
                 captureItems={captureItems}
                 selectedCaptureItem={selectedCaptureItem}

@@ -7,6 +7,7 @@ import { CaptureItem } from '../handlers/ProfilerHandlers';
 interface ProfilerSectionProps {
     capturesBasePath: string;
     onCaptureBasePathBrowseButtonPressed: () => void;
+    onOpenCapturesFolder: () => void;
     onCaptureBasePathEdited: (event: React.ChangeEvent<HTMLInputElement>) => void;
     scrollingListRef: React.RefObject<HTMLDivElement>;
     captureItems: CaptureItem[];
@@ -23,6 +24,7 @@ interface ProfilerSectionProps {
 const ProfilerSection: React.FC<ProfilerSectionProps> = ({
     capturesBasePath,
     onCaptureBasePathBrowseButtonPressed,
+    onOpenCapturesFolder,
     onCaptureBasePathEdited,
     scrollingListRef,
     captureItems,
@@ -48,6 +50,14 @@ const ProfilerSection: React.FC<ProfilerSectionProps> = ({
                 />
                 <VSCodeButton className="browse-button" onClick={onCaptureBasePathBrowseButtonPressed}>
                     Browse
+                </VSCodeButton>
+                <VSCodeButton
+                    className="open-captures-folder-button"
+                    title="Open captures folder in File Explorer"
+                    onClick={onOpenCapturesFolder}
+                    disabled={capturesBasePath.trim() === ''}
+                >
+                    Open Folder
                 </VSCodeButton>
             </div>
             <div className="profiler-button-container">

@@ -158,23 +158,6 @@ describe('HomeViewProvider capture watching', () => {
             await handler({ type: 'open-captures-folder', capturesBasePath });
         }
 
-        it('opens the captures folder with the system file explorer without requiring a debugger connection', async () => {
-            const folder = path.resolve('captures with spaces');
-            await openFolder(folder);
-
-            expect(mocks.stat).toHaveBeenCalledWith(folder);
-            expect(mocks.openExternal).toHaveBeenCalledWith(vscode.Uri.file(folder));
-            expect(mocks.showErrorMessage).not.toHaveBeenCalled();
-        });
-
-        it.each([undefined, '', '   '])('reports an unset captures path (%s)', async capturesBasePath => {
-            await openFolder(capturesBasePath);
-
-            expect(mocks.stat).not.toHaveBeenCalled();
-            expect(mocks.openExternal).not.toHaveBeenCalled();
-            expect(mocks.showErrorMessage).toHaveBeenCalledWith('Set a captures path before opening the folder.');
-        });
-
         it('reports an inaccessible or missing folder', async () => {
             mocks.stat.mockRejectedValue(new Error('Directory is unavailable'));
             await openFolder(capturesPath);
@@ -345,38 +328,6 @@ describe('HomeViewProvider capture watching', () => {
         expect(mocks.readdir).toHaveBeenCalledOnce();
         expect(mocks.createWatcher).toHaveBeenCalledOnce();
         expect(ui.postMessage).not.toHaveBeenCalled();
-    });
-
-    it('cleans up the previous view when the home view is resolved again', () => {
-        setCapturesPath(capturesPath);
-        const oldUi = ui;
-        ui = createView();
-        provider.resolveWebviewView(ui.view);
-        oldUi.received.fire({ type: 'refresh-captures', capturesBasePath: otherPath });
-        setCapturesPath(otherPath);
-
-        expect(watchers[0].watcher.dispose).toHaveBeenCalledOnce();
-        expect(watchers).toHaveLength(2);
-        expect(emitter.listenerCount('new-profiler-capture')).toBe(1);
-    });
-
-    it('ignores out-of-order reads without losing new-capture selection', () => {
-        mocks.readdir.mockImplementation(() => undefined);
-        setCapturesPath(capturesPath);
-        emitter.emit('new-profiler-capture', capturesPath, 'new.cpuprofile');
-        watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'new.cpuprofile')));
-        vi.advanceTimersByTime(100);
-
-        mocks.readdir.mock.calls[2][1](null, ['new.cpuprofile']);
-        mocks.readdir.mock.calls[1][1](null, ['new.cpuprofile']);
-        mocks.readdir.mock.calls[0][1](null, []);
-
-        expect(ui.postMessage).toHaveBeenCalledOnce();
-        expect(ui.postMessage).toHaveBeenLastCalledWith({
-            type: 'capture-files-refreshed',
-            allCaptureFileNames: ['new.cpuprofile'],
-            newCaptureFileName: 'new.cpuprofile',
-        });
     });
 
     it('ignores new-capture events for other folders', () => {

@@ -202,7 +202,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider, vscode.Disp
             this._capturesRefreshTimer = setTimeout(() => {
                 this._capturesRefreshTimer = undefined;
                 this._refreshProfilerCaptures();
-            }, 100);
+            }, 1000);
         };
         this._capturesWatcher.onDidCreate(refreshCaptures);
         this._capturesWatcher.onDidDelete(refreshCaptures);

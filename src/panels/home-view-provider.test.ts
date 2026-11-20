@@ -224,7 +224,9 @@ describe('HomeViewProvider capture watching', () => {
         mocks.readdir.mockImplementation((_path, callback) => callback(null, files));
 
         watchers[0][event].fire(vscode.Uri.file(path.join(capturesPath, 'external.cpuprofile')));
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(999);
+        expect(mocks.readdir).toHaveBeenCalledOnce();
+        vi.advanceTimersByTime(1);
 
         expect(ui.postMessage).toHaveBeenLastCalledWith({
             type: 'capture-files-refreshed',
@@ -239,7 +241,7 @@ describe('HomeViewProvider capture watching', () => {
         watchers[0].created.fire(uri);
         vi.advanceTimersByTime(50);
         watchers[0].deleted.fire(uri);
-        vi.advanceTimersByTime(99);
+        vi.advanceTimersByTime(999);
         expect(mocks.readdir).toHaveBeenCalledTimes(1);
 
         vi.advanceTimersByTime(1);
@@ -269,7 +271,7 @@ describe('HomeViewProvider capture watching', () => {
         setCapturesPath(capturesPath);
         watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'capture.cpuprofile')));
         setCapturesPath('');
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(1000);
 
         expect(watchers[0].watcher.dispose).toHaveBeenCalledOnce();
         expect(mocks.createWatcher).toHaveBeenCalledOnce();
@@ -281,7 +283,7 @@ describe('HomeViewProvider capture watching', () => {
         setCapturesPath(capturesPath);
         watchers[0].created.fire(vscode.Uri.file(path.join(capturesPath, 'capture.cpuprofile')));
         ui.setVisible(false);
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(1000);
 
         expect(watchers[0].watcher.dispose).toHaveBeenCalledOnce();
         expect(mocks.readdir).toHaveBeenCalledOnce();
@@ -319,7 +321,7 @@ describe('HomeViewProvider capture watching', () => {
             provider.dispose();
         }
         mocks.readdir.mock.calls[0][1](null, ['stale.cpuprofile']);
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(1000);
         setCapturesPath(otherPath);
 
         expect(watchers[0].watcher.dispose).toHaveBeenCalledOnce();
